@@ -11,7 +11,7 @@ env_root = Path(__file__).resolve().parents[3] / ".env"
 class Settings(BaseSettings):
     PROJECT_NAME: str = "BiletFlow"
     API_V1_PREFIX: str = "/api/v1"
-
+    VERSION: str = "0.1.0"
     DATABASE_URL: str
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
