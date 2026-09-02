@@ -44,6 +44,12 @@ jobs:
       - name: Tests
         run: uv run pytest 
 
+      - name: Extract OpenAPI spec
+        run: uv run python scripts/export_openapi.py
+
+      - name: Verify OpenAPI spec has been updated
+        run: git diff --exit-code docs/openapi.json openapi.json
+
 
 
   docker:
