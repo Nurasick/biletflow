@@ -21,7 +21,7 @@ jobs:
       run:
         working-directory: backend
     env:
-      DATABASE_URL: "postgresql+psycopg://biletflow:devpassword@db:5432/biletflow"
+      DATABASE_URL: "postgresql+psycopg://ci:ci@localhost:5432/ci"
       SECRET_KEY: "ci-not-a-real-secret"
     steps:
       - uses: actions/checkout@v5
