@@ -23,6 +23,22 @@ jobs:
     env:
       DATABASE_URL: "postgresql+psycopg://ci:ci@localhost:5432/ci"
       SECRET_KEY: "ci-not-a-real-secret"
+    services:
+      # Any test that touches the database needs a real Postgres. The runner
+      # reaches this on localhost:5432, which is what DATABASE_URL above says.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v5
 
@@ -41,8 +57,18 @@ jobs:
       - name: Format check
         run: uv run ruff format --check .
 
+      - name: Apply migrations
+        run: uv run alembic upgrade head
+
+      # A downgrade that is never exercised is a downgrade that does not work.
+      # This leaves the schema at head, ready for the tests below.
+      - name: Verify migrations reverse
+        run: |
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+
       - name: Tests
-        run: uv run pytest 
+        run: uv run pytest
 
       - name: Extract OpenAPI spec
         run: uv run python scripts/export_openapi.py
