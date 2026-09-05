@@ -100,7 +100,7 @@ model is missing from that file, the generated migration will be silently empty.
 
 ## Documentation
 
-- [`docs/erd.md`](docs/erd.md) — data model
+- [`docs/data-model/`](docs/data-model/) — data model, one file per slice
 - [`docs/state-machines.md`](docs/state-machines.md) — order and ticket lifecycles
 - [`docs/openapi.json`](docs/openapi.json) — generated API contract
 
