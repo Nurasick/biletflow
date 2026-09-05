@@ -19,10 +19,17 @@ services:
     volumes: ["./backend:/app"]
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
   web:
-    build: ./web
+    build:
+      context: ./web
+      target: development
     depends_on:
       - api
-    ports: ["5173:80"]
+    environment:
+      VITE_USE_POLLING: "true"
+    ports: ["5173:5173"]
+    volumes:
+      - ./web:/app
+      - web_node_modules:/app/node_modules
   mobile:
     build: ./mobile
     depends_on:
@@ -39,4 +46,5 @@ services:
     tty: true
 volumes:
   pgdata:
+  web_node_modules:
   mobile_node_modules:
