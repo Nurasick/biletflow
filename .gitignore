@@ -1,5 +1,71 @@
+# ─── Secrets ───────────────────────────────────────────────────────────────
+# .env holds SECRET_KEY and the database password. .env.example is the
+# committed template and must stay tracked.
 .env
+.env.*
+!.env.example
+
+# Signing material and private keys, wherever they land.
+*.pem
+*.key
+*.p12
+*.p8
+*.jks
+*.mobileprovision
+
+# ─── Python / backend ──────────────────────────────────────────────────────
 .venv/
+venv/
 __pycache__/
-.pytest_cache/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Tool caches
 .ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Coverage output
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# NOTE: uv.lock and backend/.python-version are intentionally NOT ignored --
+# CI runs `uv sync --locked` and needs both.
+
+# ─── Node / web + mobile ───────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.vite/
+web-build/
+.expo/
+*.tsbuildinfo
+
+# NOTE: package-lock.json is intentionally NOT ignored.
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# ─── Editors ───────────────────────────────────────────────────────────────
+# Share the project setup (interpreter path, pytest config, ruff on save) but
+# not per-user state. Flip this to a bare `.vscode/` if you'd rather keep
+# editor config personal.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+.idea/
+*.swp
+*.swo
+
+# ─── OS ────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
