@@ -75,6 +75,7 @@ def test_user_create_rejects_unsupported_locale():
     errors = excinfo.value.errors()
     assert [e["loc"] for e in errors] == [("locale",)]
 
+
 def test_user_create_reject_short_password():
     with pytest.raises(ValidationError) as excinfo:
         UserCreate(
