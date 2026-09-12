@@ -1,16 +1,21 @@
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jwt import InvalidTokenError
+from fastapi import Depends, Header, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
-from app.core.security import decode_token
 from app.db.session import get_db
-from app.models.user import User
+from app.models.user import User, UserStatus
+from app.services.auth import resolve_token_user
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
+# HTTPBearer, not OAuth2PasswordBearer. Both read the same `Authorization:
+# Bearer <jwt>` header, so clients are unaffected either way. The difference is
+# what they tell /docs: the OAuth2 password flow advertises a tokenUrl and asks
+# Swagger to fetch a token by POSTing a form to /auth/login, which accepts JSON
+# and answers that form with a 422. Its Authorize dialog offers no field for an
+# existing token, so it could never authorise a request. HTTPBearer's dialog
+# takes the token itself.
+bearer_scheme = HTTPBearer(bearerFormat="JWT")
 
 CREDENTIALS_EXCEPTION = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -18,29 +23,31 @@ CREDENTIALS_EXCEPTION = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
+
+def bearer_mode(x_auth_mode: Annotated[str | None, Header()] = None) -> bool:
+    """True when the caller wants tokens in the response body instead of cookies.
+
+    The default is cookies, so a browser client that forgets to say anything
+    fails safe. The Expo client, which has no cookie jar worth depending on,
+    opts out explicitly with `X-Auth-Mode: bearer`.
+    """
+    return (x_auth_mode or "").lower() == "bearer"
+
+
+BearerMode = Annotated[bool, Depends(bearer_mode)]
 DbSession = Annotated[Session, Depends(get_db)]
-TokenDep = Annotated[str, Depends(oauth2_scheme)]
+TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)]
 
 
-def get_current_user(token: TokenDep, db: DbSession) -> User:
-    try:
-        payload = decode_token(token)
-    except InvalidTokenError:
-        raise CREDENTIALS_EXCEPTION from None
-    if payload.get("type") != "access":
-        raise CREDENTIALS_EXCEPTION
-    try:
-        user_id = int(payload["sub"])
-    except (KeyError, TypeError, ValueError):
-        raise CREDENTIALS_EXCEPTION from None
-    user = db.get(User, user_id)
+def get_current_user(credentials: TokenDep, db: DbSession) -> User:
+    user = resolve_token_user(db, credentials.credentials, "access")
     if user is None:
         raise CREDENTIALS_EXCEPTION
     return user
 
 
 def get_current_active_user(user: Annotated[User, Depends(get_current_user)]) -> User:
-    if user.status != "active":
+    if user.status != UserStatus.ACTIVE:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Inactive user")
     return user
 
