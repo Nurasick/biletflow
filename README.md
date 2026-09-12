@@ -36,16 +36,16 @@ mobile build against that file.
 
 ## Quickstart
 
-> TODO: fill this in once the backend actually boots. Write it by copying the
-> commands you really ran, in the order you ran them, the first time it worked.
-> Then verify it by deleting `.venv/`, running `docker compose down -v`, and
-> following your own instructions literally.
-
 ```bash
 git clone <repo-url>
 cd biletflow
 cp .env.example .env    # then fill in the blanks
+docker compose up --build
 ```
+
+Compose waits for PostgreSQL, applies Alembic migrations, and then starts the
+API. If a migration fails, the API does not start. The web app is available at
+http://localhost:5173 and the API docs at http://localhost:8000/docs.
 
 ## Environment
 
@@ -58,8 +58,10 @@ Generate a `SECRET_KEY` with:
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Note that `DATABASE_URL` uses `db` as the host, not `localhost` — that is the
-service name inside Docker Compose. Run migrations through the container:
+For host development, `DATABASE_URL` should use `localhost:5433`. Compose
+overrides it to use `db:5432` inside the API container. Migrations run
+automatically when the Compose API starts. To apply them to an already running
+API (for example, after a `relation "users" does not exist` error):
 
 ```bash
 docker compose exec api alembic upgrade head
@@ -70,6 +72,7 @@ docker compose exec api alembic upgrade head
 ```bash
 cd backend
 uv sync                                  # install dependencies
+uv run alembic upgrade head               # apply migrations before serving
 uv run uvicorn app.main:app --reload     # serve on :8000
 uv run pytest                            # tests
 uv run ruff check --fix .                # lint

@@ -1,46 +1,16 @@
-type Session = {
-  time: string;
-  price: string;
-  selected?: boolean;
-  soldOut?: boolean;
+import type { EventHall } from "../../../../hooks/useEventBooking";
+
+type SessionListProps = {
+  halls: EventHall[];
+  selectedSessionId: string;
+  onSelectSession: (sessionId: string) => void;
 };
 
-type Hall = {
-  name: string;
-  capacity: string;
-  sessions: Session[];
-};
-
-const halls: Hall[] = [
-  {
-    name: "Main hall · assigned seating",
-    capacity: "1 200 seats",
-    sessions: [
-      { time: "17:00", price: "from 8 500 ₸" },
-      { time: "19:00", price: "from 8 500 ₸", selected: true },
-      { time: "21:30", price: "from 6 000 ₸" },
-    ],
-  },
-  {
-    name: "Small hall · general admission",
-    capacity: "180 seats",
-    sessions: [
-      { time: "18:30", price: "5 000 ₸" },
-      { time: "20:30", price: "5 000 ₸" },
-      { time: "22:00", price: "sold out", soldOut: true },
-    ],
-  },
-  {
-    name: "Open-air terrace",
-    capacity: "standing",
-    sessions: [
-      { time: "19:30", price: "from 4 000 ₸" },
-      { time: "22:00", price: "from 4 000 ₸" },
-    ],
-  },
-];
-
-export const SessionList = () => {
+export const SessionList = ({
+  halls,
+  selectedSessionId,
+  onSelectSession,
+}: SessionListProps) => {
   return (
     <section className="mt-5 flex flex-col gap-4">
       {halls.map((hall) => (
@@ -55,17 +25,20 @@ export const SessionList = () => {
           <div className="mt-2.5 flex flex-wrap gap-2.5">
             {hall.sessions.map((session) => (
               <button
-                key={session.time}
+                key={session.id}
+                type="button"
                 disabled={session.soldOut}
+                aria-pressed={selectedSessionId === session.id}
+                onClick={() => onSelectSession(session.id)}
                 className={`min-w-20 rounded-lg border px-3 py-2 text-center ${
-                  session.selected
+                  selectedSessionId === session.id
                     ? "border-[#FF5C35] bg-orange-50"
-                    : "border-[#D0D5DD]"
+                    : "border-[#D0D5DD] hover:border-[#98A2B3]"
                 } ${session.soldOut ? "bg-[#F5F5F0] opacity-50" : ""}`}
               >
                 <div
                   className={`text-[15px] font-semibold ${
-                    session.selected ? "text-[#FF5C35]" : ""
+                    selectedSessionId === session.id ? "text-[#FF5C35]" : ""
                   } ${session.soldOut ? "line-through" : ""}`}
                 >
                   {session.time}
