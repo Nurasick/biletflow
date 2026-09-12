@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StatusBar, TextInput, TouchableOpacity, SafeAreaView, View, ScrollView } from 'react-native';
+import { StatusBar, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -19,7 +20,7 @@ export default function LoginScreen() {
       return;
     }
     await login(email, password);
-    router.replace('/(tabs)/');
+    router.replace('/');
   };
 
   return (
@@ -49,7 +50,7 @@ export default function LoginScreen() {
               WELCOME BACK
             </ThemedText>
             <ThemedText className="text-3xl font-bold leading-tight mb-2">
-              Your next great{''n''}night starts here.
+              Your next great{'\n'}night starts here.
             </ThemedText>
             <ThemedText className="text-sm text-gray-400">
               Sign in to access your tickets, saved events and faster checkout.
@@ -91,7 +92,7 @@ export default function LoginScreen() {
             </View>
             <View className="flex-row items-center bg-slate-800 rounded-lg border border-slate-700">
               <TextInput
-                placeholder="ïïïïïïïï"
+                placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢"
                 placeholderTextColor="#98A2B3"
                 style={{ color: '#F5F5F0', flex: 1 }}
                 className="px-4 py-3 text-base"
@@ -105,7 +106,7 @@ export default function LoginScreen() {
                 className="px-4"
               >
                 <ThemedText className="text-lg">
-                  {showPassword ? '?' : '?'}
+                  {showPassword ? '‚óê' : '‚óâ'}
                 </ThemedText>
               </TouchableOpacity>
             </View>
@@ -116,9 +117,11 @@ export default function LoginScreen() {
             <View className="flex-row items-center gap-2">
               <TouchableOpacity
                 onPress={() => setRememberMe(!rememberMe)}
-                className={`w-5 h-5 rounded border-2 items-center justify-center ${''{rememberMe ? ''bg-orange-500 border-orange-500'' : ''border-slate-600''}''}`}
+                className={`w-5 h-5 rounded border-2 items-center justify-center ${
+                  rememberMe ? 'bg-orange-500 border-orange-500' : 'border-slate-600'
+                }`}
               >
-                {rememberMe && <ThemedText className="text-xs font-bold text-black">?</ThemedText>}
+                {rememberMe && <ThemedText className="text-xs font-bold text-black">‚úì</ThemedText>}
               </TouchableOpacity>
               <ThemedText className="text-sm">Remember me</ThemedText>
             </View>
@@ -132,19 +135,21 @@ export default function LoginScreen() {
 
           {/* Login Button */}
           <TouchableOpacity
-            className={`bg-orange-500 rounded-lg py-4 items-center mb-6 ${''{loading ? ''opacity-70'' : ''''''}''}`}
+            className={`bg-orange-500 rounded-lg py-4 items-center mb-6 ${
+              loading ? 'opacity-70' : ''
+            }`}
             onPress={handleLogin}
             disabled={loading}
           >
             <ThemedText className="text-black font-bold text-base">
-              {loading ? ''Signing in...'' : ''Sign in''}
+              {loading ? 'Signing in...' : 'Sign in'}
             </ThemedText>
           </TouchableOpacity>
 
           {/* Sign Up Link */}
           <View className="flex-row justify-center gap-1">
-            <ThemedText className="text-sm text-gray-400">Don''t have an account?</ThemedText>
-            <TouchableOpacity onPress={() => router.push(''/signup'')}>
+            <ThemedText className="text-sm text-gray-400">Don't have an account?</ThemedText>
+            <TouchableOpacity onPress={() => router.push('/')}>
               <ThemedText className="text-sm text-orange-500 font-bold">Sign up</ThemedText>
             </TouchableOpacity>
           </View>
