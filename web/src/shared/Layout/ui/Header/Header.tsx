@@ -1,10 +1,19 @@
+import { Link } from "react-router-dom";
+import { useAuth } from "../../../../hooks/useAuth";
+
 export const Header = () => {
+  const { me } = useAuth();
+  const user = me.data;
   return (
     <header className="border-b border-[#D0D5DD]">
       <div className="mx-auto flex max-w-7xl items-center gap-6 px-7 py-4">
-        <div className="shrink-0 text-2xl font-bold tracking-tight">
+        <Link
+          to="/"
+          aria-label="BiletFlow home"
+          className="shrink-0 text-2xl font-bold tracking-tight"
+        >
           Bilet<span className="text-[#FF5C35]">Flow</span>
-        </div>
+        </Link>
 
         <div className="flex h-12 flex-1 overflow-hidden rounded-xl border border-[#D0D5DD] bg-[#F5F5F0]">
           <input
@@ -28,16 +37,20 @@ export const Header = () => {
             </span>
           </button>
 
-          <button className="flex items-center gap-3 rounded-full border border-[#D0D5DD] py-1.5 pl-1.5 pr-4">
-            <div className="grid h-8 w-8 place-items-center rounded-full bg-orange-50 text-xs font-semibold text-[#FF5C35]">
-              AN
-            </div>
-            <div className="text-left text-xs">
-              <div className="font-semibold">Shamil O'Nil</div>
-              <div className="text-[#667085]">3 tickets</div>
-            </div>
-            <span className="text-xs text-[#667085]">▾</span>
-          </button>
+          {me.isPending ? (
+            <span className="text-xs text-[#667085]">Checking session…</span>
+          ) : me.isError ? (
+            <button onClick={() => void me.refetch()} className="text-sm">Retry sign-in status</button>
+          ) : user ? (
+            <Link to="/account" className="flex items-center gap-3 rounded-full border border-[#D0D5DD] py-1.5 pl-1.5 pr-4">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-orange-50 text-xs font-semibold text-[#FF5C35]">
+                {user.first_name.slice(0, 1)}{user.last_name.slice(0, 1)}
+              </span>
+              <span className="text-xs font-semibold">{user.first_name} {user.last_name}</span>
+            </Link>
+          ) : (
+            <Link to="/login" className="rounded-xl border border-[#D0D5DD] px-5 py-3 text-sm font-semibold">Sign in</Link>
+          )}
 
           <button className="rounded-xl bg-[#FF5C35] px-5 py-3 text-sm font-semibold text-[#101828]">
             Create event

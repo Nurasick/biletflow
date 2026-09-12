@@ -1,7 +1,6 @@
-import { useState } from "react";
-
 import { EventCard } from "../features/Main/ui/EventCard/EventCard";
 import { Hero } from "../features/Main/ui/Hero/Hero";
+import { useDateSelection } from "../hooks/useDateSelection";
 import { DateSelector } from "../shared/DateSelector/DateSelector";
 
 const events = [
@@ -36,34 +35,22 @@ const events = [
 ];
 
 export const HomePage = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
-  });
-
-  const selectedDateLabel = selectedDate?.toLocaleDateString("en-US", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
+  const { selectedDate, selectedDateLabel, setSelectedDate } =
+    useDateSelection();
 
   return (
     <main className="mx-auto max-w-7xl px-7 py-6">
-      {/* Hero */}
       <Hero />
 
-      {/* Date selector */}
       <DateSelector
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
 
-      {/* Events */}
       <section className="mt-8">
         <div className="flex items-end justify-between">
           <h2 className="text-2xl font-bold tracking-tight">
-            Afisha · {selectedDateLabel ?? "All dates"}
+            Afisha · {selectedDateLabel}
           </h2>
 
           <div className="text-sm text-[#667085]">
@@ -75,7 +62,6 @@ export const HomePage = () => {
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-5">
-          {/* Event card */}
           {events.map((event, index) => {
             return (
               <EventCard

@@ -1,18 +1,13 @@
-import { useState } from "react";
-
-import { AboutEvent } from "../features/EventPage/ui/AboutEvent/AboutEvent";
-import { Breadcrumb } from "../features/EventPage/ui/Breadcrumb/Breadcrumb";
-import { EventInfo } from "../features/EventPage/ui/EventInfo/EventInfo";
-import { PurchasePanel } from "../features/EventPage/ui/PurchasePanel/PurchasePanel";
-import { SessionList } from "../features/EventPage/ui/SessionList/SessionList";
+import { AboutEvent } from "../features/Event/ui/AboutEvent/AboutEvent";
+import { Breadcrumb } from "../features/Event/ui/Breadcrumb/Breadcrumb";
+import { EventInfo } from "../features/Event/ui/EventInfo/EventInfo";
+import { PurchasePanel } from "../features/Event/ui/PurchasePanel/PurchasePanel";
+import { SessionList } from "../features/Event/ui/SessionList/SessionList";
+import { useEventBooking } from "../hooks/useEventBooking";
 import { DateSelector } from "../shared/DateSelector/DateSelector";
 
 export const EventPage = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
-  });
+  const booking = useEventBooking();
 
   return (
     <>
@@ -29,16 +24,20 @@ export const EventPage = () => {
               Choose a date and time
             </h2>
             <DateSelector
-              selectedDate={selectedDate}
-              onDateChange={setSelectedDate}
+              selectedDate={booking.selectedDate}
+              onDateChange={booking.selectDate}
               className="mt-3"
             />
           </div>
-          <SessionList />
+          <SessionList
+            halls={booking.halls}
+            selectedSessionId={booking.selectedSessionId}
+            onSelectSession={booking.selectSession}
+          />
           <AboutEvent />
         </div>
 
-        <PurchasePanel />
+        <PurchasePanel booking={booking} />
       </main>
     </>
   );
