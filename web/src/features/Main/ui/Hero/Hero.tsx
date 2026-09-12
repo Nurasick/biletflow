@@ -1,7 +1,8 @@
+import { Link } from "react-router-dom";
+
 export const Hero = () => {
   return (
     <section className="grid grid-cols-3 gap-5">
-      {/* Featured event */}
       <div className="col-span-2 flex min-h-[280px] items-end rounded-2xl border border-[#D0D5DD] bg-[#F5F5F0] p-6">
         <div className="max-w-sm rounded-xl bg-white p-5 shadow-lg">
           <div className="text-xs font-semibold tracking-wider text-[#FF5C35]">
@@ -17,16 +18,18 @@ export const Hero = () => {
           </p>
 
           <div className="mt-5 flex items-center gap-4">
-            <button className="rounded-lg bg-[#FF5C35] px-5 py-2.5 text-sm font-semibold">
+            <Link
+              to="/events"
+              className="rounded-lg bg-[#FF5C35] px-5 py-2.5 text-sm font-semibold"
+            >
               Buy tickets
-            </button>
+            </Link>
 
             <span className="text-sm font-semibold">from 8 500 ₸</span>
           </div>
         </div>
       </div>
 
-      {/* Right side */}
       <div className="flex flex-col gap-4">
         <div className="flex-1 rounded-xl border border-[#D0D5DD] p-5">
           <h2 className="font-semibold">Your next event</h2>
