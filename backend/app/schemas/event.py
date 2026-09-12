@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 EventStatusType = Literal["draft", "published", "unlisted", "cancelled"]
@@ -19,7 +20,7 @@ class EventBase(BaseModel):
     start_time: datetime
     end_time: datetime | None = Field(default=None)
 
-    capacity: int = Field(default=0, ge=0) 
+    capacity: int = Field(default=0, ge=0)
     registration_start: datetime | None = Field(default=None)
     registration_end: datetime | None = Field(default=None)
 

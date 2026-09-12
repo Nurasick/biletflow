@@ -39,7 +39,7 @@ class EventCategory(StrEnum):
 
 
 _STATUS_LIST = ", ".join(f"'{s.value}'" for s in EventStatus)
-_VISIBILITY_LIST = ", ".join(f"'{s.value}'" for v in EventVisibility)
+_VISIBILITY_LIST = ", ".join(f"'{v.value}'" for v in EventVisibility)
 _CATEGORY_LIST = ", ".join(f"'{c.value}'" for c in EventCategory)
 
 
@@ -51,9 +51,7 @@ class Event(Base):
     # main info
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text())
-    category: Mapped[EventCategory] = mapped_column(
-        String(50), server_default=EventCategory.OTHER
-    )
+    category: Mapped[EventCategory] = mapped_column(String(50), server_default=EventCategory.OTHER)
     image_url: Mapped[str | None] = mapped_column(String(512))
 
     # place
@@ -70,18 +68,14 @@ class Event(Base):
     registartion_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # status and visibility
-    status: Mapped(EventStatus) = mapped_column(
-        String(20), server_default=EventStatus.DRAFT
-    )
+    status: Mapped(EventStatus) = mapped_column(String(20), server_default=EventStatus.DRAFT)
     visibility: Mapped[EventVisibility] = mapped_column(
         String(20), server_default=EventVisibility.PUBLIC
     )
 
     # foreign keys and dates
     organizer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("organizers.id"))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -89,10 +83,6 @@ class Event(Base):
     # PostgreSQL database-level constraint checks
     __table_args__ = (
         CheckConstraint(f"status IN ({_STATUS_LIST})", name="check_event_status"),
-        CheckConstraint(
-            f"visibility IN ({_VISIBILITY_LIST})", name="check_event_visibility"
-        ),
-        CheckConstraint(
-            f"category IN ({_CATEGORY_LIST})", name="check_event_category"
-        ),
+        CheckConstraint(f"visibility IN ({_VISIBILITY_LIST})", name="check_event_visibility"),
+        CheckConstraint(f"category IN ({_CATEGORY_LIST})", name="check_event_category"),
     )

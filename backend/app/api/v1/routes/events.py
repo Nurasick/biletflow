@@ -1,5 +1,7 @@
 from datetime import datetime
+
 from fastapi import APIRouter
+
 from app.schemas.event import EventRead
 
 router = APIRouter(prefix="/events", tags=["events"])
