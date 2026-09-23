@@ -24,35 +24,35 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-900">
+    <SafeAreaView className="flex-1 bg-[#182230]">
       <StatusBar barStyle="light-content" backgroundColor="#101828" />
 
       {/* Decorative blob */}
-      <View className="absolute top-0 right-0 w-64 h-64 bg-orange-500 rounded-full opacity-10 blur-3xl" />
+      <View className="absolute top-0 right-0 w-64 h-64 bg-[#FF5C35] rounded-full opacity-10 blur-3xl" />
 
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
       >
-        <ThemedView className="flex-1 justify-center px-6 relative z-10">
+        <ThemedView className="flex-1 px-6 relative z-10">
           {/* Logo */}
           <View className="flex-row items-center gap-2 mb-12">
-            <View className="w-6 h-7 bg-orange-500 rounded" />
+            <View className="w-6 h-7 bg-[#FF5C35] rounded" />
             <ThemedText className="text-2xl font-extrabold">
-              Bilet<ThemedText className="text-orange-500">Flow</ThemedText>
+              Bilet<ThemedText className="text-[#FF5C35]">Flow</ThemedText>
             </ThemedText>
           </View>
 
           {/* Copy Section */}
           <View className="mb-7">
-            <ThemedText className="text-xs font-bold text-orange-500 mb-2 tracking-widest">
+            <ThemedText className="text-xs font-bold text-[#FF5C35] mb-2 tracking-widest">
               WELCOME BACK
             </ThemedText>
             <ThemedText className="text-3xl font-bold leading-tight mb-2">
               Your next great{'\n'}night starts here.
             </ThemedText>
-            <ThemedText className="text-sm text-gray-400">
+            <ThemedText className="text-sm text-[#98A2B3]">
               Sign in to access your tickets, saved events and faster checkout.
             </ThemedText>
           </View>
@@ -70,8 +70,8 @@ export default function LoginScreen() {
             <TextInput
               placeholder="you@example.com"
               placeholderTextColor="#98A2B3"
-              style={{ color: '#F5F5F0' }}
-              className="bg-slate-800 rounded-lg px-4 py-3 text-base border border-slate-700"
+
+              className="bg-[#101828] rounded-lg px-4 py-3 text-base text-[#F5F5F0] border border-[#344054]"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -85,17 +85,17 @@ export default function LoginScreen() {
             <View className="flex-row justify-between items-center mb-2">
               <ThemedText className="text-sm font-semibold">Password</ThemedText>
               <TouchableOpacity>
-                <ThemedText className="text-xs text-orange-500 font-semibold">
+                <ThemedText className="text-xs text-[#FF5C35] font-semibold">
                   Forgot password?
                 </ThemedText>
               </TouchableOpacity>
             </View>
-            <View className="flex-row items-center bg-slate-800 rounded-lg border border-slate-700">
+            <View className="flex-row items-center bg-[#101828] rounded-lg border border-[#344054]">
               <TextInput
                 placeholder="••••••••"
                 placeholderTextColor="#98A2B3"
-                style={{ color: '#F5F5F0', flex: 1 }}
-                className="px-4 py-3 text-base"
+
+                className="flex-1 px-4 py-3 text-base text-[#F5F5F0]"
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
@@ -118,39 +118,39 @@ export default function LoginScreen() {
               <TouchableOpacity
                 onPress={() => setRememberMe(!rememberMe)}
                 className={`w-5 h-5 rounded border-2 items-center justify-center ${
-                  rememberMe ? 'bg-orange-500 border-orange-500' : 'border-slate-600'
+                  rememberMe ? 'bg-[#FF5C35] border-[#FF5C35]' : 'border-[#344054]'
                 }`}
               >
-                {rememberMe && <ThemedText className="text-xs font-bold text-black">✓</ThemedText>}
+                {rememberMe && <ThemedText className="text-xs font-bold text-white">✓</ThemedText>}
               </TouchableOpacity>
               <ThemedText className="text-sm">Remember me</ThemedText>
             </View>
-            <ThemedText className="text-xs text-gray-400">
+            <ThemedText className="text-xs text-[#98A2B3]">
               By signing in, you agree to our{' '}
-              <ThemedText className="text-orange-500 font-semibold">Terms of Service</ThemedText>
+              <ThemedText className="text-[#FF5C35] font-semibold">Terms of Service</ThemedText>
               {' '}and{' '}
-              <ThemedText className="text-orange-500 font-semibold">Privacy Policy</ThemedText>
+              <ThemedText className="text-[#FF5C35] font-semibold">Privacy Policy</ThemedText>
             </ThemedText>
           </View>
 
           {/* Login Button */}
           <TouchableOpacity
-            className={`bg-orange-500 rounded-lg py-4 items-center mb-6 ${
+            className={`bg-[#FF5C35] rounded-lg py-4 items-center mb-6 ${
               loading ? 'opacity-70' : ''
             }`}
             onPress={handleLogin}
             disabled={loading}
           >
-            <ThemedText className="text-black font-bold text-base">
+            <ThemedText className="text-white font-bold text-base">
               {loading ? 'Signing in...' : 'Sign in'}
             </ThemedText>
           </TouchableOpacity>
 
           {/* Sign Up Link */}
           <View className="flex-row justify-center gap-1">
-            <ThemedText className="text-sm text-gray-400">Don't have an account?</ThemedText>
+            <ThemedText className="text-sm text-[#98A2B3]">Don't have an account?</ThemedText>
             <TouchableOpacity onPress={() => router.push('/')}>
-              <ThemedText className="text-sm text-orange-500 font-bold">Sign up</ThemedText>
+              <ThemedText className="text-sm text-[#FF5C35] font-bold">Sign up</ThemedText>
             </TouchableOpacity>
           </View>
         </ThemedView>

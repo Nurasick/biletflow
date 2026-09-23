@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StatusBar, TextInput, TouchableOpacity, SafeAreaView, View, ScrollView } from 'react-native';
 import { SafeAreaView as SafeAreaViewContext } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -33,6 +34,7 @@ const EVENTS = [
 export default function HomeScreen() {
   const [activeCategory, setActiveCategory] = useState('Concerts');
   const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
 
   return (
     <SafeAreaViewContext style={{ flex: 1, backgroundColor: '#101828' }}>
@@ -126,7 +128,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Featured Banner */}
-          <TouchableOpacity style={{ backgroundColor: '#182230', borderRadius: 16, overflow: 'hidden', paddingHorizontal: 16, paddingVertical: 16, marginBottom: 16, borderWidth: 1, borderColor: '#344054', minHeight: 120 }}>
+          <TouchableOpacity onPress={() => router.push('/event-details')} style={{ backgroundColor: '#182230', borderRadius: 16, overflow: 'hidden', paddingHorizontal: 16, paddingVertical: 16, marginBottom: 16, borderWidth: 1, borderColor: '#344054', minHeight: 120 }}>
             <ThemedText style={{ fontSize: 11, fontWeight: '700', color: '#FFA38B', marginBottom: 8, letterSpacing: 1 }}>
               FEATURED
             </ThemedText>
