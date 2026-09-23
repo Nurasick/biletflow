@@ -1,25 +1,210 @@
 {
   "components": {
     "schemas": {
-      "EventRead": {
+      "EventCreate": {
+        "description": "What an organizer sends to create a draft.\n\nNo organizer id and no status: the owner comes from the access token, and\nevery event starts as a draft. Status changes go through dedicated actions.",
         "properties": {
           "capacity": {
-            "default": 0,
-            "minimum": 0.0,
-            "title": "Capacity",
-            "type": "integer"
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
           },
           "category": {
-            "default": "other",
-            "enum": [
-              "concert",
-              "conference",
-              "sport",
-              "theater",
-              "other"
+            "anyOf": [
+              {
+                "enum": [
+                  "concert",
+                  "conference",
+                  "sport",
+                  "theater",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Category",
+            "title": "Category"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
             "type": "string"
+          },
+          "registration_closes_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Closes At"
+          },
+          "registration_opens_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Opens At"
+          },
+          "seating_mode": {
+            "default": "general_admission",
+            "enum": [
+              "general_admission",
+              "assigned"
+            ],
+            "title": "Seating Mode",
+            "type": "string"
+          },
+          "slug": {
+            "maxLength": 200,
+            "minLength": 3,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "timezone": {
+            "maxLength": 64,
+            "title": "Timezone",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "venue_address": {
+            "minLength": 1,
+            "title": "Venue Address",
+            "type": "string"
+          },
+          "venue_name": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Venue Name",
+            "type": "string"
+          },
+          "visibility": {
+            "default": "public",
+            "enum": [
+              "public",
+              "unlisted",
+              "private"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "venue_name",
+          "venue_address",
+          "starts_at",
+          "ends_at",
+          "timezone"
+        ],
+        "title": "EventCreate",
+        "type": "object"
+      },
+      "EventRead": {
+        "properties": {
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "capacity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "concert",
+                  "conference",
+                  "sport",
+                  "theater",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
           },
           "created_at": {
             "format": "date-time",
@@ -37,39 +222,20 @@
             ],
             "title": "Description"
           },
-          "end_time": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "End Time"
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
           },
           "id": {
             "title": "Id",
             "type": "integer"
           },
-          "image_url": {
-            "anyOf": [
-              {
-                "maxLength": 512,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Image Url"
-          },
-          "organizer_id": {
-            "title": "Organizer Id",
+          "organizer_profile_id": {
+            "title": "Organizer Profile Id",
             "type": "integer"
           },
-          "registration_end": {
+          "published_at": {
             "anyOf": [
               {
                 "format": "date-time",
@@ -79,9 +245,9 @@
                 "type": "null"
               }
             ],
-            "title": "Registration End"
+            "title": "Published At"
           },
-          "registration_start": {
+          "registration_closes_at": {
             "anyOf": [
               {
                 "format": "date-time",
@@ -91,26 +257,52 @@
                 "type": "null"
               }
             ],
-            "title": "Registration Start"
+            "title": "Registration Closes At"
           },
-          "start_time": {
+          "registration_opens_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Opens At"
+          },
+          "seating_mode": {
+            "enum": [
+              "general_admission",
+              "assigned"
+            ],
+            "title": "Seating Mode",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "starts_at": {
             "format": "date-time",
-            "title": "Start Time",
+            "title": "Starts At",
             "type": "string"
           },
           "status": {
-            "default": "draft",
             "enum": [
               "draft",
               "published",
-              "unlisted",
-              "cancelled"
+              "cancelled",
+              "suspended"
             ],
             "title": "Status",
             "type": "string"
           },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
           "title": {
-            "maxLength": 255,
             "title": "Title",
             "type": "string"
           },
@@ -120,24 +312,14 @@
             "type": "string"
           },
           "venue_address": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Venue Address"
+            "title": "Venue Address",
+            "type": "string"
           },
           "venue_name": {
-            "maxLength": 255,
             "title": "Venue Name",
             "type": "string"
           },
           "visibility": {
-            "default": "public",
             "enum": [
               "public",
               "unlisted",
@@ -148,15 +330,219 @@
           }
         },
         "required": [
-          "title",
-          "venue_name",
-          "start_time",
           "id",
-          "organizer_id",
+          "slug",
+          "organizer_profile_id",
+          "title",
+          "description",
+          "category",
+          "cover_image_url",
+          "status",
+          "visibility",
+          "seating_mode",
+          "venue_name",
+          "venue_address",
+          "starts_at",
+          "ends_at",
+          "timezone",
+          "capacity",
+          "registration_opens_at",
+          "registration_closes_at",
+          "published_at",
+          "cancelled_at",
           "created_at",
           "updated_at"
         ],
         "title": "EventRead",
+        "type": "object"
+      },
+      "EventUpdate": {
+        "description": "A partial update. Omitted fields are left alone.\n\nThe window checks here only see the fields in the request; the service\nre-checks them against the stored values after merging.",
+        "properties": {
+          "capacity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "concert",
+                  "conference",
+                  "sport",
+                  "theater",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "registration_closes_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Closes At"
+          },
+          "registration_opens_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Opens At"
+          },
+          "seating_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "general_admission",
+                  "assigned"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seating Mode"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "venue_address": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue Address"
+          },
+          "venue_name": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue Name"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "unlisted",
+                  "private"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visibility"
+          }
+        },
+        "title": "EventUpdate",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -630,10 +1016,124 @@
         ]
       }
     },
-    "/api/v1/events/test": {
+    "/api/v1/events": {
       "get": {
-        "description": "\u041f\u0440\u043e\u0432\u0435\u0440\u043e\u0447\u043d\u044b\u0439 \u0440\u0443\u0447\u043a\u0430: \u043e\u0442\u0434\u0430\u0451\u0442 \u0444\u0435\u0439\u043a\u043e\u0432\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0447\u0435\u0440\u0435\u0437 \u0441\u0445\u0435\u043c\u0443 EventRead.",
-        "operationId": "test_event_schema_api_v1_events_test_get",
+        "operationId": "list_events_api_v1_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventRead"
+                  },
+                  "title": "Response List Events Api V1 Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Events",
+        "tags": [
+          "events"
+        ]
+      },
+      "post": {
+        "operationId": "create_event_api_v1_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/events/{slug}": {
+      "get": {
+        "operationId": "read_event_api_v1_events__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -644,9 +1144,19 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
-        "summary": "Test Event Schema",
+        "summary": "Read Event",
         "tags": [
           "events"
         ]
@@ -670,6 +1180,93 @@
         "summary": "Health Check",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/organizer/events": {
+      "get": {
+        "operationId": "list_my_events_api_v1_organizer_events_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventRead"
+                  },
+                  "title": "Response List My Events Api V1 Organizer Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Events",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}": {
+      "patch": {
+        "operationId": "update_event_api_v1_organizer_events__event_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Event",
+        "tags": [
+          "events"
         ]
       }
     },
