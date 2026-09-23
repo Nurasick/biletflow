@@ -1,4 +1,5 @@
 from app.db.base_class import Base
+from app.models.event import Event
 from app.models.organizer import OrganizerProfile, PayoutAccount
 from app.models.token import UserToken
 from app.models.user import User
