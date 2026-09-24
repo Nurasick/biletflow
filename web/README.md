@@ -1,5 +1,23 @@
 # BiletFlow web
 
+## Organizer profile (frontend demo)
+
+Open `/organizer/profile` to preview the light organizer form without a backend.
+It uses the dummy session and profile in `src/features/Organizer/model/dummyData.ts`.
+Values are saved in localStorage per demo user and survive a reload. Contact and
+payout fields use React Hook Form + Zod, with React Query for loading/saving.
+
+Change `DUMMY_SESSION` to `null` to preview the login redirect, or change its role
+to `attendee` to preview denied access. Set `DUMMY_ERRORS.load` or `.save` to `true`
+to preview errors; failed saves keep entered values. This is a simulated frontend
+guard, not server authorization. Replace the dummy session/API adapter with real
+authenticated organizer endpoints when the backend is ready.
+
+Payouts are simulation-only: choose a demo provider and a reference such as
+`demo_music_club`. Clear both fields to disconnect. No real payout is performed.
+To check: edit and save, reload, discard an edit, try invalid email/phone/reference
+values, then exercise the error and access states above.
+
 Run `npm install`, then `npm run dev`. The backend must be running with its
 migrations applied. The default API URL is `http://localhost:8000/api/v1`;
 copy `.env.example` to `.env.local` to override `VITE_API_URL`.
