@@ -268,6 +268,32 @@ def test_update_event_rejects_an_end_before_the_stored_start(api, db, organizer)
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("field", ["title", "venue_name", "starts_at", "timezone", "visibility"])
+def test_update_event_rejects_an_explicit_null_for_a_required_field(api, db, organizer, field):
+    user, profile = organizer
+    event = add_event(db, profile)
+
+    response = api.patch(f"{MY_EVENTS}/{event.id}", json={field: None}, headers=auth(user))
+
+    assert response.status_code == 422
+    assert f"{field} cannot be null" in response.text
+
+
+def test_update_event_accepts_an_explicit_null_for_an_optional_field(api, db, organizer):
+    user, profile = organizer
+    event = add_event(db, profile, description="Old", capacity=100)
+
+    response = api.patch(
+        f"{MY_EVENTS}/{event.id}",
+        json={"description": None, "capacity": None},
+        headers=auth(user),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["description"] is None
+    assert response.json()["capacity"] is None
+
+
 def test_update_event_refuses_a_cancelled_event(api, db, organizer):
     user, profile = organizer
     event = add_event(db, profile, status=EventStatus.CANCELLED)
