@@ -621,6 +621,424 @@
         "title": "RefreshRequest",
         "type": "object"
       },
+      "TicketTypeCreate": {
+        "properties": {
+          "currency": {
+            "const": "KZT",
+            "default": "KZT",
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_hidden": {
+            "default": false,
+            "title": "Is Hidden",
+            "type": "boolean"
+          },
+          "max_per_order": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Per Order"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "default": 0,
+            "title": "Position",
+            "type": "integer"
+          },
+          "price_minor": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Price Minor",
+            "type": "integer"
+          },
+          "quantity_total": {
+            "minimum": 1.0,
+            "title": "Quantity Total",
+            "type": "integer"
+          },
+          "sales_end_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales End At"
+          },
+          "sales_start_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Start At"
+          }
+        },
+        "required": [
+          "name",
+          "quantity_total"
+        ],
+        "title": "TicketTypeCreate",
+        "type": "object"
+      },
+      "TicketTypePublic": {
+        "properties": {
+          "available": {
+            "readOnly": true,
+            "title": "Available",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "max_per_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Per Order"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_minor": {
+            "title": "Price Minor",
+            "type": "integer"
+          },
+          "sales_end_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales End At"
+          },
+          "sales_start_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Start At"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "price_minor",
+          "currency",
+          "sales_start_at",
+          "sales_end_at",
+          "max_per_order",
+          "available"
+        ],
+        "title": "TicketTypePublic",
+        "type": "object"
+      },
+      "TicketTypeRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_hidden": {
+            "title": "Is Hidden",
+            "type": "boolean"
+          },
+          "max_per_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Per Order"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "price_minor": {
+            "title": "Price Minor",
+            "type": "integer"
+          },
+          "quantity_reserved": {
+            "title": "Quantity Reserved",
+            "type": "integer"
+          },
+          "quantity_sold": {
+            "title": "Quantity Sold",
+            "type": "integer"
+          },
+          "quantity_total": {
+            "title": "Quantity Total",
+            "type": "integer"
+          },
+          "sales_end_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales End At"
+          },
+          "sales_start_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Start At"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "event_id",
+          "name",
+          "description",
+          "price_minor",
+          "currency",
+          "quantity_total",
+          "quantity_sold",
+          "quantity_reserved",
+          "sales_start_at",
+          "sales_end_at",
+          "max_per_order",
+          "is_hidden",
+          "position",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TicketTypeRead",
+        "type": "object"
+      },
+      "TicketTypeUpdate": {
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "const": "KZT",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_hidden": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Hidden"
+          },
+          "max_per_order": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Per Order"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "price_minor": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Minor"
+          },
+          "quantity_total": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity Total"
+          },
+          "sales_end_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales End At"
+          },
+          "sales_start_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Start At"
+          }
+        },
+        "title": "TicketTypeUpdate",
+        "type": "object"
+      },
       "TokenResponse": {
         "description": "The answer to a login or a refresh.\n\nWhich optional half is populated says how the caller was served. In bearer\nmode `refresh_token` is present and the client stores both. In cookie mode\nthe refresh token goes out as an httpOnly cookie and never appears here,\nand `csrf_token` carries the value to echo back on the next refresh.",
         "properties": {
@@ -1162,6 +1580,52 @@
         ]
       }
     },
+    "/api/v1/events/{slug}/ticket-types": {
+      "get": {
+        "operationId": "list_public_ticket_types_api_v1_events__slug__ticket_types_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TicketTypePublic"
+                  },
+                  "title": "Response List Public Ticket Types Api V1 Events  Slug  Ticket Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Public Ticket Types",
+        "tags": [
+          "ticket-types"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "health_check_api_v1_health_get",
@@ -1267,6 +1731,178 @@
         "summary": "Update Event",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/ticket-types": {
+      "get": {
+        "operationId": "list_my_ticket_types_api_v1_organizer_events__event_id__ticket_types_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TicketTypeRead"
+                  },
+                  "title": "Response List My Ticket Types Api V1 Organizer Events  Event Id  Ticket Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Ticket Types",
+        "tags": [
+          "ticket-types"
+        ]
+      },
+      "post": {
+        "operationId": "create_ticket_type_api_v1_organizer_events__event_id__ticket_types_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketTypeCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketTypeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Ticket Type",
+        "tags": [
+          "ticket-types"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/ticket-types/{ticket_type_id}": {
+      "patch": {
+        "operationId": "update_ticket_type_api_v1_organizer_events__event_id__ticket_types__ticket_type_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ticket_type_id",
+            "required": true,
+            "schema": {
+              "title": "Ticket Type Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketTypeUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketTypeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Ticket Type",
+        "tags": [
+          "ticket-types"
         ]
       }
     },
