@@ -3,6 +3,22 @@
     "schemas": {
       "EventCreate": {
         "description": "What an organizer sends to create a draft.\n\nNo organizer id and no status: the owner comes from the access token, and\nevery event starts as a draft. Status changes go through dedicated actions.",
+        "examples": [
+          {
+            "capacity": 500,
+            "category": "concert",
+            "description": "An evening of live jazz.",
+            "ends_at": "2030-11-30T22:00:00+05:00",
+            "seating_mode": "general_admission",
+            "slug": "jazz-night-almaty",
+            "starts_at": "2030-11-30T19:00:00+05:00",
+            "timezone": "Asia/Almaty",
+            "title": "Jazz Night",
+            "venue_address": "Momyshuly Ave 1, Almaty",
+            "venue_name": "Almaty Arena",
+            "visibility": "public"
+          }
+        ],
         "properties": {
           "capacity": {
             "anyOf": [
@@ -358,6 +374,12 @@
       },
       "EventUpdate": {
         "description": "A partial update. Omitted fields are left alone.\n\nThe window checks here only see the fields in the request; the service\nre-checks them against the stored values after merging.",
+        "examples": [
+          {
+            "capacity": 600,
+            "title": "Jazz Night II"
+          }
+        ],
         "properties": {
           "capacity": {
             "anyOf": [
@@ -583,6 +605,12 @@
       },
       "LoginRequest": {
         "description": "Credentials for POST /auth/login.\n\nInherits the email normalisation from UserBase so a login and the account\nit belongs to agree on what the address is.",
+        "examples": [
+          {
+            "email": "organizer@example.com",
+            "password": "correct-horse-battery"
+          }
+        ],
         "properties": {
           "email": {
             "format": "email",
@@ -622,6 +650,17 @@
         "type": "object"
       },
       "TicketTypeCreate": {
+        "examples": [
+          {
+            "description": "Standing area",
+            "is_hidden": false,
+            "max_per_order": 6,
+            "name": "General admission",
+            "position": 0,
+            "price_minor": 500000,
+            "quantity_total": 200
+          }
+        ],
         "properties": {
           "currency": {
             "const": "KZT",
@@ -916,6 +955,12 @@
         "type": "object"
       },
       "TicketTypeUpdate": {
+        "examples": [
+          {
+            "price_minor": 450000,
+            "quantity_total": 250
+          }
+        ],
         "properties": {
           "currency": {
             "anyOf": [
@@ -1082,6 +1127,16 @@
         "type": "object"
       },
       "UserCreate": {
+        "examples": [
+          {
+            "email": "organizer@example.com",
+            "first_name": "Aigerim",
+            "last_name": "Sultanova",
+            "locale": "ru",
+            "password": "correct-horse-battery",
+            "phone": "+77011234567"
+          }
+        ],
         "properties": {
           "email": {
             "format": "email",

@@ -72,6 +72,29 @@ class EventCreate(BaseModel):
     registration_opens_at: AwareDatetime | None = None
     registration_closes_at: AwareDatetime | None = None
 
+    # Swagger pre-fills request bodies from this instead of inventing a
+    # 200-character slug and "string" for every text field.
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "slug": "jazz-night-almaty",
+                    "title": "Jazz Night",
+                    "description": "An evening of live jazz.",
+                    "category": "concert",
+                    "visibility": "public",
+                    "seating_mode": "general_admission",
+                    "venue_name": "Almaty Arena",
+                    "venue_address": "Momyshuly Ave 1, Almaty",
+                    "starts_at": "2030-11-30T19:00:00+05:00",
+                    "ends_at": "2030-11-30T22:00:00+05:00",
+                    "timezone": "Asia/Almaty",
+                    "capacity": 500,
+                }
+            ]
+        }
+    )
+
     @model_validator(mode="after")
     def check_windows(self) -> Self:
         _check_windows(
@@ -108,6 +131,11 @@ class EventUpdate(BaseModel):
     capacity: int | None = Field(default=None, gt=0)
     registration_opens_at: AwareDatetime | None = None
     registration_closes_at: AwareDatetime | None = None
+
+    # Deliberately small: in a PATCH, every field left in the body is applied.
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"title": "Jazz Night II", "capacity": 600}]}
+    )
 
     @model_validator(mode="after")
     def check_windows(self) -> Self:

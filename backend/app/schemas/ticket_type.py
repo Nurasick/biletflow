@@ -31,6 +31,24 @@ class TicketTypeCreate(BaseModel):
     is_hidden: bool = Field(default=False)
     position: int = Field(default=0)
 
+    # Swagger pre-fills request bodies from this. Without it, it invents
+    # "string" names and is_hidden: true, and hides the ticket type by accident.
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "General admission",
+                    "description": "Standing area",
+                    "price_minor": 500000,
+                    "quantity_total": 200,
+                    "max_per_order": 6,
+                    "is_hidden": False,
+                    "position": 0,
+                }
+            ]
+        }
+    )
+
     @model_validator(mode="after")
     def check_window(self) -> Self:
         _check_sales_windows(
@@ -51,6 +69,11 @@ class TicketTypeUpdate(BaseModel):
     max_per_order: int | None = Field(default=None, gt=0)
     is_hidden: bool | None = Field(default=None)
     position: int | None = Field(default=None)
+
+    # Deliberately small: in a PATCH, every field left in the body is applied.
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"price_minor": 450000, "quantity_total": 250}]}
+    )
 
     @model_validator(mode="after")
     def check_window(self) -> Self:

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.user import UserBase
 
@@ -13,6 +13,12 @@ class LoginRequest(UserBase):
     """
 
     password: str = Field(min_length=1)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"email": "organizer@example.com", "password": "correct-horse-battery"}]
+        }
+    )
 
 
 class RefreshRequest(BaseModel):

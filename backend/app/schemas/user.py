@@ -20,6 +20,23 @@ class UserCreate(UserBase):
     phone: str | None = Field(default=None, max_length=32)
     locale: Literal["kk", "ru", "en"]
 
+    # Same credentials as LoginRequest's example, so /docs can register and
+    # then log in without editing either body.
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "email": "organizer@example.com",
+                    "password": "correct-horse-battery",
+                    "first_name": "Aigerim",
+                    "last_name": "Sultanova",
+                    "phone": "+77011234567",
+                    "locale": "ru",
+                }
+            ]
+        }
+    )
+
 
 class UserRead(UserBase):
     id: int
