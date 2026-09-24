@@ -8,9 +8,15 @@ import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { AccountPage } from "./pages/AccountPage";
 import { GuestRoute, ProtectedRoute } from "./shared/auth/RouteGuards";
 import { Layout } from "./shared/Layout/Layout";
+import { OrganizerProfilePage } from "./pages/OrganizerProfilePage";
+import { OrganizerRoute } from "./shared/auth/OrganizerRoute";
 
 function App() {
   const router = createBrowserRouter([
+    {
+      element: <OrganizerRoute />,
+      children: [{ path: "/organizer/profile", element: <OrganizerProfilePage /> }],
+    },
     {
       element: <GuestRoute />,
       children: [

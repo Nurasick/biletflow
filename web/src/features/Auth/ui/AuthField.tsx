@@ -10,7 +10,7 @@ type AuthFieldProps = {
   registration: UseFormRegisterReturn;
   error?: string;
   errorId?: string;
-  type?: "text" | "email" | "password";
+  type?: "text" | "email" | "password" | "tel";
   autoComplete?: string;
   placeholder?: string;
   className?: string;
