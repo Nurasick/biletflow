@@ -33,7 +33,7 @@ class StaffAssignment(Base):
     __tablename__ = "staff_assignments"
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     event_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("events.id"))
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"),index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
     role: Mapped[StaffRole] = mapped_column(STAFF_ROLE, server_default=StaffRole.ADMIN)
     assigned_by_user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
