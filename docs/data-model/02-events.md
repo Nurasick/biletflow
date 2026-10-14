@@ -323,14 +323,17 @@ error toast.
 
 ## Build checklist
 
-- [ ] `app/models/event.py` — `events`
-- [ ] `app/models/ticket_type.py` — `ticket_types` with all three CHECK constraints
+- [x] `app/models/event.py` — `events`
+- [x] `app/models/ticket_type.py` — `ticket_types` with all three CHECK constraints
 - [ ] `app/models/activation.py` — `event_activations`
-- [ ] `app/models/staff.py` — `staff_assignments`, if deferred from 01
-- [ ] Import all of them in `app/db/base.py`
-- [ ] `alembic revision --autogenerate -m "events and inventory"` — **read it**
-- [ ] Verify the CHECK constraints reached the migration. Autogenerate is
+- [x] `app/models/staff.py` — `staff_assignments`, if deferred from 01
+- [x] Import all of them in `app/db/base.py`
+- [x] `alembic revision --autogenerate -m "events and inventory"` — **read it**
+- [x] Verify the CHECK constraints reached the migration. Autogenerate is
       unreliable about these; if they're missing, add them by hand
+- [x] Publish transition (`draft → published`) with the ≥1 ticket type guard.
+      Nothing can be bought until this exists — `PATCH` deliberately refuses
+      `status`
 - [ ] Prove the constraint works: try `UPDATE ticket_types SET quantity_sold =
       quantity_total + 1` in `psql` and confirm Postgres refuses
 - [ ] Derived-status helper for Upcoming/Active/Completed — with the clock frozen
