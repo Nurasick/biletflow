@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -6,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.event import Event, EventStatus, EventVisibility
 from app.models.organizer import OrganizerProfile
+from app.models.ticket_type import TicketType
 from app.models.user import User
 from app.schemas.event import EventCreate, EventUpdate
 
@@ -20,6 +22,14 @@ class EventNotEditable(Exception):
 
 class InvalidEventWindow(Exception):
     """The merged dates break one of the ordering CHECK constraints."""
+
+
+class CannotPublish(Exception):
+    """A guard on draft -> published failed. `reason` says which one."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
 
 
 def get_organizer_profile(db: Session, user: User) -> OrganizerProfile | None:
@@ -53,6 +63,32 @@ def update_event(db: Session, event: Event, data: EventUpdate) -> Event:
         # constraints on the table can, so they decide.
         db.rollback()
         raise InvalidEventWindow from None
+    db.refresh(event)
+    return event
+
+
+def publish_event(db: Session, event: Event, now: datetime | None = None) -> Event:
+    """draft -> published, with the guards from docs/state-machines.md section 1.
+
+    Venue and times are NOT NULL columns, so that guard is already enforced.
+    """
+    now = now or datetime.now(UTC)
+    if event.status != EventStatus.DRAFT:
+        raise CannotPublish(f"only a draft can be published; this event is {event.status}")
+    starts_at = event.starts_at if event.starts_at.tzinfo else event.starts_at.replace(tzinfo=UTC)
+    if starts_at <= now:
+        raise CannotPublish("starts_at must be in the future")
+    has_visible_type = db.scalar(
+        select(func.count())
+        .select_from(TicketType)
+        .where(TicketType.event_id == event.id, TicketType.is_hidden.is_(False))
+    )
+    if not has_visible_type:
+        raise CannotPublish("add at least one visible ticket type first")
+
+    event.status = EventStatus.PUBLISHED
+    event.published_at = now
+    db.commit()
     db.refresh(event)
     return event
 

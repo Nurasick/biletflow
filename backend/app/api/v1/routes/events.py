@@ -62,3 +62,14 @@ def update_event(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "ends_at must be after starts_at, and registration must close after it opens",
         ) from None
+
+
+@router.post("/organizer/events/{event_id}/publish", response_model=EventRead)
+def publish_event(event_id: int, organizer: CurrentOrganizer, db: DbSession) -> Event:
+    event = event_service.get_owned_event(db, organizer, event_id)
+    if event is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Event not found")
+    try:
+        return event_service.publish_event(db, event)
+    except event_service.CannotPublish as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, exc.reason) from None
