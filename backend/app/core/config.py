@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
+    # How often the app releases expired checkout holds. 0 turns the sweeper
+    # off, which the test suite does so no test touches the real database.
+    HOLD_SWEEP_INTERVAL_SECONDS: int = 30
 
     CORS_ORIGINS: Annotated[list[AnyHttpUrl], NoDecode] = []
 
