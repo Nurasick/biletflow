@@ -56,6 +56,27 @@ def get_current_active_user(user: Annotated[User, Depends(get_current_user)]) ->
 
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
 
+optional_bearer_scheme = HTTPBearer(bearerFormat="JWT", auto_error=False)
+
+
+def get_optional_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(optional_bearer_scheme)],
+    db: DbSession,
+) -> User | None:
+    """The signed-in user, or None for a guest. Guests may buy (03-ordering.md).
+
+    A token that is present but invalid is still a 401, not a silent guest:
+    otherwise an expired session would quietly create an ownerless order the
+    user then cannot find under "my orders".
+    """
+    if credentials is None:
+        return None
+    user = get_current_user(credentials, db)
+    return get_current_active_user(user)
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_user)]
+
 
 def get_current_organizer(user: CurrentUser, db: DbSession) -> OrganizerProfile:
     profile = get_organizer_profile(db, user)

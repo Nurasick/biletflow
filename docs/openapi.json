@@ -1,6 +1,197 @@
 {
   "components": {
     "schemas": {
+      "AttendeeIn": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "full_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "required": [
+          "full_name"
+        ],
+        "title": "AttendeeIn",
+        "type": "object"
+      },
+      "CheckoutRequest": {
+        "properties": {
+          "contact_email": {
+            "format": "email",
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "contact_phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Phone"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLineIn"
+            },
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contact_name",
+          "contact_email",
+          "items"
+        ],
+        "title": "CheckoutRequest",
+        "type": "object"
+      },
+      "CheckoutResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "fee_minor": {
+            "title": "Fee Minor",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItemRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "subtotal_minor": {
+            "title": "Subtotal Minor",
+            "type": "integer"
+          },
+          "tickets": {
+            "items": {
+              "$ref": "#/components/schemas/TicketRead"
+            },
+            "title": "Tickets",
+            "type": "array"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_number",
+          "event_id",
+          "status",
+          "contact_name",
+          "contact_email",
+          "subtotal_minor",
+          "discount_minor",
+          "fee_minor",
+          "total_minor",
+          "currency",
+          "expires_at",
+          "confirmed_at",
+          "created_at",
+          "items",
+          "tickets",
+          "access_token"
+        ],
+        "title": "CheckoutResponse",
+        "type": "object"
+      },
       "EventCreate": {
         "description": "What an organizer sends to create a draft.\n\nNo organizer id and no status: the owner comes from the access token, and\nevery event starts as a draft. Status changes go through dedicated actions.",
         "properties": {
@@ -602,6 +793,178 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "OrderItemRead": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "subtotal_minor": {
+            "title": "Subtotal Minor",
+            "type": "integer"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          },
+          "unit_price_minor": {
+            "title": "Unit Price Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "ticket_type_id",
+          "quantity",
+          "unit_price_minor",
+          "subtotal_minor"
+        ],
+        "title": "OrderItemRead",
+        "type": "object"
+      },
+      "OrderLineIn": {
+        "properties": {
+          "attendees": {
+            "items": {
+              "$ref": "#/components/schemas/AttendeeIn"
+            },
+            "minItems": 1,
+            "title": "Attendees",
+            "type": "array"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ticket_type_id",
+          "attendees"
+        ],
+        "title": "OrderLineIn",
+        "type": "object"
+      },
+      "OrderRead": {
+        "properties": {
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "fee_minor": {
+            "title": "Fee Minor",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItemRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "subtotal_minor": {
+            "title": "Subtotal Minor",
+            "type": "integer"
+          },
+          "tickets": {
+            "items": {
+              "$ref": "#/components/schemas/TicketRead"
+            },
+            "title": "Tickets",
+            "type": "array"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_number",
+          "event_id",
+          "status",
+          "contact_name",
+          "contact_email",
+          "subtotal_minor",
+          "discount_minor",
+          "fee_minor",
+          "total_minor",
+          "currency",
+          "expires_at",
+          "confirmed_at",
+          "created_at",
+          "items",
+          "tickets"
+        ],
+        "title": "OrderRead",
+        "type": "object"
+      },
+      "OrderStatus": {
+        "enum": [
+          "pending",
+          "confirmed",
+          "cancelled",
+          "refunded",
+          "partially_refunded",
+          "expired"
+        ],
+        "title": "OrderStatus",
+        "type": "string"
+      },
       "RefreshRequest": {
         "description": "Body for POST /auth/refresh.\n\nOptional because browsers send the refresh token as a cookie instead and\npost no body at all; only clients in bearer mode fill this in.",
         "properties": {
@@ -620,6 +983,43 @@
         },
         "title": "RefreshRequest",
         "type": "object"
+      },
+      "TicketRead": {
+        "properties": {
+          "attendee_name": {
+            "title": "Attendee Name",
+            "type": "string"
+          },
+          "public_code": {
+            "title": "Public Code",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "public_code",
+          "ticket_type_id",
+          "status",
+          "attendee_name"
+        ],
+        "title": "TicketRead",
+        "type": "object"
+      },
+      "TicketStatus": {
+        "enum": [
+          "valid",
+          "checked_in",
+          "cancelled",
+          "refunded"
+        ],
+        "title": "TicketStatus",
+        "type": "string"
       },
       "TicketTypeCreate": {
         "properties": {
@@ -1580,6 +1980,64 @@
         ]
       }
     },
+    "/api/v1/events/{slug}/orders": {
+      "post": {
+        "description": "Reserve and order in one request. Free orders come back `confirmed`\nwith tickets; paid ones come back `pending` until payments exist.",
+        "operationId": "checkout_api_v1_events__slug__orders_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Checkout",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
     "/api/v1/events/{slug}/ticket-types": {
       "get": {
         "operationId": "list_public_ticket_types_api_v1_events__slug__ticket_types_get",
@@ -1644,6 +2102,71 @@
         "summary": "Health Check",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/orders/{order_number}": {
+      "get": {
+        "operationId": "read_order_api_v1_orders__order_number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_number",
+            "required": true,
+            "schema": {
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Order",
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -1729,6 +2252,53 @@
           }
         ],
         "summary": "Update Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/publish": {
+      "post": {
+        "operationId": "publish_event_api_v1_organizer_events__event_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Event",
         "tags": [
           "events"
         ]
@@ -1929,6 +2499,36 @@
         "summary": "Read Current User",
         "tags": [
           "users"
+        ]
+      }
+    },
+    "/api/v1/users/me/orders": {
+      "get": {
+        "operationId": "list_my_orders_api_v1_users_me_orders_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrderRead"
+                  },
+                  "title": "Response List My Orders Api V1 Users Me Orders Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Orders",
+        "tags": [
+          "orders"
         ]
       }
     }

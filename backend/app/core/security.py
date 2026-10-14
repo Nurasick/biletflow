@@ -59,6 +59,15 @@ def create_refresh_token(
     return _create_token(subject, "refresh", delta, {"csrf": csrf} if csrf else None)
 
 
+def create_order_token(order_id: int) -> str:
+    """The signed link that lets a guest, who has no session, open their order.
+
+    Typed "order" so it can never be replayed as an access token, and the
+    reverse: resolve_token_user rejects any type but the one it expects.
+    """
+    return _create_token(order_id, "order", timedelta(days=settings.ORDER_LINK_EXPIRE_DAYS))
+
+
 def decode_token(token: str) -> dict:
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
 
