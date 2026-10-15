@@ -3,21 +3,9 @@ import { ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-type SeatType = 'standard' | 'premium' | 'vip';
+import { EVENT, ROWS, SEAT_PRICE, SEATS_PER_ROW, SOLD_SEATS, formatTenge, type SeatType } from '@/constants/seating';
 
-const ROWS: { name: string; type: SeatType }[] = [
-  { name: '1', type: 'standard' },
-  { name: '2', type: 'standard' },
-  { name: '3', type: 'standard' },
-  { name: '4', type: 'premium' },
-  { name: '5', type: 'premium' },
-  { name: '6', type: 'vip' },
-  { name: '7', type: 'vip' },
-];
-const SEATS_PER_ROW = 12;
-const SOLD_SEATS = new Set(['2-5', '2-6', '5-7', '5-8', '7-4', '7-5', '7-6', '7-7', '7-8', '7-9']);
 const INITIAL_SELECTION = ['3-6', '3-7'];
-const SEAT_PRICE: Record<SeatType, number> = { standard: 8500, premium: 12000, vip: 15000 };
 const COLORS: Record<SeatType, { border: string; background: string; text: string }> = {
   standard: { border: '#FF563D', background: '#111A2A', text: '#FF563D' },
   premium: { border: '#207C6C', background: '#123D3A', text: '#65C9AE' },
@@ -40,6 +28,10 @@ export default function SeatSelectionScreen() {
     return sum + (row ? SEAT_PRICE[row.type] : 0);
   }, 0);
 
+  const handleContinue = () => {
+    router.push({ pathname: '/checkout', params: { seats: selectedSeats.join(',') } });
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-[#0F1728]" edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor="#172235" />
@@ -56,8 +48,8 @@ export default function SeatSelectionScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 16, paddingBottom: 16 }}>
-        <Text className="text-[17px] font-extrabold text-white">Almaty Indie Night</Text>
-        <Text className="mt-1 text-[11px] text-[#98A2B3]">Sat 18 Apr · 19:00 · Main hall</Text>
+        <Text className="text-[17px] font-extrabold text-white">{EVENT.title}</Text>
+        <Text className="mt-1 text-[11px] text-[#98A2B3]">{EVENT.date} · {EVENT.time} · {EVENT.hall}</Text>
 
         <View className="mt-6 h-[38px] justify-center rounded-b-[24px] bg-[#F5F5F0] px-6">
           <Text className="sr-only">Stage</Text>
@@ -123,7 +115,7 @@ export default function SeatSelectionScreen() {
                   <Text className="text-[11px] font-bold text-[#F2F4F7]">Row {seat.split('-')[0]} · Seat {seat.split('-')[1]}</Text>
                   <Text className="mt-[2px] text-[9px] capitalize text-[#98A2B3]">{type}</Text>
                 </View>
-                <Text className="text-[11px] font-extrabold text-white">{SEAT_PRICE[type].toLocaleString('en-US').replaceAll(',', ' ')} ₸</Text>
+                <Text className="text-[11px] font-extrabold text-white">{formatTenge(SEAT_PRICE[type])}</Text>
               </View>
             );
           })}
@@ -133,12 +125,13 @@ export default function SeatSelectionScreen() {
       <View className="flex-row items-center justify-between border-t border-[#344054] bg-[#172235] px-3 py-3">
         <View>
           <Text className="text-[10px] text-[#98A2B3]">Total</Text>
-          <Text className="mt-[2px] text-[14px] font-extrabold text-white">{selectedTotal.toLocaleString('en-US').replaceAll(',', ' ')} ₸</Text>
+          <Text className="mt-[2px] text-[14px] font-extrabold text-white">{formatTenge(selectedTotal)}</Text>
         </View>
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityState={{ disabled: selectedSeats.length === 0 }}
           disabled={selectedSeats.length === 0}
+          onPress={handleContinue}
           className={`h-12 w-[150px] items-center justify-center rounded-xl ${selectedSeats.length ? 'bg-[#FF563D]' : 'bg-[#667085]'}`}>
           <Text className="text-[14px] font-extrabold text-[#101828]">Continue</Text>
         </TouchableOpacity>
