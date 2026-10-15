@@ -1,10 +1,9 @@
 from collections.abc import Sequence
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.deps import CurrentUser, DbSession
-from app.models.organizer import OrganizerProfile
+from app.api.deps import CurrentOrganizer, DbSession
 from app.models.ticket import Ticket
 from app.schemas.ticket import TicketCreate, TicketRead, TicketUpdate
 from app.services import event as event_service
@@ -15,16 +14,6 @@ router = APIRouter(tags=["tickets"])
 MAX_PAGE_SIZE = 100
 
 
-def get_current_organizer(user: CurrentUser, db: DbSession) -> OrganizerProfile:
-    profile = event_service.get_organizer_profile(db, user)
-    if profile is None:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "An organizer profile is required")
-    return profile
-
-
-CurrentOrganizer = Annotated[OrganizerProfile, Depends(get_current_organizer)]
-
-
 @router.get("/events/{event_id}/tickets", response_model=list[TicketRead])
 def list_event_tickets(
     event_id: int,
@@ -32,6 +21,9 @@ def list_event_tickets(
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Sequence[Ticket]:
+    # Drafts are hidden from attendees, and so are their tickets.
+    if ticket_service.get_visible_event(db, event_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Event not found")
     return ticket_service.list_available_tickets(db, event_id=event_id, limit=limit, offset=offset)
 
 
@@ -77,5 +69,5 @@ def update_ticket(
         return ticket_service.update_ticket(db, ticket, data)
     except ticket_service.TicketNotEditable:
         raise HTTPException(
-            status.HTTP_409_CONFLICT, "A sold or cancelled ticket cannot be edited"
+            status.HTTP_409_CONFLICT, "Only available tickets can be edited"
         ) from None

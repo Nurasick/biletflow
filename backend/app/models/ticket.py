@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
@@ -54,7 +55,7 @@ class Ticket(Base):
 
     ticket_code: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     seat_number: Mapped[str | None] = mapped_column(String(50))
-    price: Mapped[float] = mapped_column(Numeric(10, 2))
+    price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
 
     status: Mapped[TicketStatus] = mapped_column(
         _string_enum(TicketStatus, 20), server_default=TicketStatus.AVAILABLE.value

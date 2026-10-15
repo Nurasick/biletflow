@@ -1,13 +1,18 @@
 from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.models.event import Event, EventStatus
 from app.models.order import Order, OrderStatus
 from app.models.ticket import Ticket, TicketStatus
 from app.models.user import User
 from app.schemas.order import OrderCreate
+
+# How long a pending order holds its tickets before they go back on sale.
+RESERVATION_TTL = timedelta(minutes=15)
 
 
 class TicketsNotAvailable(Exception):
@@ -19,20 +24,33 @@ class OrderNotCancellable(Exception):
 
 
 def create_order(db: Session, user: User, data: OrderCreate) -> Order:
+    now = datetime.now(UTC)
+    release_expired_orders(db, now)
+
+    # FOR UPDATE: two checkouts for the same ticket serialise here on Postgres,
+    # and the second one sees it reserved. Locking in id order keeps two
+    # overlapping checkouts from deadlocking each other.
     tickets = db.scalars(
-        select(Ticket).where(
-            Ticket.id.in_(data.ticket_ids), Ticket.status == TicketStatus.AVAILABLE
+        select(Ticket)
+        .join(Event, Ticket.event_id == Event.id)
+        .where(
+            Ticket.id.in_(data.ticket_ids),
+            Ticket.status == TicketStatus.AVAILABLE,
+            Event.status == EventStatus.PUBLISHED,
         )
+        .order_by(Ticket.id)
+        .with_for_update(of=Ticket)
     ).all()
 
     if len(tickets) != len(data.ticket_ids):
+        db.rollback()
         raise TicketsNotAvailable
 
-    total_amount = sum(t.price for t in tickets)
     order = Order(
         user_id=user.id,
-        total_amount=total_amount,
+        total_amount=sum(t.price for t in tickets),
         status=OrderStatus.PENDING,
+        expires_at=now + RESERVATION_TTL,
     )
     db.add(order)
     db.flush()  # Получаем order.id без коммита
@@ -49,6 +67,23 @@ def create_order(db: Session, user: User, data: OrderCreate) -> Order:
 
     db.refresh(order)
     return order
+
+
+def release_expired_orders(db: Session, now: datetime) -> None:
+    """Expire pending orders past their deadline and put their tickets back on sale.
+
+    There is no background sweeper yet, so this runs lazily before every
+    checkout. It flushes but does not commit: the caller's commit covers it.
+    """
+    expired = db.scalars(
+        select(Order)
+        .where(Order.status == OrderStatus.PENDING, Order.expires_at <= now)
+        .with_for_update()
+    ).all()
+    for order in expired:
+        order.status = OrderStatus.EXPIRED
+        _release_tickets(db, order)
+    db.flush()
 
 
 def get_user_order(db: Session, user: User, order_id: int) -> Order | None:
@@ -70,13 +105,17 @@ def cancel_order(db: Session, order: Order) -> Order:
         raise OrderNotCancellable
 
     order.status = OrderStatus.CANCELLED
+    order.cancelled_at = datetime.now(UTC)
+    _release_tickets(db, order)
 
+    db.commit()
+    db.refresh(order)
+    return order
+
+
+def _release_tickets(db: Session, order: Order) -> None:
     # Возвращаем связанные билеты обратно в доступные
     tickets = db.scalars(select(Ticket).where(Ticket.order_id == order.id)).all()
     for ticket in tickets:
         ticket.order_id = None
         ticket.status = TicketStatus.AVAILABLE
-
-    db.commit()
-    db.refresh(order)
-    return order
