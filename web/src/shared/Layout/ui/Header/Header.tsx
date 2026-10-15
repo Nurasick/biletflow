@@ -54,9 +54,9 @@ export const Header = () => {
             <Link to="/login" className="rounded-xl border border-[#D0D5DD] px-5 py-3 text-sm font-semibold">{t("common.signIn")}</Link>
           )}
 
-          <button className="rounded-xl bg-[#FF5C35] px-5 py-3 text-sm font-semibold text-[#101828]">
+          <Link to="/organizer/events/new" className="rounded-xl bg-[#FF5C35] px-5 py-3 text-sm font-semibold text-[#101828]">
             {t("nav.createEvent")}
-          </button>
+          </Link>
         </div>
       </div>
 

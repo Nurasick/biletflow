@@ -64,9 +64,9 @@ export const Hero = () => {
             {t("home.organizerDescription")}
           </p>
 
-          <button className="mt-4 text-sm font-semibold text-[#FF5C35]">
+          <Link to="/organizer/events/new" className="mt-4 inline-block text-sm font-semibold text-[#FF5C35]">
             {t("home.startEvent")}
-          </button>
+          </Link>
         </div>
       </div>
     </section>

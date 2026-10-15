@@ -10,12 +10,16 @@ import { GuestRoute, ProtectedRoute } from "./shared/auth/RouteGuards";
 import { Layout } from "./shared/Layout/Layout";
 import { OrganizerProfilePage } from "./pages/OrganizerProfilePage";
 import { OrganizerRoute } from "./shared/auth/OrganizerRoute";
+import { OrganizerEventPage } from "./pages/OrganizerEventPage";
 
 function App() {
   const router = createBrowserRouter([
     {
       element: <OrganizerRoute />,
-      children: [{ path: "/organizer/profile", element: <OrganizerProfilePage /> }],
+      children: [
+        { path: "/organizer/profile", element: <OrganizerProfilePage /> },
+        { path: "/organizer/events/new", element: <OrganizerEventPage /> },
+      ],
     },
     {
       element: <GuestRoute />,
