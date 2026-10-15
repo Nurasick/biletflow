@@ -1,6 +1,6 @@
 import { Input } from "antd";
 import type { ReactNode } from "react";
-import type { UseFormRegisterReturn } from "react-hook-form";
+import type { FieldError as FormFieldError, UseFormRegisterReturn } from "react-hook-form";
 
 import { FieldError } from "./FormControls";
 
@@ -8,7 +8,7 @@ type AuthFieldProps = {
   id: string;
   label: string;
   registration: UseFormRegisterReturn;
-  error?: string;
+  error?: FormFieldError;
   errorId?: string;
   type?: "text" | "email" | "password" | "tel";
   autoComplete?: string;
@@ -41,7 +41,7 @@ export const AuthField = ({
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
       />
-      <FieldError id={errorId} message={error} />
+      <FieldError id={errorId} error={error} />
     </div>
   );
 };

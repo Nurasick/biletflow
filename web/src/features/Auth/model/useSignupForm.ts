@@ -8,16 +8,16 @@ import { passwordSchema } from "./passwordSchema";
 
 const signupSchema = z
   .object({
-    firstName: z.string().trim().min(1, "Enter your first name").max(100),
-    lastName: z.string().trim().min(1, "Enter your last name").max(100),
-    email: z.email("Enter a valid email address"),
+    firstName: z.string().trim().min(1, "validation.firstName").max(100, "validation.nameMax"),
+    lastName: z.string().trim().min(1, "validation.lastName").max(100, "validation.nameMax"),
+    email: z.email("validation.email"),
     password: passwordSchema,
     confirmPassword: z.string(),
-    terms: z.boolean().refine(Boolean, "Accept the terms to continue"),
+    terms: z.boolean().refine(Boolean, "validation.terms"),
   })
   .refine((values) => values.password === values.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Passwords do not match",
+    message: "validation.passwordMismatch",
   });
 
 type SignupValues = z.infer<typeof signupSchema>;
@@ -55,16 +55,16 @@ export const useSignupForm = (onSuccess: (email: string) => void) => {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.fieldErrors.first_name) {
-          setError("firstName", { message: error.fieldErrors.first_name });
+          setError("firstName", { type: "server", message: error.fieldErrors.first_name });
         }
         if (error.fieldErrors.last_name) {
-          setError("lastName", { message: error.fieldErrors.last_name });
+          setError("lastName", { type: "server", message: error.fieldErrors.last_name });
         }
         if (error.fieldErrors.email) {
-          setError("email", { message: error.fieldErrors.email });
+          setError("email", { type: "server", message: error.fieldErrors.email });
         }
         if (error.fieldErrors.password) {
-          setError("password", { message: error.fieldErrors.password });
+          setError("password", { type: "server", message: error.fieldErrors.password });
         }
       }
     }

@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 export const AboutEvent = () => {
+  const { t } = useTranslation();
   return (
     <section className="mt-6">
-      <h2 className="text-[15px] font-semibold">About this event</h2>
+      <h2 className="text-[15px] font-semibold">{t("event.about")}</h2>
 
       <div className="mt-3 space-y-2">
         <div className="h-2.5 rounded-full bg-[#F5F5F0]" />

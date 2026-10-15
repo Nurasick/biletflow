@@ -1,5 +1,37 @@
 # BiletFlow web
 
+## Translations
+
+The web UI uses i18next and react-i18next. Static copy lives in
+`src/i18n/locales/kk.json`, `ru.json`, and `en.json`. English defines the typed
+translation keys and is the fallback for missing or empty translations, so new
+Kazakh and Russian copy can be added progressively.
+
+Language buttons are available in the public header, authentication pages, and
+organizer workspace. The app uses a saved `biletflow.locale` preference first,
+then a supported browser language, then Kazakh (`kk`). The preference stays in
+the browser, and switching updates the document language, UI component locale,
+dates, prices, plurals, and client validation messages without clearing forms or
+ticket selections. Language codes are `kk`, `ru`, and `en`.
+
+For new static text, add a semantic key to `en.json` and use
+`const { t } = useTranslation()` with `t("your.key")` in the component. Use
+interpolation for complete messages (`t("common.fromPrice", { price })`) and
+i18next plural suffixes (`_one`, `_few`, `_many`, `_other`) with `{ count }`.
+Keep interpolation placeholders consistent across locales. Use `useLocale()`
+for `Intl` formatting. Ant Design strings follow the same locale through
+`LocaleProvider`.
+
+Client validation schemas store `validation.*` keys, which `FieldError`
+translates when rendered. Mark service field errors with `type: "server"` so
+their messages remain unchanged. Event data, profile values, user input, and
+service messages must never be used as translation keys. Local event examples
+use `demo.*` copy; the service adapters and demo organizer profile are unchanged.
+
+`npm test` covers language detection and persistence, fallback, interpolation,
+Russian plurals, validation messages, stable booking identifiers, and locale
+placeholder consistency.
+
 ## Organizer profile (frontend demo)
 
 Open `/organizer/profile` to preview the light organizer form without a backend.
