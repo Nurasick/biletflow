@@ -2,12 +2,12 @@ import '../../global.css';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { Platform, useColorScheme as useSystemColorScheme } from 'react-native';
+import { Platform, View, useColorScheme as useSystemColorScheme } from 'react-native';
 import { useColorScheme as useNativeWindColorScheme } from 'nativewind';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import LoginScreen from './login';
-import { useAuth } from '@/hooks/use-auth';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -20,11 +20,19 @@ function getBrowserColorScheme(): 'light' | 'dark' | null {
 }
 
 export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutContent />
+    </AuthProvider>
+  );
+}
+
+function RootLayoutContent() {
   const systemColorScheme = useSystemColorScheme();
   const [browserColorScheme, setBrowserColorScheme] = useState(getBrowserColorScheme);
   const colorScheme = browserColorScheme ?? systemColorScheme;
   const { setColorScheme } = useNativeWindColorScheme();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isRestoring } = useAuth();
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') {
@@ -45,15 +53,16 @@ export default function RootLayout() {
     setColorScheme(colorScheme === 'dark' ? 'dark' : 'light');
   }, [colorScheme, setColorScheme]);
 
-  // Show login screen if not authenticated
-  if (!isLoggedIn) {
-    return <LoginScreen />;
-  }
-
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
-      <Stack screenOptions={{ headerShown: false }} />
+      {isRestoring ? (
+        <View className="flex-1 bg-[#F5F5F0] dark:bg-[#101828]" />
+      ) : isLoggedIn ? (
+        <Stack screenOptions={{ headerShown: false }} />
+      ) : (
+        <LoginScreen />
+      )}
     </ThemeProvider>
   );
 }
