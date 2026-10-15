@@ -11,12 +11,16 @@ import { Layout } from "./shared/Layout/Layout";
 import { OrganizerProfilePage } from "./pages/OrganizerProfilePage";
 import { OrganizerRoute } from "./shared/auth/OrganizerRoute";
 import { OrganizerEventPage } from "./pages/OrganizerEventPage";
+import { OrganizerEventsPage } from "./pages/OrganizerEventsPage";
+import { OrganizerEventPreviewPage } from "./pages/OrganizerEventPreviewPage";
 
 function App() {
   const router = createBrowserRouter([
     {
       element: <OrganizerRoute />,
       children: [
+        { path: "/organizer/events", element: <OrganizerEventsPage /> },
+        { path: "/organizer/events/:eventId/preview", element: <OrganizerEventPreviewPage /> },
         { path: "/organizer/profile", element: <OrganizerProfilePage /> },
         { path: "/organizer/events/new", element: <OrganizerEventPage /> },
       ],

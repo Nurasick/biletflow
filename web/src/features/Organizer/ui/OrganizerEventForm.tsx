@@ -1,8 +1,9 @@
 import { Alert, Button, Modal } from "antd";
-import { Save } from "lucide-react";
+import { Eye, Save } from "lucide-react";
 import { useState } from "react";
 import { useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { validationMessage } from "../../../i18n/validation";
 import { FieldError } from "../../Auth/ui/FormControls";
@@ -14,11 +15,13 @@ import { useUnsavedEvent } from "../model/useUnsavedEvent";
 import { EventFormField, EventFormSection, EventInput, eventInputClass } from "./EventFormField";
 import { EventImages } from "./EventImages";
 
-export const OrganizerEventForm = ({ draft, saveDraft }: {
+export const OrganizerEventForm = ({ draft, saveDraft, previewHref }: {
   draft: OrganizerEventValues;
   saveDraft: (values: OrganizerEventValues) => Promise<OrganizerEventValues>;
+  previewHref?: string;
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { form, saved, resetVersion, onSubmit, onChange, onReset } = useOrganizerEventForm(draft, saveDraft);
   const { register, control, setValue, formState: { errors, isDirty, isSubmitting, submitCount } } = form;
   const images = useWatch({ control, name: "images" });
@@ -136,6 +139,9 @@ export const OrganizerEventForm = ({ draft, saveDraft }: {
         </p>
         <div className="flex flex-wrap gap-3">
           <Button htmlType="button" onClick={() => setDiscardOpen(true)} disabled={!isDirty || busy}>{t("organizer.discard")}</Button>
+          <Button htmlType="button" disabled={!previewHref || isDirty || busy}
+            icon={<Eye size={16} aria-hidden="true" />} title={isDirty ? t("eventWorkflow.saveFirst") : undefined}
+            onClick={() => { if (previewHref) void navigate(previewHref); }}>{t("eventWorkflow.preview")}</Button>
           <Button htmlType="submit" type="primary" loading={isSubmitting} disabled={!isDirty || busy}
             icon={<Save size={16} aria-hidden="true" />}>
             {isSubmitting ? t("organizer.saving") : t("organizerEvent.saveDraft")}

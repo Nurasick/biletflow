@@ -1,5 +1,5 @@
 import { ConfigProvider } from "antd";
-import { ArrowLeft, BadgeCheck, CalendarPlus, UserRound } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarDays, CalendarPlus, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink } from "react-router-dom";
@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "../../../i18n/LanguageSwitcher";
 export const OrganizerWorkspace = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
   const links = [
+    { to: "/organizer/events", label: t("eventWorkflow.myEvents"), Icon: CalendarDays, end: true },
     { to: "/organizer/events/new", label: t("nav.createEvent"), Icon: CalendarPlus },
     { to: "/organizer/profile", label: t("organizer.profile"), Icon: UserRound },
   ];
@@ -37,8 +38,8 @@ export const OrganizerWorkspace = ({ children }: { children: ReactNode }) => {
               <ArrowLeft size={14} aria-hidden="true" />{t("common.backToEvents")}
             </Link>
             <nav aria-label={t("organizer.navigation")} className="mt-6 flex flex-wrap gap-2 lg:flex-col">
-              {links.map(({ to, label, Icon }) => (
-                <NavLink key={to} to={to} className={({ isActive }) =>
+              {links.map(({ to, label, Icon, end }) => (
+                <NavLink key={to} to={to} end={end} className={({ isActive }) =>
                   `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold ${isActive
                     ? "bg-[#FF5C35]/10 text-[#A93216]" : "text-[#667085] hover:bg-white"}`}>
                   <Icon size={18} aria-hidden="true" />{label}

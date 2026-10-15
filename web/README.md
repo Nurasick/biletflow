@@ -32,6 +32,54 @@ use `demo.*` copy; the service adapters and demo organizer profile are unchanged
 Russian plurals, validation messages, stable booking identifiers, and locale
 placeholder consistency.
 
+## Event preview and publication (frontend demo)
+
+Save a draft at `/organizer/events/new`, then choose **Preview event**. **My
+events** in the organizer navigation opens `/organizer/events`; each saved event
+links to `/organizer/events/:eventId/preview`. The existing demo supports one
+event per organizer. Preview is disabled while the form has unsaved changes.
+
+The preview shows the saved cover and gallery, plain-text description, venue,
+schedule in the event's time zone, registration boundaries, visibility,
+capacity, and visible tickets. It has no checkout controls. A clearly labelled
+sample free admission ticket lets the demo exercise publishing without creating
+backend inventory.
+
+**Publish event** is enabled only when the adapter reports all requirements met:
+a title, venue and address, ordered event times, a future start, and at least one
+visible ticket type. The checklist explains each missing requirement.
+**Unpublish event** requires confirmation and returns the event to draft for
+editing. **Cancel event** requires confirmation, preserves the saved event, and
+is permanent. Published events must be unpublished before editing; cancelled and
+suspended events remain read-only.
+
+The web adapter in `src/shared/api/eventLifecycle.ts` owns state transitions and
+returns complete snapshots with status, requirements, and permitted actions.
+The UI updates after a successful response, refreshes after failed actions,
+disables mutations when a refresh fails, and prevents duplicate submissions.
+Status persists in localStorage per demo organizer; details and images retain
+their existing IndexedDB persistence. Other tabs refresh through storage events,
+and focus and periodic refreshes recheck requirements. Stale confirmation dialogs
+and success messages are dismissed when the saved state changes.
+
+This is a web-only simulation, consistent with the existing organizer workspace.
+It does not publish to the live platform. The current backend contract does not
+provide event lifecycle endpoints. A future HTTP adapter must implement `list`,
+`preview`, `transition`, and a change subscription, returning the same snapshot contract with
+server-authorized actions and requirements. Backend authorization, ticket
+invalidation, notifications, and refunds remain server responsibilities.
+
+Set `EVENT_WORKFLOW_DEMO.errors.load`, `.publish`, `.unpublish`, or `.cancel` to
+exercise failures. Set `EVENT_WORKFLOW_DEMO.ticketTypes` to `[]` and refresh to
+exercise missing tickets; a saved event with a past start exercises the time
+requirement. Failures preserve the previous status and support retry.
+
+`npm test` covers the status/action matrix, publish requirements and their
+revalidation, reload persistence, corrupt storage, failed writes and retries,
+and competing transitions. Manual checks should also cover confirmation
+dismissal, cross-tab updates, failed refreshes, locale switching, and narrow
+screens.
+
 ## Organizer event form (frontend demo)
 
 Open `/organizer/events/new`, use **Create event** in the public header, or choose
@@ -60,9 +108,10 @@ Drafts can include past dates so previously saved events remain editable.
 Unsaved changes are marked beside the save action. Discard requires confirmation
 and restores the last saved values. Internal navigation offers keep-editing/leave
 choices, while reload and tab close use the browser's native unsaved prompt.
-Saving only stores a draft: publishing, invitations, discovery visibility and
-server authorization are outside this frontend demo. The storage adapter is
-isolated in `src/shared/api/organizerEvents.ts` for later backend integration.
+Saving only stores a draft; use **Preview event** to access the simulated
+publication workflow above. Live publishing, invitations, discovery visibility
+and server authorization require backend integration. The draft storage adapter
+is isolated in `src/shared/api/organizerEvents.ts`.
 
 `npm test` includes event schema, time zone/DST, image validation and draft
 persistence/error tests. For a manual check: enter event details, select images,
