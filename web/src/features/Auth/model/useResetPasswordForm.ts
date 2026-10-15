@@ -11,7 +11,7 @@ export const resetPasswordSchema = z.object({
   confirmPassword: z.string(),
 }).refine((values) => values.password === values.confirmPassword, {
   path: ["confirmPassword"],
-  message: "Passwords do not match",
+  message: "validation.passwordMismatch",
 });
 
 export const useResetPasswordForm = (token: string) => {
@@ -28,7 +28,7 @@ export const useResetPasswordForm = (token: string) => {
       reset();
     } catch (error) {
       if (error instanceof ApiError && error.fieldErrors.password) {
-        setError("password", { message: error.fieldErrors.password });
+        setError("password", { type: "server", message: error.fieldErrors.password });
       }
     }
   });

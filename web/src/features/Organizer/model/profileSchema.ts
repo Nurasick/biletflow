@@ -1,24 +1,24 @@
 import { z } from "zod";
 
 export const profileSchema = z.object({
-  displayName: z.string().trim().min(1, "Enter your organizer name").max(200, "Use 200 characters or fewer"),
-  contactEmail: z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address")),
-  contactPhone: z.string().trim().max(32, "Use 32 characters or fewer").refine(
+  displayName: z.string().trim().min(1, "validation.organizerName").max(200, "validation.organizerNameMax"),
+  contactEmail: z.string().trim().toLowerCase().pipe(z.email("validation.email")),
+  contactPhone: z.string().trim().max(32, "validation.phoneMax").refine(
     (value) => !value || (/^\+?[0-9 ()-]+$/.test(value) && /^[0-9]{7,15}$/.test(value.replace(/\D/g, ""))),
-    "Enter a phone number with 7–15 digits",
+    "validation.phone",
   ),
-  description: z.string().trim().max(2000, "Use 2,000 characters or fewer"),
-  payoutProvider: z.enum(["", "sandbox_bank", "sandbox_wallet"]),
+  description: z.string().trim().max(2000, "validation.descriptionMax"),
+  payoutProvider: z.enum(["", "sandbox_bank", "sandbox_wallet"], { error: "validation.payoutProvider" }),
   payoutReference: z.string().trim().refine(
     (value) => !value || /^demo_[A-Za-z0-9_-]{3,64}$/.test(value),
-    "Use demo_ followed by 3–64 letters, numbers, hyphens or underscores",
+    "validation.payoutReference",
   ),
 }).superRefine((values, context) => {
   if (values.payoutReference && !values.payoutProvider) {
-    context.addIssue({ code: "custom", path: ["payoutProvider"], message: "Choose a simulation provider" });
+    context.addIssue({ code: "custom", path: ["payoutProvider"], message: "validation.payoutProvider" });
   }
   if (values.payoutProvider && !values.payoutReference) {
-    context.addIssue({ code: "custom", path: ["payoutReference"], message: "Enter a demo account reference" });
+    context.addIssue({ code: "custom", path: ["payoutReference"], message: "validation.payoutRequired" });
   }
 });
 

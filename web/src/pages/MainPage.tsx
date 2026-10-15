@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { EventCard } from "../features/Main/ui/EventCard/EventCard";
 import { Hero } from "../features/Main/ui/Hero/Hero";
 import { useDateSelection } from "../hooks/useDateSelection";
@@ -7,34 +9,35 @@ const events = [
   {
     age: 12,
     price: 5000,
-    title: "Live Orchestra",
+    title: "demo.liveOrchestra",
     time: "18:30",
-    venue: "Central Concert Hall",
+    venue: "demo.centralHall",
   },
   {
     age: 18,
     price: 7500,
-    title: "Stand-up Night",
+    title: "demo.standup",
     time: "20:00",
-    venue: "Almaty Theatre",
+    venue: "demo.almatyTheatre",
   },
   {
     age: 6,
     price: 3500,
-    title: "Family Theatre",
+    title: "demo.familyTheatre",
     time: "15:00",
-    venue: "Drama Theatre",
+    venue: "demo.dramaTheatre",
   },
   {
     age: 12,
     price: 6000,
-    title: "Jazz Evening",
+    title: "demo.jazz",
     time: "21:00",
-    venue: "Music Hall",
+    venue: "demo.musicHall",
   },
-];
+] as const;
 
 export const HomePage = () => {
+  const { t } = useTranslation();
   const { selectedDate, selectedDateLabel, setSelectedDate } =
     useDateSelection();
 
@@ -50,13 +53,13 @@ export const HomePage = () => {
       <section className="mt-8">
         <div className="flex items-end justify-between">
           <h2 className="text-2xl font-bold tracking-tight">
-            Afisha · {selectedDateLabel}
+            {t("nav.afisha")} · {selectedDateLabel}
           </h2>
 
           <div className="text-sm text-[#667085]">
-            28 events ·{" "}
+            {t("common.events", { count: 28 })} ·{" "}
             <button className="font-semibold text-[#101828]">
-              Popular ▾
+              {t("home.popular")} ▾
             </button>
           </div>
         </div>
@@ -68,9 +71,9 @@ export const HomePage = () => {
                 key={index}
                 age={event.age}
                 price={event.price}
-                title={event.title}
+                title={t(event.title)}
                 time={event.time}
-                venue={event.venue}
+                venue={t(event.venue)}
               />
             );
           })}

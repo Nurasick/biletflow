@@ -7,8 +7,8 @@ import { useAuth } from "../../../hooks/useAuth";
 import { ApiError } from "../../../shared/api/auth";
 
 const loginSchema = z.object({
-  email: z.string().trim().pipe(z.email("Enter a valid email address")),
-  password: z.string().min(1, "Enter your password"),
+  email: z.string().trim().pipe(z.email("validation.email")),
+  password: z.string().min(1, "validation.passwordRequired"),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -36,10 +36,10 @@ export const useLoginForm = () => {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.fieldErrors.email) {
-          setError("email", { message: error.fieldErrors.email });
+          setError("email", { type: "server", message: error.fieldErrors.email });
         }
         if (error.fieldErrors.password) {
-          setError("password", { message: error.fieldErrors.password });
+          setError("password", { type: "server", message: error.fieldErrors.password });
         }
       }
     }

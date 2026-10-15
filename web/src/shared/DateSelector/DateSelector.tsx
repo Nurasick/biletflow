@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import { useLocale } from "../../i18n/useLocale";
 type DateSelectorProps = {
   selectedDate: Date | null;
   onDateChange: (date: Date | null) => void;
@@ -22,22 +24,24 @@ export const DateSelector = ({
   numberOfDays = 6,
   className = "mt-7",
 }: DateSelectorProps) => {
+  const { t } = useTranslation();
+  const locale = useLocale();
   const dates = getDatesFromToday(numberOfDays);
 
   return (
     <section
-      aria-label="Choose an event date"
+      aria-label={t("dates.choose")}
       className={`flex gap-2 overflow-x-auto ${className}`}
     >
       {dates.map((date) => {
         const isSelected = selectedDate?.getTime() === date.getTime();
-        const day = date.toLocaleDateString("en-US", { weekday: "short" });
+        const day = date.toLocaleDateString(locale, { weekday: "short" });
 
         return (
           <button
             key={date.toISOString()}
             type="button"
-            aria-label={date.toLocaleDateString("en-US", {
+            aria-label={date.toLocaleDateString(locale, {
               weekday: "long",
               day: "numeric",
               month: "long",
@@ -73,7 +77,7 @@ export const DateSelector = ({
             : "border-[#D0D5DD] bg-white text-[#667085] hover:bg-[#F9FAFB]"
         }`}
       >
-        All dates
+        {t("dates.all")}
       </button>
     </section>
   );

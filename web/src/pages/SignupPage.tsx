@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 
 import { AuthHeading } from "../features/Auth/ui/AuthHeading";
@@ -7,20 +8,21 @@ import { SignupForm } from "../features/Auth/ui/SignupForm";
 import { SignupSuccess } from "../features/Auth/ui/SignupSuccess";
 
 export const SignupPage = () => {
+  const { t } = useTranslation();
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   return (
     <AuthShell
-      top={<AuthSwitchLink prompt="Already have an account?" to="/login" label="Sign in" />}
+      top={<AuthSwitchLink prompt={t("auth.existingAccount")} to="/login" label={t("common.signIn")} />}
     >
       {registeredEmail ? (
         <SignupSuccess email={registeredEmail} />
       ) : (
         <>
           <AuthHeading
-            eyebrow="JOIN BILETFLOW"
-            title="Create your account"
-            description="One account for tickets, saved events and quicker checkout."
+            eyebrow={t("auth.join")}
+            title={t("auth.signupTitle")}
+            description={t("auth.signupDescription")}
           />
           <SignupForm onSuccess={setRegisteredEmail} />
         </>
