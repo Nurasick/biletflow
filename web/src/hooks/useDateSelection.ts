@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useLocale } from "../i18n/useLocale";
 
 const getToday = () => {
   const today = new Date();
@@ -7,16 +9,18 @@ const getToday = () => {
 };
 
 export const useDateSelection = () => {
+  const { t } = useTranslation();
+  const locale = useLocale();
   const [selectedDate, setSelectedDate] = useState<Date | null>(getToday);
 
   const selectedDateLabel = useMemo(
     () =>
-      selectedDate?.toLocaleDateString("en-US", {
+      selectedDate?.toLocaleDateString(locale, {
         weekday: "short",
         day: "numeric",
         month: "short",
-      }) ?? "All dates",
-    [selectedDate],
+      }) ?? t("dates.all"),
+    [selectedDate, locale, t],
   );
 
   return { selectedDate, selectedDateLabel, setSelectedDate };

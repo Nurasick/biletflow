@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocale } from "../../../../i18n/useLocale";
 
 import { formatPrice } from "../../../../shared/lib/formatPrice";
 
@@ -15,6 +17,8 @@ export const EventCard = ({
   time: string;
   venue: string;
 }) => {
+  const { t } = useTranslation();
+  const locale = useLocale();
   return (
     <Link to="/events" className="group block">
       <div className="relative aspect-[2/3] rounded-xl border border-[#D0D5DD] bg-[#F5F5F0]">
@@ -23,7 +27,7 @@ export const EventCard = ({
         </span>
 
         <span className="absolute bottom-3 left-3 rounded-md bg-white px-2 py-1 text-xs font-semibold shadow">
-          from {formatPrice(price)}
+          {t("common.fromPrice", { price: formatPrice(price, locale) })}
         </span>
       </div>
 

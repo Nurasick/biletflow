@@ -23,7 +23,7 @@ export const useOrganizerProfileForm = (
       reset(result);
       setSaved(true);
     } catch (error) {
-      setError("root", { message: error instanceof Error ? error.message : "Couldn't save your changes. Please try again." });
+      setError("root", { type: error instanceof Error ? "server" : "client", message: error instanceof Error ? error.message : "organizer.saveError" });
     }
   });
 

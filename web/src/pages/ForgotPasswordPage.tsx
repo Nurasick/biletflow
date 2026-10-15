@@ -1,13 +1,17 @@
+import { useTranslation } from "react-i18next";
 import { AuthHeading } from "../features/Auth/ui/AuthHeading";
 import { AuthShell } from "../features/Auth/ui/AuthShell";
 import { AuthSwitchLink } from "../features/Auth/ui/AuthSwitchLink";
 
-export const ForgotPasswordPage = () => (
-  <AuthShell top={<AuthSwitchLink prompt="Back to your account" to="/login" label="Sign in" />}>
-    <AuthHeading
-      eyebrow="ACCOUNT RECOVERY"
-      title="Password recovery is coming soon"
-      description="Password reset is not available yet. Please sign in with your existing password."
-    />
-  </AuthShell>
-);
+export const ForgotPasswordPage = () => {
+  const { t } = useTranslation();
+  return (
+    <AuthShell top={<AuthSwitchLink prompt={t("auth.backToAccount")} to="/login" label={t("common.signIn")} />}>
+      <AuthHeading
+        eyebrow={t("auth.recovery")}
+        title={t("auth.recoverySoon")}
+        description={t("auth.recoveryUnavailable")}
+      />
+    </AuthShell>
+  );
+};
