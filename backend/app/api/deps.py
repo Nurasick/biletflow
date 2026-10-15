@@ -5,8 +5,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.organizer import OrganizerProfile
 from app.models.user import User, UserStatus
 from app.services.auth import resolve_token_user
+from app.services.event import get_organizer_profile
 
 # HTTPBearer, not OAuth2PasswordBearer. Both read the same `Authorization:
 # Bearer <jwt>` header, so clients are unaffected either way. The difference is
@@ -53,3 +55,13 @@ def get_current_active_user(user: Annotated[User, Depends(get_current_user)]) ->
 
 
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
+
+
+def get_current_organizer(user: CurrentUser, db: DbSession) -> OrganizerProfile:
+    profile = get_organizer_profile(db, user)
+    if profile is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "An organizer profile is required")
+    return profile
+
+
+CurrentOrganizer = Annotated[OrganizerProfile, Depends(get_current_organizer)]

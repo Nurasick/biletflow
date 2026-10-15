@@ -119,6 +119,30 @@ class EventUpdate(BaseModel):
         )
         return self
 
+    @model_validator(mode="after")
+    def check_not_null(self) -> Self:
+        # `None` above means "not sent". A client that sends an explicit null
+        # for a NOT NULL column would otherwise reach the database and fail
+        # there, and the service would report it as a date-window error.
+        for field in self.model_fields_set & _NOT_NULL_ON_UPDATE:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+        return self
+
+
+_NOT_NULL_ON_UPDATE = frozenset(
+    {
+        "title",
+        "visibility",
+        "seating_mode",
+        "venue_name",
+        "venue_address",
+        "starts_at",
+        "ends_at",
+        "timezone",
+    }
+)
+
 
 class EventRead(BaseModel):
     id: int

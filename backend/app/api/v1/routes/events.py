@@ -1,27 +1,16 @@
 from collections.abc import Sequence
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentOrganizer, DbSession
 from app.models.event import Event
-from app.models.organizer import OrganizerProfile
 from app.schemas.event import EventCreate, EventRead, EventUpdate
 from app.services import event as event_service
 
 router = APIRouter(tags=["events"])
 
 MAX_PAGE_SIZE = 100
-
-
-def get_current_organizer(user: CurrentUser, db: DbSession) -> OrganizerProfile:
-    profile = event_service.get_organizer_profile(db, user)
-    if profile is None:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "An organizer profile is required")
-    return profile
-
-
-CurrentOrganizer = Annotated[OrganizerProfile, Depends(get_current_organizer)]
 
 
 @router.get("/events", response_model=list[EventRead])

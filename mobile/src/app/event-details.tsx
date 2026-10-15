@@ -90,7 +90,10 @@ export default function EventDetailsScreen() {
       </ScrollView>
 
       <View className="border-t border-[#D0D5DD] bg-white px-[14px] pb-3 pt-3 dark:border-[#344054] dark:bg-[#182230]">
-        <TouchableOpacity className="h-12 items-center justify-center rounded-xl bg-[#FF5C35]" onPress={() => {}}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          className="h-12 items-center justify-center rounded-xl bg-[#FF5C35]"
+          onPress={() => router.push('/seat-selection')}>
           <Text className="text-sm font-extrabold text-white">Select seats</Text>
         </TouchableOpacity>
       </View>
