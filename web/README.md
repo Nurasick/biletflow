@@ -32,6 +32,44 @@ use `demo.*` copy; the service adapters and demo organizer profile are unchanged
 Russian plurals, validation messages, stable booking identifiers, and locale
 placeholder consistency.
 
+## Organizer event form (frontend demo)
+
+Open `/organizer/events/new`, use **Create event** in the public header, or choose
+**Create event** in the organizer workspace. The form follows the existing
+`features/Organizer/model` and `ui` structure, using React Hook Form, Zod, React
+Query and the shared organizer layout. All new copy is translated into English,
+Kazakh and Russian. No backend changes or API requests are involved.
+
+The form saves one event draft per demo organizer in IndexedDB, including image
+data. Reloading restores the last successful save. Images support JPEG, PNG and
+WebP, up to five files of 2 MB each, with previews, removal and cover selection.
+Saving is acknowledged only after the storage transaction completes. Failed
+saves retain the entered values and images; storage/load errors offer retry.
+`EVENT_DEMO_ERRORS` in `src/shared/api/organizerEvents.ts` can simulate load/save
+failures. The existing dummy organizer session controls access.
+
+Validation covers required event details, field lengths, supported categories,
+positive integer capacity, visibility, valid calendar dates and IANA zones,
+event end after start, registration close after open, and registration no later
+than event start. Registration boundaries, capacity and images are optional.
+Dates use the selected event zone, independently of the browser zone. Clock
+changes that skip or repeat a local time produce a field error rather than
+silently changing the intended time. Changing zones keeps entered wall times.
+Drafts can include past dates so previously saved events remain editable.
+
+Unsaved changes are marked beside the save action. Discard requires confirmation
+and restores the last saved values. Internal navigation offers keep-editing/leave
+choices, while reload and tab close use the browser's native unsaved prompt.
+Saving only stores a draft: publishing, invitations, discovery visibility and
+server authorization are outside this frontend demo. The storage adapter is
+isolated in `src/shared/api/organizerEvents.ts` for later backend integration.
+
+`npm test` includes event schema, time zone/DST, image validation and draft
+persistence/error tests. For a manual check: enter event details, select images,
+make a different image the cover, save and reload. Then edit a field and test
+navigation cancellation, discard, invalid date/registration ranges and the demo
+load/save switches. Check narrow screens and change language while editing.
+
 ## Organizer profile (frontend demo)
 
 Open `/organizer/profile` to preview the light organizer form without a backend.
