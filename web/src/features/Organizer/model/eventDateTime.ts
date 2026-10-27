@@ -39,3 +39,16 @@ export const resolveEventDateTime = (value: string, timeZone: string): number[] 
   return [...offsets].map((offset) => local - offset)
     .filter((instant) => wallTime(instant) === local).sort((a, b) => a - b);
 };
+
+// The inverse of resolveEventDateTime: an instant from the API shown as the
+// wall-clock "YYYY-MM-DDTHH:mm" it was in the event's own zone, which is what
+// the form edits. Independent of the browser's zone.
+export const toLocalDateTime = (iso: string, timeZone: string): string => {
+  const instant = Date.parse(iso);
+  if (!Number.isFinite(instant)) return "";
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(instant).map(({ type, value }) => [type, value]));
+  return `${parts.year.padStart(4, "0")}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+};

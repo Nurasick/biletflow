@@ -25,7 +25,7 @@ export const Hero = () => {
 
           <div className="mt-5 flex items-center gap-4">
             <Link
-              to="/events"
+              to="/#afisha"
               className="rounded-lg bg-[#FF5C35] px-5 py-2.5 text-sm font-semibold"
             >
               {t("home.buyTickets")}

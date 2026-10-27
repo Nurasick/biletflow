@@ -9,6 +9,11 @@ export type User = {
   is_email_verified: boolean;
   locale: string;
   created_at: string;
+  phone?: string | null;
+  // Roles come from the real session (audit #9). Event admin is per event,
+  // so it is not here: see GET /staff/events.
+  is_platform_admin?: boolean;
+  is_organizer?: boolean;
 };
 
 export type LoginCredentials = {
@@ -76,7 +81,7 @@ const parseError = async (response: Response) => {
   return new ApiError(message, response.status, fieldErrors);
 };
 
-const rawRequest = async <T>(path: string, init?: RequestInit) => {
+export const rawRequest = async <T>(path: string, init?: RequestInit) => {
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
   const response = await fetch(`${API_URL}${path}`, {
@@ -161,22 +166,65 @@ export const authenticatedRequest = async <T>(path: string, init?: RequestInit):
   }
 };
 
+// Another tab signing out removes the CSRF proof; another tab signing in as a
+// different account replaces it. Either way the access token held here belongs
+// to the old session, so drop it and tell the app to reload who is signed in
+// (audit #17: an A tab silently became B on its next refresh).
 window.addEventListener("storage", (event) => {
-  if ((event.key === CSRF_KEY && !event.newValue) || event.key === null) {
-    accessToken = null;
-    window.dispatchEvent(new Event("biletflow:session-ended"));
-  }
+  if (event.key !== CSRF_KEY && event.key !== null) return;
+  if (event.key === CSRF_KEY && event.newValue === event.oldValue) return;
+  accessToken = null;
+  window.dispatchEvent(new Event(event.key === CSRF_KEY && event.newValue
+    ? "biletflow:session-changed" : "biletflow:session-ended"));
 });
 
-const unavailable = async (_value: string): Promise<{ message?: string }> => {
-  throw new ApiError("This feature is not available yet.", 501);
+const json = (method: string, body?: unknown): RequestInit => ({
+  method,
+  headers: { "Content-Type": "application/json" },
+  body: body === undefined ? undefined : JSON.stringify(body),
+});
+
+// For endpoints that work signed in or out (checkout, guest order links):
+// attach the session when there is one, never force a sign-in.
+export const optionalAuthRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  if (accessToken || localStorage.getItem(CSRF_KEY)) {
+    try {
+      return await authenticatedRequest<T>(path, init);
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) throw error;
+      clearSession();
+    }
+  }
+  return rawRequest<T>(path, init);
+};
+
+export const api = {
+  get: <T>(path: string, init?: RequestInit) => authenticatedRequest<T>(path, init),
+  post: <T>(path: string, body?: unknown) => authenticatedRequest<T>(path, json("POST", body)),
+  put: <T>(path: string, body: unknown) => authenticatedRequest<T>(path, json("PUT", body)),
+  patch: <T>(path: string, body: unknown) => authenticatedRequest<T>(path, json("PATCH", body)),
+  delete: <T>(path: string) => authenticatedRequest<T>(path, { method: "DELETE" }),
+  json,
 };
 
 export const authApi = {
-  verifyEmail: unavailable,
-  resendVerification: unavailable,
-  forgotPassword: unavailable,
-  resetPassword: (_token: string, password: string) => unavailable(password),
+  verifyEmail: async (token: string) => {
+    await rawRequest<null>("/auth/verify-email", json("POST", { token }));
+    return { message: "verified" };
+  },
+  resendVerification: async (_email: string) => {
+    await authenticatedRequest<unknown>("/users/me/verify-email", { method: "POST" });
+    return { message: "sent" };
+  },
+  // The backend answers the same whether or not the address has an account.
+  forgotPassword: async (email: string) => {
+    await rawRequest<unknown>("/auth/password-reset", json("POST", { email }));
+    return { message: "sent" };
+  },
+  resetPassword: async (token: string, password: string) => {
+    await rawRequest<null>("/auth/password-reset/confirm", json("POST", { token, new_password: password }));
+    return { message: "reset" };
+  },
   currentUser: async ({ signal }: { signal?: AbortSignal } = {}) => {
     if (!accessToken && !localStorage.getItem(CSRF_KEY)) return null;
     try {

@@ -7,6 +7,8 @@ import type { EventAction } from "../../../shared/api/eventLifecycle";
 export const organizerEventKeys = {
   list: (userId: number) => ["organizer", "events", userId] as const,
   preview: (userId: number, eventId: number) => ["organizer", "event-preview", userId, eventId] as const,
+  edit: (userId: number, eventId: number) => ["organizer", "event-edit", userId, eventId] as const,
+  ticketTypes: (eventId: number) => ["organizer", "ticket-types", eventId] as const,
 };
 
 export const useEventWorkflowSync = (userId: number) => {

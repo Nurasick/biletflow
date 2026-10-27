@@ -11,8 +11,13 @@ export const EVENT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const eventImageSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  dataUrl: z.string().max(Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 32, "validation.eventImageSize")
-    .regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, "validation.eventImageType"),
+  // A newly picked file (a data URL, uploaded on save) or an image already
+  // stored on the server (its URL; the id is then "server-<image id>").
+  dataUrl: z.union([
+    z.string().max(Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 32, "validation.eventImageSize")
+      .regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, "validation.eventImageType"),
+    z.string().max(512).regex(/^https?:\/\/\S+$/, "validation.eventImageType"),
+  ]),
 });
 export type EventImage = z.infer<typeof eventImageSchema>;
 

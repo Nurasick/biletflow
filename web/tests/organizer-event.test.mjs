@@ -1,17 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import ts from 'typescript';
 
-// Exercise the feature's TypeScript modules, as in the existing auth/profile tests.
-async function moduleUrl(path, replacements = {}) {
-  let source = await readFile(new URL(path, import.meta.url), 'utf8');
-  for (const [from, to] of Object.entries(replacements)) source = source.replaceAll(from, to);
-  const { outputText } = ts.transpileModule(source, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
-  });
-  return `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`;
-}
+import { fakeAuthUrl, moduleUrl, scriptApi } from './harness.mjs';
 
 const dateTimeUrl = await moduleUrl('../src/features/Organizer/model/eventDateTime.ts');
 const schemaUrl = await moduleUrl('../src/features/Organizer/model/eventSchema.ts', {
@@ -21,20 +11,16 @@ const schemaUrl = await moduleUrl('../src/features/Organizer/model/eventSchema.t
 const imageUrl = await moduleUrl('../src/features/Organizer/model/eventImages.ts', {
   '"./eventSchema"': JSON.stringify(schemaUrl),
 });
-const sessionUrl = `data:text/javascript;base64,${Buffer.from(`
-  export const session = { id: 1, role: 'organizer' };
-  export const organizerApi = { currentSession: () => session };
-`).toString('base64')}`;
 const apiUrl = await moduleUrl('../src/shared/api/organizerEvents.ts', {
+  '"../../features/Organizer/model/eventDateTime"': JSON.stringify(dateTimeUrl),
   '"../../features/Organizer/model/eventSchema"': JSON.stringify(schemaUrl),
-  '"./organizer"': JSON.stringify(sessionUrl),
+  '"./auth"': JSON.stringify(fakeAuthUrl),
 });
-
-const { parseLocalDateTime, resolveEventDateTime, isEventTimeZone } = await import(dateTimeUrl);
+const { parseLocalDateTime, resolveEventDateTime, isEventTimeZone, toLocalDateTime } = await import(dateTimeUrl);
 const { emptyOrganizerEvent, eventSchema, MAX_IMAGE_BYTES } = await import(schemaUrl);
 const { validateEventImageFiles, readEventImage } = await import(imageUrl);
-const { createOrganizerEventApi, EVENT_DEMO_ERRORS } = await import(apiUrl);
-const { session } = await import(sessionUrl);
+const { organizerEventApi, OrganizerEventError } = await import(apiUrl);
+
 
 const validDraft = () => ({
   ...emptyOrganizerEvent(),
@@ -145,61 +131,64 @@ test('image decoding failures are surfaced, including files that only claim to b
   }
 });
 
-test('drafts persist normalized details, image order and optional boundaries per organizer', async () => {
-  const records = new Map();
-  const storage = {
-    read: async (key) => structuredClone(records.get(key)),
-    write: async (key, values) => { records.set(key, structuredClone(values)); },
-  };
-  const api = createOrganizerEventApi(storage);
-  assert.deepEqual(await api.getDraft(1), emptyOrganizerEvent());
-  const draft = { ...validDraft(), title: '  Indie Night ', images: [
-    { id: 'cover', name: 'cover.png', dataUrl: 'data:image/png;base64,AAAA' },
-    { id: 'gallery', name: 'gallery.png', dataUrl: 'data:image/png;base64,BBBB' },
-  ] };
-  const result = await api.saveDraft(1, draft);
-  assert.equal(result.title, 'Indie Night');
-  assert.equal(draft.title, '  Indie Night ');
-  assert.deepEqual(await createOrganizerEventApi(storage).getDraft(1), result);
-  assert.deepEqual(result.images.map((image) => image.id), ['cover', 'gallery']);
-  await assert.rejects(api.getDraft(2), /organizerEvent.accessError/);
-  session.role = 'attendee';
-  try {
-    await assert.rejects(api.getDraft(1), /organizerEvent.accessError/);
-    await assert.rejects(api.saveDraft(1, draft), /organizerEvent.accessError/);
-  } finally { session.role = 'organizer'; }
+
+// --- the API adapter (audit #5, #11: real events, addressed by id) ----------
+
+const record = (overrides = {}) => ({
+  id: 7, slug: 'indie-night', title: 'Indie Night', description: 'Live.', category: 'concert',
+  cover_image_url: null, status: 'draft', phase: 'draft', visibility: 'unlisted',
+  venue_name: 'Music Hall', venue_address: '56 Dostyk Ave, Almaty',
+  starts_at: '2027-04-18T14:00:00Z', ends_at: '2027-04-18T17:00:00Z', timezone: 'Asia/Almaty',
+  capacity: 250, registration_opens_at: null, registration_closes_at: null, refund_policy: null,
+  published_at: null, cancelled_at: null, updated_at: '2027-01-01T00:00:00Z', ...overrides,
 });
 
-test('storage failures preserve the previous draft and the submitted values, and allow retry', async () => {
-  let stored = validDraft();
-  let fail = true;
-  const api = createOrganizerEventApi({
-    read: async () => { if (fail) throw new Error('Storage blocked'); return structuredClone(stored); },
-    write: async (_, values) => { if (fail) throw new Error('Quota exceeded'); stored = structuredClone(values); },
-  });
-  const changes = { ...validDraft(), title: 'Updated title' };
-  await assert.rejects(api.getDraft(1), /organizerEvent.loadError/);
-  await assert.rejects(api.saveDraft(1, changes), /organizerEvent.saveError/);
-  assert.equal(stored.title, 'Indie Night');
-  assert.equal(changes.title, 'Updated title');
-  fail = false;
-  assert.deepEqual(await api.saveDraft(1, changes), changes);
-  assert.deepEqual(await api.getDraft(1), changes);
-});
-
-test('corrupted saved data is reported without overwriting it, and demo errors can be retried', async () => {
-  const api = createOrganizerEventApi({ read: async () => ({ title: 'corrupt' }), write: async () => assert.fail('must not overwrite') });
-  await assert.rejects(api.getDraft(1), /organizerEvent.loadError/);
-  const validApi = createOrganizerEventApi({ read: async () => validDraft(), write: async () => {} });
-  EVENT_DEMO_ERRORS.load = true;
-  EVENT_DEMO_ERRORS.save = true;
-  try {
-    await assert.rejects(validApi.getDraft(1), /organizerEvent.loadError/);
-    await assert.rejects(validApi.saveDraft(1, validDraft()), /organizerEvent.saveError/);
-  } finally {
-    EVENT_DEMO_ERRORS.load = false;
-    EVENT_DEMO_ERRORS.save = false;
+test('an instant from the API is shown as wall-clock time in the event zone', () => {
+  assert.equal(toLocalDateTime('2027-04-18T14:00:00Z', 'Asia/Almaty'), '2027-04-18T19:00');
+  assert.equal(toLocalDateTime('2027-04-18T13:15:00Z', 'Asia/Kathmandu'), '2027-04-18T19:00');
+  for (const zone of ['UTC', 'Asia/Almaty', 'America/New_York']) {
+    const local = '2027-06-01T08:30';
+    const [instant] = resolveEventDateTime(local, zone);
+    assert.equal(toLocalDateTime(new Date(instant).toISOString(), zone), local);
   }
-  assert.deepEqual(await validApi.getDraft(1), validDraft());
-  assert.deepEqual(await validApi.saveDraft(1, validDraft()), validDraft());
+});
+
+test('creating sends UTC instants resolved in the event zone, then uploads new images', async () => {
+  const fake = scriptApi([[201, record()], [200, []], [201, { id: 1, url: 'http://x/1.png', position: 0 }]]);
+  const id = await organizerEventApi.create({
+    ...validDraft(), timeZone: 'Asia/Almaty',
+    images: [{ id: 'new', name: 'cover.png', dataUrl: 'data:image/png;base64,AAAA' }],
+  });
+  assert.equal(id, 7);
+  const [create, list, upload] = fake.calls;
+  assert.deepEqual([create.method, create.path], ['POST', '/events']);
+  assert.equal(create.body.starts_at, '2027-04-18T14:00:00.000Z');
+  assert.equal(create.body.capacity, 250);
+  assert.equal(create.body.registration_opens_at, '2027-04-01T04:00:00.000Z');
+  assert.deepEqual([list.method, list.path], ['GET', '/organizer/events/7/images']);
+  assert.deepEqual(upload.body, { data_url: 'data:image/png;base64,AAAA' });
+});
+
+test('loading maps stored images to server ids so a save keeps or deletes them', async () => {
+  const images = [{ id: 11, url: 'http://x/a.png', position: 0 }, { id: 12, url: 'http://x/b.png', position: 1 }];
+  scriptApi([[200, record()], [200, images]]);
+  const { values } = await organizerEventApi.get(7);
+  assert.equal(values.startsAt, '2027-04-18T19:00');
+  assert.deepEqual(values.images.map((i) => i.id), ['server-11', 'server-12']);
+  assert.equal(eventSchema.safeParse(values).success, true);
+
+  const fake = scriptApi([[200, record()], [200, images], [204, null], [200, record()], [200, [images[0]]]]);
+  await organizerEventApi.update(7, { ...values, images: [values.images[0]] });
+  assert.deepEqual(fake.calls.map((c) => [c.method, c.path]), [
+    ['PATCH', '/organizer/events/7'], ['GET', '/organizer/events/7/images'],
+    ['DELETE', '/organizer/events/7/images/12'], ['GET', '/organizer/events/7'], ['GET', '/organizer/events/7/images'],
+  ]);
+});
+
+test('not found and frozen events surface as typed errors', async () => {
+  scriptApi([[404, { detail: 'Event not found' }], [200, []]]);
+  await assert.rejects(organizerEventApi.get(99), (e) => e instanceof OrganizerEventError && e.message === 'organizerEvent.accessError');
+  scriptApi([[409, { detail: 'A cancelled event cannot be edited' }]]);
+  await assert.rejects(organizerEventApi.update(7, validDraft()),
+    (e) => e instanceof OrganizerEventError && e.message === 'organizerEvent.notEditable');
 });
