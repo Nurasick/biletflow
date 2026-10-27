@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.models.event import Event, EventStatus
 from app.models.ticket_type import TicketType
+from app.models.user import User
 from app.schemas.ticket_type import TicketTypeCreate, TicketTypeUpdate
+from app.services import audit
 
 
 class EventClosedForChanges(Exception):
@@ -40,7 +42,11 @@ def create_ticket_type(db: Session, event: Event, data: TicketTypeCreate) -> Tic
 
 
 def update_ticket_type(
-    db: Session, event: Event, ticket_type: TicketType, data: TicketTypeUpdate
+    db: Session,
+    event: Event,
+    ticket_type: TicketType,
+    data: TicketTypeUpdate,
+    actor: User | None = None,
 ) -> TicketType:
     _ensure_open(event)
     changes = data.model_dump(exclude_unset=True)
@@ -55,6 +61,7 @@ def update_ticket_type(
     if starts is not None and ends is not None and _as_utc(ends) <= _as_utc(starts):
         raise InvalidSalesWindow
 
+    _audit_changes(db, event, ticket_type, changes, actor)
     for field, value in changes.items():
         setattr(ticket_type, field, value)
     try:
@@ -90,6 +97,29 @@ def list_public(db: Session, event: Event) -> Sequence[TicketType]:
         .where(TicketType.event_id == event.id, TicketType.is_hidden.is_(False))
         .order_by(TicketType.position, TicketType.id)
     ).all()
+
+
+def _audit_changes(
+    db: Session, event: Event, ticket_type: TicketType, changes: dict, actor: User | None
+) -> None:
+    """§4.16 names "ticket price or capacity changes" for the timeline. Written
+    before the commit so it lands, or rolls back, with the change itself."""
+    for field, action, label in (
+        ("price_minor", "ticket_type.price_changed", "price"),
+        ("quantity_total", "ticket_type.capacity_changed", "quantity"),
+    ):
+        old = getattr(ticket_type, field)
+        if field in changes and changes[field] != old:
+            audit.record(
+                db,
+                action=action,
+                entity_type="ticket_type",
+                entity_id=ticket_type.id,
+                event_id=event.id,
+                actor=actor,
+                summary=f"{ticket_type.name}: {label} changed from {old} to {changes[field]}",
+                payload={"from": old, "to": changes[field]},
+            )
 
 
 def _ensure_open(event: Event) -> None:

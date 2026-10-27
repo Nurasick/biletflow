@@ -18,11 +18,16 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
+from app.models.activation import EventActivation
 from app.models.attendee import Attendee
+from app.models.audit import AuditLog
+from app.models.check_in import CheckInRecord
 from app.models.event import Event, EventStatus
 from app.models.hold import Hold
 from app.models.order import Order, OrderItem
 from app.models.organizer import OrganizerProfile
+from app.models.payment import Payment, Refund
+from app.models.staff import StaffAssignment
 from app.models.ticket import Ticket
 from app.models.ticket_type import TicketType
 from app.models.user import User
@@ -83,19 +88,34 @@ def stock(pg: sessionmaker) -> Iterator[tuple[int, int]]:
 
     user_id, profile_id, event_id, _ = ids
     with pg() as db:
-        # Everything hanging off the event, children first.
-        types = select(TicketType.id).where(TicketType.event_id == event_id)
-        orders = select(Order.id).where(Order.event_id == event_id)
-        db.execute(delete(Ticket).where(Ticket.event_id == event_id))
-        db.execute(delete(Attendee).where(Attendee.order_id.in_(orders)))
-        db.execute(delete(Hold).where(Hold.ticket_type_id.in_(types)))
-        db.execute(delete(OrderItem).where(OrderItem.order_id.in_(orders)))
-        db.execute(delete(Order).where(Order.event_id == event_id))
-        db.execute(delete(TicketType).where(TicketType.event_id == event_id))
-        db.execute(delete(Event).where(Event.id == event_id))
+        purge_event(db, event_id)
         db.execute(delete(OrganizerProfile).where(OrganizerProfile.id == profile_id))
         db.execute(delete(User).where(User.id == user_id))
         db.commit()
+
+
+def purge_event(db, event_id: int) -> None:
+    """Delete everything hanging off one test event, children first.
+
+    Test teardown only. The audit log is append-only in the service layer
+    (app/services/audit.py has no delete); a shared dev database still needs
+    the rows a test created gone again.
+    """
+    types = select(TicketType.id).where(TicketType.event_id == event_id)
+    orders = select(Order.id).where(Order.event_id == event_id)
+    db.execute(delete(AuditLog).where(AuditLog.event_id == event_id))
+    db.execute(delete(CheckInRecord).where(CheckInRecord.event_id == event_id))
+    db.execute(delete(Refund).where(Refund.order_id.in_(orders)))
+    db.execute(delete(EventActivation).where(EventActivation.event_id == event_id))
+    db.execute(delete(Payment).where(Payment.order_id.in_(orders) | (Payment.event_id == event_id)))
+    db.execute(delete(Ticket).where(Ticket.event_id == event_id))
+    db.execute(delete(Attendee).where(Attendee.order_id.in_(orders)))
+    db.execute(delete(Hold).where(Hold.ticket_type_id.in_(types)))
+    db.execute(delete(OrderItem).where(OrderItem.order_id.in_(orders)))
+    db.execute(delete(Order).where(Order.event_id == event_id))
+    db.execute(delete(StaffAssignment).where(StaffAssignment.event_id == event_id))
+    db.execute(delete(TicketType).where(TicketType.event_id == event_id))
+    db.execute(delete(Event).where(Event.id == event_id))
 
 
 def race(pg: sessionmaker, event_id: int, ticket_type_id: int, buyers: int, each: int) -> int:

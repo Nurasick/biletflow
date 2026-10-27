@@ -1,15 +1,17 @@
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.clock import as_utc
 from app.models.event import Event, EventStatus, EventVisibility
 from app.models.organizer import OrganizerProfile
-from app.models.ticket_type import TicketType
 from app.models.user import User
-from app.schemas.event import EventCreate, EventUpdate
+from app.schemas.event import EventCreate, EventUpdate, check_windows
+from app.services import audit
+from app.services.slugs import slugify
 
 
 class SlugAlreadyTaken(Exception):
@@ -17,19 +19,29 @@ class SlugAlreadyTaken(Exception):
 
 
 class EventNotEditable(Exception):
-    """The event is in a terminal state and can no longer change."""
+    """The event's status does not allow edits. `status` says which status."""
+
+    def __init__(self, status: EventStatus):
+        super().__init__(status)
+        self.status = status
 
 
 class InvalidEventWindow(Exception):
-    """The merged dates break one of the ordering CHECK constraints."""
-
-
-class CannotPublish(Exception):
-    """A guard on draft -> published failed. `reason` says which one."""
+    """The merged dates break a window rule. `reason` says which one."""
 
     def __init__(self, reason: str):
         super().__init__(reason)
         self.reason = reason
+
+
+# Organizers edit drafts and published events (a published event can change,
+# and §4.10 "Event updates" notifies its attendees). Suspended events are under
+# a platform admin's review and cancelled ones are terminal, so both are frozen.
+# The web form applies the same rule (audit finding #15).
+EDITABLE = (EventStatus.DRAFT, EventStatus.PUBLISHED)
+
+# Fields whose change is worth a timeline entry (§4.16 names capacity changes).
+_AUDITED_CHANGES = ("starts_at", "ends_at", "capacity", "venue_name", "venue_address", "visibility")
 
 
 def get_organizer_profile(db: Session, user: User) -> OrganizerProfile | None:
@@ -37,7 +49,12 @@ def get_organizer_profile(db: Session, user: User) -> OrganizerProfile | None:
 
 
 def create_event(db: Session, profile: OrganizerProfile, data: EventCreate) -> Event:
-    event = Event(**data.model_dump(), organizer_profile_id=profile.id)
+    fields = data.model_dump()
+    if fields["slug"] is None:
+        # A generated slug picks a free variant up front. A slug the client
+        # chose is used as sent, and a clash with it is the client's 409.
+        fields["slug"] = unique_slug(db, slugify(data.title))
+    event = Event(**fields, organizer_profile_id=profile.id)
     db.add(event)
     try:
         db.commit()
@@ -50,47 +67,79 @@ def create_event(db: Session, profile: OrganizerProfile, data: EventCreate) -> E
     return event
 
 
-def update_event(db: Session, event: Event, data: EventUpdate) -> Event:
-    if event.status == EventStatus.CANCELLED:
-        raise EventNotEditable
-    for field, value in data.model_dump(exclude_unset=True).items():
+def update_event(db: Session, event: Event, data: EventUpdate, actor: User | None = None) -> Event:
+    if event.status not in EDITABLE:
+        raise EventNotEditable(event.status)
+    changes = data.model_dump(exclude_unset=True)
+    _check_merged_windows(event, changes)
+
+    before = {field: getattr(event, field) for field in _AUDITED_CHANGES if field in changes}
+    for field, value in changes.items():
         setattr(event, field, value)
+    changed = {f: v for f, v in before.items() if _differs(v, changes[f])}
+    if changed:
+        audit.record(
+            db,
+            action="event.capacity_changed" if list(changed) == ["capacity"] else "event.updated",
+            entity_type="event",
+            entity_id=event.id,
+            event_id=event.id,
+            actor=actor,
+            summary="Event details changed: " + ", ".join(sorted(changed)),
+            payload={
+                field: {"from": _jsonable(old), "to": _jsonable(changes[field])}
+                for field, old in changed.items()
+            },
+        )
     try:
         db.commit()
     except IntegrityError:
-        # A request that moves only one end of a window cannot be checked by
-        # the schema, which never sees the stored other end. The CHECK
-        # constraints on the table can, so they decide.
+        # The CHECK constraints on the table are the final authority on the
+        # windows the merged check above might have missed in a race.
         db.rollback()
-        raise InvalidEventWindow from None
+        raise InvalidEventWindow("the dates conflict with each other") from None
     db.refresh(event)
     return event
 
 
-def publish_event(db: Session, event: Event, now: datetime | None = None) -> Event:
-    """draft -> published, with the guards from docs/state-machines.md section 1.
+def _check_merged_windows(event: Event, changes: dict) -> None:
+    """The schema only sees the request; the rule applies to request + stored row."""
 
-    Venue and times are NOT NULL columns, so that guard is already enforced.
-    """
-    now = now or datetime.now(UTC)
-    if event.status != EventStatus.DRAFT:
-        raise CannotPublish(f"only a draft can be published; this event is {event.status}")
-    starts_at = event.starts_at if event.starts_at.tzinfo else event.starts_at.replace(tzinfo=UTC)
-    if starts_at <= now:
-        raise CannotPublish("starts_at must be in the future")
-    has_visible_type = db.scalar(
-        select(func.count())
-        .select_from(TicketType)
-        .where(TicketType.event_id == event.id, TicketType.is_hidden.is_(False))
-    )
-    if not has_visible_type:
-        raise CannotPublish("add at least one visible ticket type first")
+    def merged(field: str) -> datetime | None:
+        value = changes.get(field, getattr(event, field))
+        return as_utc(value) if value is not None else None
 
-    event.status = EventStatus.PUBLISHED
-    event.published_at = now
-    db.commit()
-    db.refresh(event)
-    return event
+    try:
+        check_windows(
+            merged("starts_at"),
+            merged("ends_at"),
+            merged("registration_opens_at"),
+            merged("registration_closes_at"),
+        )
+    except ValueError as exc:
+        raise InvalidEventWindow(str(exc)) from None
+
+
+def _differs(old, new) -> bool:
+    if isinstance(old, datetime) and isinstance(new, datetime):
+        return as_utc(old) != as_utc(new)
+    return old != new
+
+
+def _jsonable(value):
+    return as_utc(value).isoformat() if isinstance(value, datetime) else value
+
+
+def unique_slug(db: Session, base: str) -> str:
+    """`base`, or `base-2`, `base-3`… whichever is free. For copies, not user input."""
+    base = base[:190]
+    taken = set(db.scalars(select(Event.slug).where(Event.slug.like(f"{base}%"))))
+    if base not in taken:
+        return base
+    n = 2
+    while f"{base}-{n}" in taken:
+        n += 1
+    return f"{base}-{n}"
 
 
 def get_owned_event(db: Session, profile: OrganizerProfile, event_id: int) -> Event | None:
@@ -107,19 +156,38 @@ def list_organizer_events(db: Session, profile: OrganizerProfile) -> Sequence[Ev
     ).all()
 
 
-def list_public_events(db: Session, *, limit: int, offset: int) -> Sequence[Event]:
+def list_public_events(
+    db: Session,
+    *,
+    limit: int,
+    offset: int,
+    q: str | None = None,
+    category: str | None = None,
+    starts_after: datetime | None = None,
+    starts_before: datetime | None = None,
+) -> Sequence[Event]:
     """Published, publicly listed events that have not ended yet."""
-    return db.scalars(
-        select(Event)
-        .where(
-            Event.status == EventStatus.PUBLISHED,
-            Event.visibility == EventVisibility.PUBLIC,
-            Event.ends_at > func.now(),
+    query = select(Event).where(
+        Event.status == EventStatus.PUBLISHED,
+        Event.visibility == EventVisibility.PUBLIC,
+        Event.ends_at > func.now(),
+    )
+    if q:
+        # Escape LIKE's wildcards so a search for "100%" means the text "100%".
+        needle = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        query = query.where(
+            or_(
+                Event.title.ilike(needle, escape="\\"),
+                Event.venue_name.ilike(needle, escape="\\"),
+            )
         )
-        .order_by(Event.starts_at, Event.id)
-        .limit(limit)
-        .offset(offset)
-    ).all()
+    if category:
+        query = query.where(Event.category == category)
+    if starts_after:
+        query = query.where(Event.starts_at >= starts_after)
+    if starts_before:
+        query = query.where(Event.starts_at < starts_before)
+    return db.scalars(query.order_by(Event.starts_at, Event.id).limit(limit).offset(offset)).all()
 
 
 def get_event_by_slug(db: Session, slug: str) -> Event | None:

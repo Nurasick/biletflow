@@ -54,8 +54,28 @@ class TicketRead(BaseModel):
 
     public_code: str
     ticket_type_id: int
+    ticket_type_name: str
     status: TicketStatus
     attendee_name: str
+    # The signed admission payload (app/core/qr.py) for the client to draw as
+    # a QR code. Built by the server: a client that could build payloads could
+    # build tickets (qr-codes.md, For the frontend).
+    qr_payload: str
+
+
+class OrderEvent(BaseModel):
+    """Enough of the event to render an order without a second request."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    slug: str
+    title: str
+    venue_name: str
+    venue_address: str
+    starts_at: datetime
+    ends_at: datetime
+    timezone: str
+    status: str
 
 
 class OrderRead(BaseModel):
@@ -63,6 +83,7 @@ class OrderRead(BaseModel):
 
     order_number: str
     event_id: int
+    event: OrderEvent
     status: OrderStatus
     contact_name: str
     contact_email: str

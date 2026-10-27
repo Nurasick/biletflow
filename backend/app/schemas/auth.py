@@ -38,3 +38,17 @@ class TokenResponse(BaseModel):
     token_type: Literal["bearer"] = "bearer"
     refresh_token: str | None = None
     csrf_token: str | None = None
+
+
+class PasswordResetRequest(UserBase):
+    """POST /auth/password-reset: the address to send a link to."""
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=200)
+    # Same bounds as registration (UserCreate.password).
+    new_password: str = Field(min_length=8, max_length=50)
+
+
+class EmailVerificationConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=200)

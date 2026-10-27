@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, create_order_token
+from app.models.activation import ActivationStatus, EventActivation
 from app.models.event import Event, EventStatus
 from app.models.hold import Hold
 from app.models.order import Order, OrderStatus
@@ -24,7 +25,20 @@ ORDER = "/api/v1/orders/{number}"
 @pytest.fixture
 def event(db: Session) -> Event:
     _, profile = add_organizer(db, "organizer@example.com")
-    return add_event(db, profile, status=EventStatus.PUBLISHED)
+    event = add_event(db, profile, status=EventStatus.PUBLISHED)
+    # Paid sales are activated, so the paid-path tests here exercise ordering
+    # rather than §4.5. test_paid_checkout.py covers the unactivated case.
+    activate_paid_sales(db, event)
+    return event
+
+
+def activate_paid_sales(db: Session, event: Event) -> EventActivation:
+    activation = EventActivation(
+        event_id=event.id, status=ActivationStatus.ACTIVE, activation_fee_minor=0
+    )
+    db.add(activation)
+    db.commit()
+    return activation
 
 
 def payload(*lines: tuple[int, int], **overrides) -> dict:

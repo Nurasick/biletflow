@@ -46,6 +46,10 @@ class FakeSession:
             return self._user
         return None
 
+    def scalar(self, *_args, **_kwargs):
+        # Every other lookup finds nothing: no organizer profile, no staff row.
+        return None
+
 
 @pytest.fixture
 def as_user():

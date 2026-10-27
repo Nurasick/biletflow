@@ -24,6 +24,24 @@ class Settings(BaseSettings):
     # off, which the test suite does so no test touches the real database.
     HOLD_SWEEP_INTERVAL_SECONDS: int = 30
 
+    # §3.3: a one-time fee per event to unlock paid sales, in KZT minor units
+    # (tiyn). The amount is open question #4; 5 000 ₸ is a placeholder.
+    ACTIVATION_FEE_MINOR: int = 500_000
+    # Lifetime of password-reset and email-verification links (user_tokens).
+    PASSWORD_RESET_EXPIRE_MINUTES: int = 60
+    EMAIL_VERIFICATION_EXPIRE_HOURS: int = 48
+    # Where the web app lives, for links that leave the API: emails, the
+    # signed guest order link, campaign QR codes.
+    PUBLIC_WEB_URL: str = "http://localhost:5173"
+
+    # Uploaded event images. Local disk for development and the demo; the
+    # storage module is the only code that knows, so S3 (§9) replaces it there.
+    MEDIA_ROOT: str = "media"
+    MEDIA_URL_PATH: str = "/media"
+    PUBLIC_API_URL: str = "http://localhost:8000"
+    MAX_IMAGE_BYTES: int = 2 * 1024 * 1024
+    MAX_EVENT_IMAGES: int = 5
+
     CORS_ORIGINS: Annotated[list[AnyHttpUrl], NoDecode] = []
 
     @field_validator("CORS_ORIGINS", mode="before")

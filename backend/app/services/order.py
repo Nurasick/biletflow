@@ -21,7 +21,8 @@ from app.models.ticket import Ticket
 from app.models.ticket_type import TicketType
 from app.models.user import User
 from app.schemas.order import CheckoutRequest
-from app.services import codes
+from app.services import activation as activation_service
+from app.services import audit, codes
 from app.services import hold as hold_service
 from app.services.hold import SoldOut
 
@@ -74,6 +75,13 @@ def _checkout(
     }
     if len(ticket_types) != len(ids):
         raise UnknownTicketType
+    # §4.5: "Paid tickets shall not be purchasable before activation." Checked
+    # here on the server, not by hiding a button. Free types on the same event
+    # stay purchasable whatever the activation says (§3.1).
+    if any(t.price_minor > 0 for t in ticket_types.values()) and not activation_service.is_active(
+        db, event.id
+    ):
+        raise hold_service.NotOnSale("paid sales are not activated for this event")
 
     requested = sum(len(item.attendees) for item in data.items)
     if event.capacity is not None:
@@ -210,6 +218,15 @@ def confirm_order(db: Session, order: Order, now: datetime | None = None) -> Non
         )
     db.flush()
     db.refresh(order)
+    audit.record(
+        db,
+        action="order.confirmed",
+        entity_type="order",
+        entity_id=order.id,
+        event_id=order.event_id,
+        summary=f"Order {order.order_number} confirmed, {sum(held.values())} ticket(s) issued",
+        payload={"total_minor": order.total_minor, "tickets": sum(held.values())},
+    )
 
 
 def get_order_by_number(db: Session, order_number: str) -> Order | None:
@@ -243,15 +260,17 @@ def order_items(db: Session, order: Order) -> list[OrderItem]:
     )
 
 
-def order_tickets(db: Session, order: Order) -> list[tuple[Ticket, str]]:
-    """Each ticket with its attendee's name, which the ticket itself displays."""
+def order_tickets(db: Session, order: Order) -> list[tuple[Ticket, str, str]]:
+    """Each ticket with its attendee's name and its type's name, both of which
+    the ticket itself displays (§4.7)."""
     rows = db.execute(
-        select(Ticket, Attendee.full_name)
+        select(Ticket, Attendee.full_name, TicketType.name)
         .join(Attendee, Attendee.id == Ticket.attendee_id)
+        .join(TicketType, TicketType.id == Ticket.ticket_type_id)
         .where(Ticket.order_id == order.id)
         .order_by(Ticket.id)
     ).all()
-    return [(ticket, name) for ticket, name in rows]
+    return [(ticket, name, type_name) for ticket, name, type_name in rows]
 
 
 def _ensure_capacity(db: Session, event: Event, requested: int) -> None:
