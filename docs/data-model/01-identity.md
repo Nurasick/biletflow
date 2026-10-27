@@ -335,10 +335,10 @@ with no assignments is a normal state, not an error. Design that empty screen.
 - [ ] `alembic upgrade head`, then `downgrade -1`, then upgrade again
 - [x] `app/core/security.py` — password hashing (pwdlib/argon2), JWT sign/verify
 - [x] `app/api/deps.py` — `get_current_user`, `get_current_organizer`
-- [ ] `app/api/deps.py` — event-scoped permission helper (is this user staff
+- [x] `app/api/deps.py` — event-scoped permission helper (is this user staff
       for event N?). Needed by check-in (04)
 - [x] Tests: email case-insensitivity, JWT expiry, suspended user cannot log in
-- [ ] Tests: `user_tokens` single-use and expiry (no flow consumes them yet),
+- [x] Tests: `user_tokens` single-use and expiry (no flow consumes them yet),
       and each row of the permission matrix
 
 `staff_assignments.event_id` references `events`, which doesn't exist yet.

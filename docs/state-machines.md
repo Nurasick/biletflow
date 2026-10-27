@@ -47,6 +47,7 @@ hold conversion — must use it. See §9 for which ones those are.
 stateDiagram-v2
     [*] --> draft : organizer creates
     draft --> published : publish
+    published --> draft : unpublish (nothing sold)
     draft --> cancelled : abandon
     published --> cancelled : cancel event
     published --> suspended : platform admin suspends
@@ -58,11 +59,20 @@ stateDiagram-v2
 | From | To | Trigger | Actor | Guard | Side effects |
 |---|---|---|---|---|---|
 | `draft` | `published` | Publish | Organizer | ≥1 visible ticket type; `starts_at` in the future; venue and time set | Set `published_at`; audit |
+| `published` | `draft` | Unpublish | Organizer | No ticket sold or held (`quantity_sold + quantity_reserved = 0` on every type) | Clear `published_at`; audit |
 | `draft` | `cancelled` | Abandon | Organizer | — | Audit |
 | `published` | `cancelled` | Cancel | Organizer | — | Void all tickets; refund paid orders (§4.9); notify attendees (§4.10); emit cancellation `.ics` (§4.11); audit |
 | `published` | `suspended` | Suspend | Platform Admin | — | **Stop all sales immediately** (§11); audit with reason |
 | `suspended` | `published` | Lift | Platform Admin | — | Audit |
 | `suspended` | `cancelled` | Cancel | Platform Admin | — | As `published → cancelled` |
+
+**Unpublish** was added while building (§4.2 lists "publish, unpublish, and cancel"). It is
+refused once anything is sold or held: taking the page down under a buyer's
+feet is what `cancel`, with its refunds, is for.
+
+**Edits** are allowed in `draft` and `published` only. `suspended` is under a
+Platform Admin's review and `cancelled` is terminal, so both are frozen; the web
+form applies the same rule.
 
 `cancelled` is terminal. §4.16 requires cancelled events to remain readable with
 all their retained records, so this is a state, never a deletion.

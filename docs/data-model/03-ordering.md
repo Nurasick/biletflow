@@ -472,6 +472,24 @@ Guests have no account, so:
   to `expired`.
 - **`attendees.order_item_id`** was added so confirmation knows which ticket
   type each attendee gets.
+- **Step 3b is `POST /orders/{order_number}/pay`** through a simulated
+  provider (`app/services/payment_provider.py`). The body picks the outcome
+  (`succeed` or `fail`) so the decline path can be demonstrated. Every row is
+  `is_simulated = true`. Retries send the same `Idempotency-Key` header; a
+  replay returns the first result and charges nothing, and a key reused for a
+  different order is a `409`.
+- **A declined payment cancels the order** and releases its holds at once
+  (state-machines.md §5), answering `402`. The buyer starts a fresh checkout.
+- **Paid lines need an active activation** (§4.5), checked inside checkout.
+  Free lines on the same event are unaffected.
+- **Refunds are full only** (`POST /organizer/events/{id}/orders/{n}/refund`).
+  Free orders are cancelled instead (`…/cancel`). Both void the live tickets
+  and return them to sale (`quantity_sold` drops).
+- **The buyer can abandon a pending order** (`POST /orders/{n}/cancel`), which
+  releases the holds without waiting for the sweeper.
+- **Known gap:** if a refund fails while an event is being cancelled, the
+  whole cancellation rolls back, including the failed refund row. The
+  simulator never fails a refund; a real provider would need that row kept.
 
 ## Build checklist
 
@@ -489,7 +507,7 @@ Guests have no account, so:
 - [ ] Tests:
   - [x] Concurrent buyers for the last ticket → exactly one winner
   - [x] Free order reaches `confirmed` with **no** `payments` row
-  - [ ] Duplicate payment webhook issues **one** set of tickets (confirming twice is already tested; the webhook itself comes with payments)
+  - [x] Duplicate payment webhook issues **one** set of tickets (confirming twice is already tested; the webhook itself comes with payments)
   - [x] Price change after purchase does **not** alter the past order's total
   - [x] Expired hold releases inventory and issues no tickets
   - [x] A guest cannot read another guest's order
