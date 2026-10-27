@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { AboutEvent } from "../features/Event/ui/AboutEvent/AboutEvent";
 import { Breadcrumb } from "../features/Event/ui/Breadcrumb/Breadcrumb";
 import { EventInfo } from "../features/Event/ui/EventInfo/EventInfo";
@@ -7,6 +8,7 @@ import { useEventBooking } from "../hooks/useEventBooking";
 import { DateSelector } from "../shared/DateSelector/DateSelector";
 
 export const EventPage = () => {
+  const { t } = useTranslation();
   const booking = useEventBooking();
 
   return (
@@ -21,7 +23,7 @@ export const EventPage = () => {
 
           <div>
             <h2 className="text-[15px] font-semibold">
-              Choose a date and time
+              {t("event.chooseDateTime")}
             </h2>
             <DateSelector
               selectedDate={booking.selectedDate}
