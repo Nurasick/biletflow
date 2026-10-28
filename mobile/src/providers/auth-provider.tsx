@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import * as SessionStorage from '@/lib/session-storage';
 import {
   createContext,
   type PropsWithChildren,
@@ -97,15 +97,23 @@ async function requestTokens(path: '/login' | '/refresh', body: Record<string, s
   return responseBody;
 }
 
+async function clearStoredSession() {
+  try {
+    await SessionStorage.deleteItemAsync(SESSION_STORAGE_KEY);
+  } catch {
+    // Storage failures must not interrupt startup or local sign-out.
+  }
+}
+
 async function saveStoredSession(session: AuthSession) {
-  await SecureStore.setItemAsync(
+  await SessionStorage.setItemAsync(
     SESSION_STORAGE_KEY,
     JSON.stringify({ email: session.user.email, refreshToken: session.refreshToken } satisfies StoredSession),
   );
 }
 
 async function readStoredSession(): Promise<StoredSession | null> {
-  const stored = await SecureStore.getItemAsync(SESSION_STORAGE_KEY);
+  const stored = await SessionStorage.getItemAsync(SESSION_STORAGE_KEY);
   if (!stored) {
     return null;
   }
@@ -124,7 +132,7 @@ async function readStoredSession(): Promise<StoredSession | null> {
     // Treat an invalid local value as an expired session.
   }
 
-  await SecureStore.deleteItemAsync(SESSION_STORAGE_KEY);
+  await clearStoredSession();
   return null;
 }
 
@@ -152,7 +160,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       await saveStoredSession(restoredSession);
       setSession(restoredSession);
     } catch {
-      await SecureStore.deleteItemAsync(SESSION_STORAGE_KEY);
+      await clearStoredSession();
       setSession(null);
     } finally {
       setIsRestoring(false);
@@ -187,7 +195,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setSession(refreshedSession);
       return refreshedSession;
     } catch (refreshError) {
-      await SecureStore.deleteItemAsync(SESSION_STORAGE_KEY);
+      await clearStoredSession();
       setSession(null);
       throw refreshError;
     }
@@ -210,7 +218,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (rememberMe) {
         await saveStoredSession(nextSession);
       } else {
-        await SecureStore.deleteItemAsync(SESSION_STORAGE_KEY);
+        await clearStoredSession();
       }
 
       setSession(nextSession);
@@ -228,7 +236,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const activeSession = session;
     setSession(null);
     setError(null);
-    await SecureStore.deleteItemAsync(SESSION_STORAGE_KEY);
+    await clearStoredSession();
 
     if (activeSession) {
       try {
