@@ -1,83 +1,56 @@
+import { useQuery } from "@tanstack/react-query";
+import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { EventCard } from "../features/Main/ui/EventCard/EventCard";
 import { Hero } from "../features/Main/ui/Hero/Hero";
-import { useDateSelection } from "../hooks/useDateSelection";
-import { DateSelector } from "../shared/DateSelector/DateSelector";
+import { eventsApi } from "../shared/api/events";
 
-const events = [
-  {
-    age: 12,
-    price: 5000,
-    title: "demo.liveOrchestra",
-    time: "18:30",
-    venue: "demo.centralHall",
-  },
-  {
-    age: 18,
-    price: 7500,
-    title: "demo.standup",
-    time: "20:00",
-    venue: "demo.almatyTheatre",
-  },
-  {
-    age: 6,
-    price: 3500,
-    title: "demo.familyTheatre",
-    time: "15:00",
-    venue: "demo.dramaTheatre",
-  },
-  {
-    age: 12,
-    price: 6000,
-    title: "demo.jazz",
-    time: "21:00",
-    venue: "demo.musicHall",
-  },
-] as const;
+const CATEGORIES = ["concert", "conference", "sport", "theater", "other"] as const;
 
+// The public catalogue: published, public events that have not ended, from the
+// API (audit #2). Search text and category live in the URL so links share them.
 export const HomePage = () => {
   const { t } = useTranslation();
-  const { selectedDate, selectedDateLabel, setSelectedDate } =
-    useDateSelection();
+  const [params, setParams] = useSearchParams();
+  const q = params.get("q") ?? "";
+  const category = params.get("category") ?? "";
+  const events = useQuery({
+    queryKey: ["events", "public", q, category],
+    queryFn: () => eventsApi.list({ q, category }),
+  });
+  const setCategory = (value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set("category", value); else next.delete("category");
+    setParams(next, { replace: true });
+  };
 
   return (
     <main className="mx-auto max-w-7xl px-7 py-6">
       <Hero />
-
-      <DateSelector
-        selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
-      />
-
-      <section className="mt-8">
-        <div className="flex items-end justify-between">
-          <h2 className="text-2xl font-bold tracking-tight">
-            {t("nav.afisha")} · {selectedDateLabel}
-          </h2>
-
-          <div className="text-sm text-[#667085]">
-            {t("common.events", { count: 28 })} ·{" "}
-            <button className="font-semibold text-[#101828]">
-              {t("home.popular")} ▾
-            </button>
+      <section className="mt-8" aria-labelledby="afisha">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h2 id="afisha" className="text-2xl font-bold tracking-tight">{t("nav.afisha")}</h2>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("organizerEvent.category")}>
+            {(["", ...CATEGORIES] as const).map((value) => <button key={value || "all"} type="button" aria-pressed={category === value}
+              onClick={() => setCategory(value)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${category === value
+                ? "border-[#101828] bg-[#101828] text-white" : "border-[#D0D5DD] text-[#667085] hover:border-[#101828]"}`}>
+              {value ? t(`organizerEvent.category.${value}`) : t("dates.all")}
+            </button>)}
           </div>
         </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-5">
-          {events.map((event, index) => {
-            return (
-              <EventCard
-                key={index}
-                age={event.age}
-                price={event.price}
-                title={t(event.title)}
-                time={event.time}
-                venue={t(event.venue)}
-              />
-            );
-          })}
-        </div>
+        {events.isPending ? <div role="status" className="flex items-center gap-2 py-16 text-sm text-[#667085]">
+          <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("eventWorkflow.loading")}
+        </div> : events.isError ? <div role="alert" className="py-16 text-sm">
+          {t("errors.unavailable")} <button type="button" className="font-semibold text-[#D9431F]"
+            onClick={() => void events.refetch()}>{t("common.retry")}</button>
+        </div> : events.data.length === 0 ? <p className="py-16 text-sm text-[#667085]">{t("catalogue.empty")}</p> : (
+          <div className="mt-5 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-5">
+            {events.data.map((event) => <EventCard key={event.id} event={event} />)}
+          </div>
+        )}
       </section>
     </main>
   );

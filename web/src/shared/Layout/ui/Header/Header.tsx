@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../hooks/useAuth";
 
 export const Header = () => {
   const { t } = useTranslation();
   const { me } = useAuth();
+  const navigate = useNavigate();
   const user = me.data;
   return (
     <header className="border-b border-[#D0D5DD]">
@@ -17,19 +18,26 @@ export const Header = () => {
           Bilet<span className="text-[#FF5C35]">Flow</span>
         </Link>
 
-        <div className="flex h-12 flex-1 overflow-hidden rounded-xl border border-[#D0D5DD] bg-[#F5F5F0]">
+        <form role="search" className="flex h-12 flex-1 overflow-hidden rounded-xl border border-[#D0D5DD] bg-[#F5F5F0]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const q = new FormData(event.currentTarget).get("q")?.toString().trim() ?? "";
+            navigate(q ? `/?q=${encodeURIComponent(q)}` : "/");
+          }}>
           <input
-            type="text"
+            type="search"
+            name="q"
+            aria-label={t("nav.searchPlaceholder")}
             placeholder={t("nav.searchPlaceholder")}
             className="min-w-0 flex-1 bg-transparent px-4 text-sm outline-none placeholder:text-[#667085]"
           />
-          <button className="border-l border-[#D0D5DD] px-4 text-sm text-[#667085]">
+          <button type="button" className="border-l border-[#D0D5DD] px-4 text-sm text-[#667085]">
             {t("nav.anyDate")} ▾
           </button>
-          <button className="bg-[#FF5C35] px-6 text-sm font-semibold text-[#101828]">
+          <button type="submit" className="bg-[#FF5C35] px-6 text-sm font-semibold text-[#101828]">
             {t("nav.search")}
           </button>
-        </div>
+        </form>
 
         <div className="flex items-center gap-3">
           <button aria-label={t("nav.menu")} className="relative grid h-10 w-10 place-items-center rounded-xl border border-[#D0D5DD] text-[#667085]">

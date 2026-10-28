@@ -280,26 +280,42 @@ back to the event's default.
 
 ---
 
+## Decisions made while building
+
+- **Audit shipped before notifications.** `audit_logs` has its own migration;
+  `notifications` is still to come. Until it exists, the account emails
+  (verification, password reset) go through `app/services/mailer.py`, which
+  logs to the console and keeps a bounded in-memory `outbox` the tests read.
+- **`record()` never commits.** It adds the row to the caller's transaction,
+  so a rolled-back transition leaves no audit row and a committed one always
+  has its row.
+- **Timeline:** `GET /organizer/events/{id}/timeline?since&until&action=…`
+  (repeat `action` to filter by several), and the same for Platform Admins
+  under `/admin/events/{id}/timeline`.
+- **Test teardown deletes audit rows** on the shared Postgres database
+  (`purge_event` in `tests/test_holds_concurrency.py`). That is cleanup of test
+  data, not a service-layer path; `app/services/audit.py` still has no delete.
+
 ## Build checklist
 
-- [ ] `app/models/audit.py` — `audit_logs`
+- [x] `app/models/audit.py` — `audit_logs`
 - [ ] `app/models/notification.py` — `notifications`
 - [ ] Import both in `app/db/base.py`
 - [ ] `alembic revision --autogenerate -m "audit and notifications"` — **read it**
-- [ ] An audit helper the transition methods call — one function, one shape
-- [ ] Wire it into **every** transition in
+- [x] An audit helper the transition methods call — one function, one shape
+- [x] Wire it into **every** transition in
       [state-machines.md](../state-machines.md); §4.9 makes money actions mandatory
 - [ ] Notification enqueue helper + a worker that drains `pending`
 - [ ] Email templates for all nine §4.10 triggers, in the supported locales
-- [ ] Timeline endpoint with date-range and action filters, **event-scoped
+- [x] Timeline endpoint with date-range and action filters, **event-scoped
       authorization in the query**
 - [ ] Tests:
-  - [ ] Each transition writes exactly one audit row with the right `action`
-  - [ ] An organizer cannot read another organizer's event timeline
-  - [ ] The service layer exposes no update or delete for `audit_logs`
+  - [x] Each transition writes exactly one audit row with the right `action`
+  - [x] An organizer cannot read another organizer's event timeline
+  - [x] The service layer exposes no update or delete for `audit_logs`
   - [ ] A failed send leaves `status='failed'` and does **not** roll back the order
   - [ ] Guest notifications work with `user_id IS NULL`
-  - [ ] Audit `payload` contains no attendee names or emails
+  - [x] Audit `payload` contains no attendee names or emails
 
 ---
 

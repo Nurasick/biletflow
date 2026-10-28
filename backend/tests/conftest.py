@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterator
 from datetime import UTC, datetime
 
@@ -20,6 +21,10 @@ def _bigint_as_integer(type_, compiler, **kw):
     return "INTEGER"
 
 
+# Before any app import reads settings: the hold sweeper would otherwise start
+# with every TestClient and write to the real database in the background.
+os.environ["HOLD_SWEEP_INTERVAL_SECONDS"] = "0"
+
 from app.db.base import Base  # noqa: E402 - must import after the compiles() override
 from app.db.session import get_db  # noqa: E402
 from app.main import app  # noqa: E402
@@ -39,6 +44,10 @@ class FakeSession:
     def get(self, model, pk):
         if self._user is not None and pk == self._user.id:
             return self._user
+        return None
+
+    def scalar(self, *_args, **_kwargs):
+        # Every other lookup finds nothing: no organizer profile, no staff row.
         return None
 
 

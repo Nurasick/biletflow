@@ -13,6 +13,8 @@ import { OrganizerRoute } from "./shared/auth/OrganizerRoute";
 import { OrganizerEventPage } from "./pages/OrganizerEventPage";
 import { OrganizerEventsPage } from "./pages/OrganizerEventsPage";
 import { OrganizerEventPreviewPage } from "./pages/OrganizerEventPreviewPage";
+import { OrderPage } from "./pages/OrderPage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 
 function App() {
   const router = createBrowserRouter([
@@ -21,9 +23,14 @@ function App() {
       children: [
         { path: "/organizer/events", element: <OrganizerEventsPage /> },
         { path: "/organizer/events/:eventId/preview", element: <OrganizerEventPreviewPage /> },
-        { path: "/organizer/profile", element: <OrganizerProfilePage /> },
         { path: "/organizer/events/new", element: <OrganizerEventPage /> },
+        { path: "/organizer/events/:eventId/edit", element: <OrganizerEventPage /> },
       ],
+    },
+    {
+      // Any signed-in account: saving this profile is how one becomes an organizer.
+      element: <OrganizerRoute requireProfile={false} />,
+      children: [{ path: "/organizer/profile", element: <OrganizerProfilePage /> }],
     },
     {
       element: <GuestRoute />,
@@ -40,6 +47,7 @@ function App() {
       path: "/reset-password",
       element: <ResetPasswordPage />,
     },
+    { path: "/verify-email", element: <VerifyEmailPage /> },
     {
       element: <Layout />,
       children: [
@@ -51,10 +59,8 @@ function App() {
           path: "/",
           element: <HomePage />,
         },
-        {
-          path: "/events",
-          element: <EventPage />,
-        },
+        { path: "/events/:slug", element: <EventPage /> },
+        { path: "/orders/:orderNumber", element: <OrderPage /> },
       ],
     },
   ]);

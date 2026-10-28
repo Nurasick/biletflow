@@ -216,6 +216,7 @@ Who is actually going. **Not the same thing as a user.**
 |---|---|---|---|
 | `id` | bigint PK | no | |
 | `order_id` | bigint FK | no | |
+| `order_item_id` | bigint FK → `order_items` | no | Which line this person's ticket comes from — confirmation needs it to issue the right ticket type |
 | `user_id` | bigint FK → `users` | yes | Set when the attendee has an account |
 | `full_name` | varchar(200) | no | |
 | `email` | varchar(320) | yes | |
@@ -451,24 +452,65 @@ Guests have no account, so:
 
 ---
 
+## Decisions made while building
+
+- **Steps 1 and 2 are one request.** `POST /events/{slug}/orders` claims every
+  line, creates the order, attendees and items, and attaches the holds in one
+  transaction. A separate "create hold" endpoint would hand out hold ids with
+  no owner, which anyone could attach to their own order.
+- **Guests get a signed link.** The checkout response carries an
+  `access_token` (JWT, `type="order"`, `ORDER_LINK_EXPIRE_DAYS`) for
+  `GET /orders/{order_number}?token=…`. Signed-in buyers need no token.
+  Missing and not-yours are both `404`.
+- **`events.capacity` is enforced** by locking the event row
+  (`SELECT … FOR UPDATE`) before claiming, only when capacity is set. The
+  per-type atomic `UPDATE` cannot see a cap that spans ticket types.
+- **Lines are claimed in ticket-type id order**, so two multi-line checkouts
+  cannot deadlock.
+- **The sweeper** runs in the API process every `HOLD_SWEEP_INTERVAL_SECONDS`
+  (default 30, `0` disables). It also moves pending orders past `expires_at`
+  to `expired`.
+- **`attendees.order_item_id`** was added so confirmation knows which ticket
+  type each attendee gets.
+- **Step 3b is `POST /orders/{order_number}/pay`** through a simulated
+  provider (`app/services/payment_provider.py`). The body picks the outcome
+  (`succeed` or `fail`) so the decline path can be demonstrated. Every row is
+  `is_simulated = true`. Retries send the same `Idempotency-Key` header; a
+  replay returns the first result and charges nothing, and a key reused for a
+  different order is a `409`.
+- **A declined payment cancels the order** and releases its holds at once
+  (state-machines.md §5), answering `402`. The buyer starts a fresh checkout.
+- **Paid lines need an active activation** (§4.5), checked inside checkout.
+  Free lines on the same event are unaffected.
+- **Refunds are full only** (`POST /organizer/events/{id}/orders/{n}/refund`).
+  Free orders are cancelled instead (`…/cancel`). Both void the live tickets
+  and return them to sale (`quantity_sold` drops).
+- **The buyer can abandon a pending order** (`POST /orders/{n}/cancel`), which
+  releases the holds without waiting for the sweeper.
+- **Known gap:** if a refund fails while an event is being cancelled, the
+  whole cancellation rolls back, including the failed refund row. The
+  simulator never fails a refund; a real provider would need that row kept.
+
 ## Build checklist
 
-- [ ] Read [concurrency.md](concurrency.md) if you haven't
-- [ ] `app/models/hold.py`, `order.py`, `attendee.py`, `ticket.py`, `payment.py`
-- [ ] Import them all in `app/db/base.py`
-- [ ] `alembic revision --autogenerate -m "ordering and tickets"` — **read it**
-- [ ] Reservation service: the atomic `UPDATE`, returning `409` on `rowcount = 0`
-- [ ] Hold-expiry sweeper + the drift-detection query
-- [ ] Confirmation as **one transaction** — counters, holds, tickets together
-- [ ] `order_number` and `public_code` generators (collision-safe, non-sequential)
-- [ ] Free path end to end **before** touching payments
+- [x] Read [concurrency.md](concurrency.md) if you haven't
+- [x] `app/models/hold.py`, `order.py`, `attendee.py`, `ticket.py`, `payment.py`
+      — `event_seat_id` (08) and `orders.campaign_id` (05) are left for the
+      slices that create their target tables
+- [x] Import them all in `app/db/base.py`
+- [x] `alembic revision --autogenerate -m "ordering and tickets"` — **read it**
+- [x] Reservation service: the atomic `UPDATE`, returning `409` on `rowcount = 0` (`POST /events/{slug}/orders` maps `SoldOut` to 409)
+- [x] Hold-expiry sweeper + the drift-detection query
+- [x] Confirmation as **one transaction** — counters, holds, tickets together
+- [x] `order_number` and `public_code` generators (collision-safe, non-sequential)
+- [x] Free path end to end **before** touching payments
 - [ ] Tests:
-  - [ ] Concurrent buyers for the last ticket → exactly one winner
-  - [ ] Free order reaches `confirmed` with **no** `payments` row
-  - [ ] Duplicate payment webhook issues **one** set of tickets
-  - [ ] Price change after purchase does **not** alter the past order's total
-  - [ ] Expired hold releases inventory and issues no tickets
-  - [ ] A guest cannot read another guest's order
+  - [x] Concurrent buyers for the last ticket → exactly one winner
+  - [x] Free order reaches `confirmed` with **no** `payments` row
+  - [x] Duplicate payment webhook issues **one** set of tickets (confirming twice is already tested; the webhook itself comes with payments)
+  - [x] Price change after purchase does **not** alter the past order's total
+  - [x] Expired hold releases inventory and issues no tickets
+  - [x] A guest cannot read another guest's order
 
 ---
 

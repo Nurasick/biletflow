@@ -216,24 +216,43 @@ feature. Say so in the UI rather than silently accepting a scan you can't verify
 
 ---
 
+## Decisions made while building
+
+- **The event's own organizer counts as staff** for scanning, without a
+  `staff_assignments` row. Making them assign themselves before opening their
+  own door would be ceremony; the permission matrix already lets them do more.
+- **Reversal uses the same permission as check-in** for the MVP (§4.8 "where
+  authorized"). Every reversal row records who did it.
+- **Six outcomes, not five:** `wrong_event` is reported separately from
+  `invalid` so the door staff know to send the person to the right entrance.
+- **The QR payload is not a JWT.** `BF1.adm.{public_code}.{event_id}.{nonce}.{sig}`
+  with a 16-byte truncated HMAC-SHA256 under a key derived from `SECRET_KEY`
+  (`app/core/qr.py`). A JWT roughly triples the length, and a longer payload
+  is a denser QR that scans worse from paper (§4.7).
+- **Clients draw the QR from `qr_payload`**, which the server signs and returns
+  on every order read. Cancelled and refunded tickets get an empty payload.
+- Endpoints: `GET /staff/events`, and under `/staff/events/{id}`: `POST scan`,
+  `POST tickets/{code}/check-in`, `POST tickets/{code}/reverse`,
+  `GET attendance`, `GET search?q=`.
+
 ## Build checklist
 
-- [ ] `app/models/check_in.py` — `check_in_records`
-- [ ] Import it in `app/db/base.py`
-- [ ] `alembic revision --autogenerate -m "check-in records"` — **read it**
-- [ ] Scan endpoint following the [qr-codes.md](qr-codes.md) order exactly
-- [ ] Returns **five distinct** outcomes, not a boolean
-- [ ] Reversal endpoint, with its own permission check
-- [ ] Counts endpoint for the mobile app
-- [ ] Manual attendee search by name and `public_code`
-- [ ] Tests:
-  - [ ] **A campaign QR is rejected** (§11 success criterion)
-  - [ ] Two concurrent scans of one ticket → exactly one check-in
-  - [ ] A refunded ticket returns `refunded`, not a generic failure
-  - [ ] An admin without an assignment for that event gets `403`
-  - [ ] Reverse then re-check-in works, and leaves **three** rows in
+- [x] `app/models/check_in.py` — `check_in_records`
+- [x] Import it in `app/db/base.py`
+- [x] `alembic revision --autogenerate -m "check-in records"` — **read it**
+- [x] Scan endpoint following the [qr-codes.md](qr-codes.md) order exactly
+- [x] Returns **five distinct** outcomes, not a boolean
+- [x] Reversal endpoint, with its own permission check
+- [x] Counts endpoint for the mobile app
+- [x] Manual attendee search by name and `public_code`
+- [x] Tests:
+  - [x] **A campaign QR is rejected** (§11 success criterion)
+  - [x] Two concurrent scans of one ticket → exactly one check-in
+  - [x] A refunded ticket returns `refunded`, not a generic failure
+  - [x] An admin without an assignment for that event gets `403`
+  - [x] Reverse then re-check-in works, and leaves **three** rows in
         `check_in_records`
-  - [ ] Counts exclude cancelled and refunded tickets
+  - [x] Counts exclude cancelled and refunded tickets
 
 ---
 

@@ -1,13 +1,467 @@
 {
   "components": {
     "schemas": {
+      "ActivationRead": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "activation_fee_minor": {
+            "title": "Activation Fee Minor",
+            "type": "integer"
+          },
+          "checklist": {
+            "$ref": "#/components/schemas/ChecklistRead"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "active",
+              "suspended"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "suspended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspended At"
+          },
+          "suspension_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspension Reason"
+          },
+          "terms_accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terms Accepted At"
+          }
+        },
+        "required": [
+          "status",
+          "activation_fee_minor",
+          "currency",
+          "is_simulated",
+          "terms_accepted_at",
+          "activated_at",
+          "suspended_at",
+          "suspension_reason",
+          "checklist"
+        ],
+        "title": "ActivationRead",
+        "type": "object"
+      },
+      "AttendanceRead": {
+        "properties": {
+          "absent": {
+            "title": "Absent",
+            "type": "integer"
+          },
+          "checked_in": {
+            "title": "Checked In",
+            "type": "integer"
+          },
+          "checked_in_percent": {
+            "title": "Checked In Percent",
+            "type": "number"
+          },
+          "registered": {
+            "title": "Registered",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "registered",
+          "checked_in",
+          "absent",
+          "checked_in_percent"
+        ],
+        "title": "AttendanceRead",
+        "type": "object"
+      },
+      "AttendeeIn": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "full_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "required": [
+          "full_name"
+        ],
+        "title": "AttendeeIn",
+        "type": "object"
+      },
+      "AttendeeRow": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "public_code": {
+            "title": "Public Code",
+            "type": "string"
+          },
+          "ticket_status": {
+            "title": "Ticket Status",
+            "type": "string"
+          },
+          "ticket_type_name": {
+            "title": "Ticket Type Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "public_code",
+          "ticket_status",
+          "ticket_type_name",
+          "order_number",
+          "full_name",
+          "email",
+          "phone"
+        ],
+        "title": "AttendeeRow",
+        "type": "object"
+      },
+      "CancelRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "CancelRequest",
+        "type": "object"
+      },
+      "ChecklistRead": {
+        "description": "\u00a74.5 \"The organizer shall see an activation checklist\": \u00a73.2's five steps.",
+        "properties": {
+          "fee_paid": {
+            "title": "Fee Paid",
+            "type": "boolean"
+          },
+          "organizer_verified": {
+            "title": "Organizer Verified",
+            "type": "boolean"
+          },
+          "paid_ticket_type": {
+            "title": "Paid Ticket Type",
+            "type": "boolean"
+          },
+          "payout_account_active": {
+            "title": "Payout Account Active",
+            "type": "boolean"
+          },
+          "terms_accepted": {
+            "title": "Terms Accepted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "paid_ticket_type",
+          "organizer_verified",
+          "fee_paid",
+          "payout_account_active",
+          "terms_accepted"
+        ],
+        "title": "ChecklistRead",
+        "type": "object"
+      },
+      "CheckoutRequest": {
+        "properties": {
+          "contact_email": {
+            "format": "email",
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "contact_phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Phone"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLineIn"
+            },
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contact_name",
+          "contact_email",
+          "items"
+        ],
+        "title": "CheckoutRequest",
+        "type": "object"
+      },
+      "CheckoutResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
+          "event": {
+            "$ref": "#/components/schemas/OrderEvent"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "fee_minor": {
+            "title": "Fee Minor",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItemRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "subtotal_minor": {
+            "title": "Subtotal Minor",
+            "type": "integer"
+          },
+          "tickets": {
+            "items": {
+              "$ref": "#/components/schemas/TicketRead"
+            },
+            "title": "Tickets",
+            "type": "array"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_number",
+          "event_id",
+          "event",
+          "status",
+          "contact_name",
+          "contact_email",
+          "subtotal_minor",
+          "discount_minor",
+          "fee_minor",
+          "total_minor",
+          "currency",
+          "expires_at",
+          "confirmed_at",
+          "created_at",
+          "items",
+          "tickets",
+          "access_token"
+        ],
+        "title": "CheckoutResponse",
+        "type": "object"
+      },
+      "DeviceInfo": {
+        "properties": {
+          "device_info": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Info"
+          }
+        },
+        "title": "DeviceInfo",
+        "type": "object"
+      },
+      "EmailVerificationConfirm": {
+        "properties": {
+          "token": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "EmailVerificationConfirm",
+        "type": "object"
+      },
       "EventCreate": {
-        "description": "What an organizer sends to create a draft.\n\nNo organizer id and no status: the owner comes from the access token, and\nevery event starts as a draft. Status changes go through dedicated actions.",
+        "description": "What an organizer sends to create a draft.\n\nNo organizer id and no status: the owner comes from the access token, and\nevery event starts as a draft. Status changes go through dedicated actions.\n`slug` is optional: left out, one is made from the title.\n\ndescription and category stay optional here although the web form\nrequires them: a draft saved through the API may be incomplete. The\nlength limits are the same as the form's.",
         "properties": {
           "capacity": {
             "anyOf": [
               {
                 "exclusiveMinimum": 0.0,
+                "maximum": 2147483647.0,
                 "type": "integer"
               },
               {
@@ -49,6 +503,7 @@
           "description": {
             "anyOf": [
               {
+                "maxLength": 10000,
                 "type": "string"
               },
               {
@@ -61,6 +516,18 @@
             "format": "date-time",
             "title": "Ends At",
             "type": "string"
+          },
+          "refund_policy": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Policy"
           },
           "registration_closes_at": {
             "anyOf": [
@@ -96,11 +563,18 @@
             "type": "string"
           },
           "slug": {
-            "maxLength": 200,
-            "minLength": 3,
-            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-            "title": "Slug",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 3,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
           },
           "starts_at": {
             "format": "date-time",
@@ -119,6 +593,7 @@
             "type": "string"
           },
           "venue_address": {
+            "maxLength": 2000,
             "minLength": 1,
             "title": "Venue Address",
             "type": "string"
@@ -141,7 +616,6 @@
           }
         },
         "required": [
-          "slug",
           "title",
           "venue_name",
           "venue_address",
@@ -152,7 +626,8 @@
         "title": "EventCreate",
         "type": "object"
       },
-      "EventRead": {
+      "EventDetail": {
+        "description": "GET /events/{slug}: what an attendee's event page needs in one request.",
         "properties": {
           "cancelled_at": {
             "anyOf": [
@@ -231,9 +706,38 @@
             "title": "Id",
             "type": "integer"
           },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/EventImageRead"
+            },
+            "title": "Images",
+            "type": "array"
+          },
+          "organizer_name": {
+            "title": "Organizer Name",
+            "type": "string"
+          },
           "organizer_profile_id": {
             "title": "Organizer Profile Id",
             "type": "integer"
+          },
+          "paid_sales_active": {
+            "title": "Paid Sales Active",
+            "type": "boolean"
+          },
+          "phase": {
+            "description": "\u00a74.16's Upcoming / Active / Completed, derived from the clock and\nnever stored (state-machines.md \u00a71.1). Non-published events report\ntheir status instead.",
+            "enum": [
+              "draft",
+              "upcoming",
+              "active",
+              "completed",
+              "cancelled",
+              "suspended"
+            ],
+            "readOnly": true,
+            "title": "Phase",
+            "type": "string"
           },
           "published_at": {
             "anyOf": [
@@ -246,6 +750,17 @@
               }
             ],
             "title": "Published At"
+          },
+          "refund_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Policy"
           },
           "registration_closes_at": {
             "anyOf": [
@@ -348,12 +863,398 @@
           "capacity",
           "registration_opens_at",
           "registration_closes_at",
+          "refund_policy",
           "published_at",
           "cancelled_at",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "organizer_name",
+          "images",
+          "paid_sales_active",
+          "phase"
+        ],
+        "title": "EventDetail",
+        "type": "object"
+      },
+      "EventImageRead": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "position"
+        ],
+        "title": "EventImageRead",
+        "type": "object"
+      },
+      "EventPreview": {
+        "description": "GET /organizer/events/{id}/preview: the page the organizer checks\nbefore publishing (\u00a74.2 \"Preview an event before publication\").",
+        "properties": {
+          "allowed_actions": {
+            "items": {
+              "enum": [
+                "publish",
+                "unpublish",
+                "cancel"
+              ],
+              "type": "string"
+            },
+            "title": "Allowed Actions",
+            "type": "array"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventRead"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/EventImageRead"
+            },
+            "title": "Images",
+            "type": "array"
+          },
+          "publish_requirements": {
+            "items": {
+              "$ref": "#/components/schemas/Requirement"
+            },
+            "title": "Publish Requirements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "event",
+          "images",
+          "publish_requirements",
+          "allowed_actions"
+        ],
+        "title": "EventPreview",
+        "type": "object"
+      },
+      "EventRead": {
+        "properties": {
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "capacity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "concert",
+                  "conference",
+                  "sport",
+                  "theater",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "organizer_profile_id": {
+            "title": "Organizer Profile Id",
+            "type": "integer"
+          },
+          "phase": {
+            "description": "\u00a74.16's Upcoming / Active / Completed, derived from the clock and\nnever stored (state-machines.md \u00a71.1). Non-published events report\ntheir status instead.",
+            "enum": [
+              "draft",
+              "upcoming",
+              "active",
+              "completed",
+              "cancelled",
+              "suspended"
+            ],
+            "readOnly": true,
+            "title": "Phase",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "refund_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Policy"
+          },
+          "registration_closes_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Closes At"
+          },
+          "registration_opens_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Opens At"
+          },
+          "seating_mode": {
+            "enum": [
+              "general_admission",
+              "assigned"
+            ],
+            "title": "Seating Mode",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "published",
+              "cancelled",
+              "suspended"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "venue_address": {
+            "title": "Venue Address",
+            "type": "string"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          },
+          "visibility": {
+            "enum": [
+              "public",
+              "unlisted",
+              "private"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "organizer_profile_id",
+          "title",
+          "description",
+          "category",
+          "cover_image_url",
+          "status",
+          "visibility",
+          "seating_mode",
+          "venue_name",
+          "venue_address",
+          "starts_at",
+          "ends_at",
+          "timezone",
+          "capacity",
+          "registration_opens_at",
+          "registration_closes_at",
+          "refund_policy",
+          "published_at",
+          "cancelled_at",
+          "created_at",
+          "updated_at",
+          "phase"
         ],
         "title": "EventRead",
+        "type": "object"
+      },
+      "EventSummary": {
+        "properties": {
+          "attendance": {
+            "$ref": "#/components/schemas/AttendanceRead"
+          },
+          "by_ticket_type": {
+            "items": {
+              "$ref": "#/components/schemas/TicketTypeSales"
+            },
+            "title": "By Ticket Type",
+            "type": "array"
+          },
+          "capacity": {
+            "title": "Capacity",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "estimated_payout_minor": {
+            "title": "Estimated Payout Minor",
+            "type": "integer"
+          },
+          "fees_minor": {
+            "title": "Fees Minor",
+            "type": "integer"
+          },
+          "gross_minor": {
+            "title": "Gross Minor",
+            "type": "integer"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "net_minor": {
+            "title": "Net Minor",
+            "type": "integer"
+          },
+          "percent_sold": {
+            "title": "Percent Sold",
+            "type": "number"
+          },
+          "refunds_minor": {
+            "title": "Refunds Minor",
+            "type": "integer"
+          },
+          "tickets_refunded": {
+            "title": "Tickets Refunded",
+            "type": "integer"
+          },
+          "tickets_remaining": {
+            "title": "Tickets Remaining",
+            "type": "integer"
+          },
+          "tickets_reserved": {
+            "title": "Tickets Reserved",
+            "type": "integer"
+          },
+          "tickets_sold": {
+            "title": "Tickets Sold",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "currency",
+          "is_simulated",
+          "capacity",
+          "tickets_sold",
+          "tickets_reserved",
+          "tickets_remaining",
+          "percent_sold",
+          "gross_minor",
+          "refunds_minor",
+          "fees_minor",
+          "net_minor",
+          "estimated_payout_minor",
+          "tickets_refunded",
+          "attendance",
+          "by_ticket_type"
+        ],
+        "title": "EventSummary",
         "type": "object"
       },
       "EventUpdate": {
@@ -363,6 +1264,7 @@
             "anyOf": [
               {
                 "exclusiveMinimum": 0.0,
+                "maximum": 2147483647.0,
                 "type": "integer"
               },
               {
@@ -404,6 +1306,7 @@
           "description": {
             "anyOf": [
               {
+                "maxLength": 10000,
                 "type": "string"
               },
               {
@@ -423,6 +1326,18 @@
               }
             ],
             "title": "Ends At"
+          },
+          "refund_policy": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Policy"
           },
           "registration_closes_at": {
             "anyOf": [
@@ -503,6 +1418,7 @@
           "venue_address": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "minLength": 1,
                 "type": "string"
               },
@@ -581,6 +1497,20 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "ImageUpload": {
+        "properties": {
+          "data_url": {
+            "maxLength": 2796266,
+            "title": "Data Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data_url"
+        ],
+        "title": "ImageUpload",
+        "type": "object"
+      },
       "LoginRequest": {
         "description": "Credentials for POST /auth/login.\n\nInherits the email normalisation from UserBase so a login and the account\nit belongs to agree on what the address is.",
         "properties": {
@@ -602,27 +1532,192 @@
         "title": "LoginRequest",
         "type": "object"
       },
-      "OrderCreate": {
-        "description": "Payload to initiate a ticket order reservation.",
+      "MeRead": {
+        "description": "GET /users/me: the account plus what it may do, so a client derives\nroles from the real session instead of a local fixture (audit #9).\nEvent admin is per event, so it is not here: see GET /staff/events.",
         "properties": {
-          "ticket_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "minItems": 1,
-            "title": "Ticket Ids",
-            "type": "array"
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_email_verified": {
+            "title": "Is Email Verified",
+            "type": "boolean"
+          },
+          "is_organizer": {
+            "title": "Is Organizer",
+            "type": "boolean"
+          },
+          "is_platform_admin": {
+            "title": "Is Platform Admin",
+            "type": "boolean"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "locale": {
+            "title": "Locale",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "suspended"
+            ],
+            "title": "Status",
+            "type": "string"
           }
         },
         "required": [
-          "ticket_ids"
+          "email",
+          "id",
+          "status",
+          "is_email_verified",
+          "first_name",
+          "last_name",
+          "locale",
+          "created_at",
+          "phone",
+          "is_platform_admin",
+          "is_organizer"
         ],
-        "title": "OrderCreate",
+        "title": "MeRead",
+        "type": "object"
+      },
+      "OrderEvent": {
+        "description": "Enough of the event to render an order without a second request.",
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "venue_address": {
+            "title": "Venue Address",
+            "type": "string"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "venue_name",
+          "venue_address",
+          "starts_at",
+          "ends_at",
+          "timezone",
+          "status"
+        ],
+        "title": "OrderEvent",
+        "type": "object"
+      },
+      "OrderItemRead": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "subtotal_minor": {
+            "title": "Subtotal Minor",
+            "type": "integer"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          },
+          "unit_price_minor": {
+            "title": "Unit Price Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "ticket_type_id",
+          "quantity",
+          "unit_price_minor",
+          "subtotal_minor"
+        ],
+        "title": "OrderItemRead",
+        "type": "object"
+      },
+      "OrderLineIn": {
+        "properties": {
+          "attendees": {
+            "items": {
+              "$ref": "#/components/schemas/AttendeeIn"
+            },
+            "minItems": 1,
+            "title": "Attendees",
+            "type": "array"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ticket_type_id",
+          "attendees"
+        ],
+        "title": "OrderLineIn",
         "type": "object"
       },
       "OrderRead": {
         "properties": {
-          "cancelled_at": {
+          "confirmed_at": {
             "anyOf": [
               {
                 "format": "date-time",
@@ -632,12 +1727,35 @@
                 "type": "null"
               }
             ],
-            "title": "Cancelled At"
+            "title": "Confirmed At"
+          },
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
           },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
+          "event": {
+            "$ref": "#/components/schemas/OrderEvent"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
           },
           "expires_at": {
             "anyOf": [
@@ -651,11 +1769,76 @@
             ],
             "title": "Expires At"
           },
-          "id": {
-            "title": "Id",
+          "fee_minor": {
+            "title": "Fee Minor",
             "type": "integer"
           },
-          "paid_at": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItemRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "subtotal_minor": {
+            "title": "Subtotal Minor",
+            "type": "integer"
+          },
+          "tickets": {
+            "items": {
+              "$ref": "#/components/schemas/TicketRead"
+            },
+            "title": "Tickets",
+            "type": "array"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_number",
+          "event_id",
+          "event",
+          "status",
+          "contact_name",
+          "contact_email",
+          "subtotal_minor",
+          "discount_minor",
+          "fee_minor",
+          "total_minor",
+          "currency",
+          "expires_at",
+          "confirmed_at",
+          "created_at",
+          "items",
+          "tickets"
+        ],
+        "title": "OrderRead",
+        "type": "object"
+      },
+      "OrderStatus": {
+        "enum": [
+          "pending",
+          "confirmed",
+          "cancelled",
+          "refunded",
+          "partially_refunded",
+          "expired"
+        ],
+        "title": "OrderStatus",
+        "type": "string"
+      },
+      "OrganizerOrderRow": {
+        "properties": {
+          "confirmed_at": {
             "anyOf": [
               {
                 "format": "date-time",
@@ -665,53 +1848,267 @@
                 "type": "null"
               }
             ],
-            "title": "Paid At"
+            "title": "Confirmed At"
+          },
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
           },
           "status": {
-            "enum": [
-              "pending",
-              "paid",
-              "cancelled",
-              "expired"
-            ],
             "title": "Status",
             "type": "string"
           },
-          "tickets": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/TicketRead"
-            },
-            "title": "Tickets",
-            "type": "array"
+          "ticket_count": {
+            "title": "Ticket Count",
+            "type": "integer"
           },
-          "total_amount": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Total Amount",
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_number",
+          "status",
+          "contact_name",
+          "contact_email",
+          "total_minor",
+          "currency",
+          "ticket_count",
+          "created_at",
+          "confirmed_at"
+        ],
+        "title": "OrganizerOrderRow",
+        "type": "object"
+      },
+      "OrganizerProfileRead": {
+        "properties": {
+          "contact_email": {
+            "title": "Contact Email",
             "type": "string"
+          },
+          "contact_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Phone"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "payout_account": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayoutAccountRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
           },
-          "user_id": {
-            "title": "User Id",
-            "type": "integer"
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
           }
         },
         "required": [
           "id",
-          "user_id",
-          "total_amount",
-          "status",
-          "expires_at",
-          "paid_at",
-          "cancelled_at",
+          "display_name",
+          "contact_email",
+          "contact_phone",
+          "description",
+          "verification_status",
+          "payout_account",
           "created_at",
           "updated_at"
         ],
-        "title": "OrderRead",
+        "title": "OrganizerProfileRead",
+        "type": "object"
+      },
+      "OrganizerProfileWrite": {
+        "description": "PUT /organizer/profile: the whole profile, created on first save.",
+        "properties": {
+          "contact_email": {
+            "format": "email",
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Phone"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "payout_provider": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sandbox_bank",
+                  "sandbox_wallet"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payout Provider"
+          },
+          "payout_reference": {
+            "anyOf": [
+              {
+                "maxLength": 70,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payout Reference"
+          }
+        },
+        "required": [
+          "display_name",
+          "contact_email"
+        ],
+        "title": "OrganizerProfileWrite",
+        "type": "object"
+      },
+      "PasswordResetConfirm": {
+        "properties": {
+          "new_password": {
+            "maxLength": 50,
+            "minLength": 8,
+            "title": "New Password",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "PasswordResetConfirm",
+        "type": "object"
+      },
+      "PasswordResetRequest": {
+        "description": "POST /auth/password-reset: the address to send a link to.",
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "PasswordResetRequest",
+        "type": "object"
+      },
+      "PayoutAccountRead": {
+        "properties": {
+          "external_account_ref": {
+            "title": "External Account Ref",
+            "type": "string"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "external_account_ref",
+          "status",
+          "is_simulated"
+        ],
+        "title": "PayoutAccountRead",
         "type": "object"
       },
       "RefreshRequest": {
@@ -733,123 +2130,323 @@
         "title": "RefreshRequest",
         "type": "object"
       },
-      "TicketCreate": {
-        "description": "What an organizer sends to issue a ticket.\n\nNo event id: the event comes from the URL, after its ownership is checked.",
+      "RefundRequest": {
         "properties": {
-          "price": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,11}0*$)\\d{0,8}\\.\\d{0,2}0*$)",
-                "type": "string"
-              }
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RefundRequest",
+        "type": "object"
+      },
+      "Requirement": {
+        "properties": {
+          "code": {
+            "enum": [
+              "title",
+              "venue",
+              "schedule",
+              "future_start",
+              "visible_ticket_type"
             ],
-            "title": "Price"
+            "title": "Code",
+            "type": "string"
           },
-          "seat_number": {
+          "met": {
+            "title": "Met",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "met"
+        ],
+        "title": "Requirement",
+        "type": "object"
+      },
+      "ScanRequest": {
+        "properties": {
+          "device_info": {
             "anyOf": [
               {
-                "maxLength": 50,
+                "maxLength": 200,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Seat Number"
+            "title": "Device Info"
           },
-          "ticket_code": {
-            "maxLength": 100,
-            "minLength": 3,
-            "title": "Ticket Code",
+          "qr": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Qr",
             "type": "string"
           }
         },
         "required": [
-          "ticket_code",
-          "price"
+          "qr"
         ],
-        "title": "TicketCreate",
+        "title": "ScanRequest",
         "type": "object"
       },
-      "TicketRead": {
+      "ScanResponse": {
+        "description": "One of six outcomes (\u00a74.8's five plus wrong_event). `ticket` is present\nwhenever the code resolved to a real ticket, so the operator sees whose it is\neven on a rejection.",
+        "properties": {
+          "outcome": {
+            "enum": [
+              "valid",
+              "invalid",
+              "wrong_event",
+              "cancelled",
+              "refunded",
+              "already_used"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "ticket": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScannedTicket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "outcome",
+          "ticket"
+        ],
+        "title": "ScanResponse",
+        "type": "object"
+      },
+      "ScannedTicket": {
+        "properties": {
+          "attendee_name": {
+            "title": "Attendee Name",
+            "type": "string"
+          },
+          "public_code": {
+            "title": "Public Code",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "ticket_type_name": {
+            "title": "Ticket Type Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "public_code",
+          "status",
+          "attendee_name",
+          "ticket_type_name"
+        ],
+        "title": "ScannedTicket",
+        "type": "object"
+      },
+      "SimulatedPayment": {
+        "description": "The outcome to simulate. Lets the demo show the decline path (\u00a74.10).",
+        "properties": {
+          "outcome": {
+            "default": "succeed",
+            "enum": [
+              "succeed",
+              "fail"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "title": "SimulatedPayment",
+        "type": "object"
+      },
+      "StaffAssign": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "StaffAssign",
+        "type": "object"
+      },
+      "StaffEventRead": {
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "role": {
+            "enum": [
+              "organizer",
+              "event_admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "venue_name",
+          "starts_at",
+          "ends_at",
+          "timezone",
+          "status",
+          "role"
+        ],
+        "title": "StaffEventRead",
+        "type": "object"
+      },
+      "StaffRead": {
         "properties": {
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "event_id": {
-            "title": "Event Id",
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
             "type": "integer"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "order_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Order Id"
-          },
-          "price": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Price",
-            "type": "string"
-          },
-          "seat_number": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Seat Number"
-          },
-          "status": {
-            "enum": [
-              "available",
-              "reserved",
-              "sold",
-              "cancelled"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "ticket_code": {
-            "title": "Ticket Code",
-            "type": "string"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
+          }
+        },
+        "required": [
+          "user_id",
+          "email",
+          "first_name",
+          "last_name",
+          "role",
+          "created_at"
+        ],
+        "title": "StaffRead",
+        "type": "object"
+      },
+      "SuspendRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
             "type": "string"
           }
         },
         "required": [
-          "id",
-          "event_id",
-          "order_id",
-          "ticket_code",
-          "seat_number",
-          "price",
+          "reason"
+        ],
+        "title": "SuspendRequest",
+        "type": "object"
+      },
+      "TicketRead": {
+        "properties": {
+          "attendee_name": {
+            "title": "Attendee Name",
+            "type": "string"
+          },
+          "public_code": {
+            "title": "Public Code",
+            "type": "string"
+          },
+          "qr_payload": {
+            "title": "Qr Payload",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          },
+          "ticket_type_name": {
+            "title": "Ticket Type Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "public_code",
+          "ticket_type_id",
+          "ticket_type_name",
           "status",
-          "created_at",
-          "updated_at"
+          "attendee_name",
+          "qr_payload"
         ],
         "title": "TicketRead",
         "type": "object"
+      },
+      "TicketStatus": {
+        "enum": [
+          "valid",
+          "checked_in",
+          "cancelled",
+          "refunded"
+        ],
+        "title": "TicketStatus",
+        "type": "string"
       },
       "TicketTypeCreate": {
         "properties": {
@@ -1145,6 +2742,49 @@
         "title": "TicketTypeRead",
         "type": "object"
       },
+      "TicketTypeSales": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_minor": {
+            "title": "Price Minor",
+            "type": "integer"
+          },
+          "quantity_reserved": {
+            "title": "Quantity Reserved",
+            "type": "integer"
+          },
+          "quantity_sold": {
+            "title": "Quantity Sold",
+            "type": "integer"
+          },
+          "quantity_total": {
+            "title": "Quantity Total",
+            "type": "integer"
+          },
+          "revenue_minor": {
+            "title": "Revenue Minor",
+            "type": "integer"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ticket_type_id",
+          "name",
+          "price_minor",
+          "quantity_total",
+          "quantity_sold",
+          "quantity_reserved",
+          "revenue_minor"
+        ],
+        "title": "TicketTypeSales",
+        "type": "object"
+      },
       "TicketTypeUpdate": {
         "properties": {
           "currency": {
@@ -1269,51 +2909,69 @@
         "title": "TicketTypeUpdate",
         "type": "object"
       },
-      "TicketUpdate": {
-        "description": "Partial update for an available ticket.\n\nReserved and sold are set by orders only. The organizer may withdraw a\nticket from sale by cancelling it, which cannot be undone.",
+      "TimelineEntry": {
+        "description": "\u00a74.16: \"a timestamp, acting user, action type, affected entity, and\nshort description\".",
         "properties": {
-          "price": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,11}0*$)\\d{0,8}\\.\\d{0,2}0*$)",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Price"
+          "action": {
+            "title": "Action",
+            "type": "string"
           },
-          "seat_number": {
+          "actor_user_id": {
             "anyOf": [
               {
-                "maxLength": 50,
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Seat Number"
+            "title": "Actor User Id"
           },
-          "status": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "integer"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "payload": {
             "anyOf": [
               {
-                "const": "cancelled",
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Status"
+            "title": "Payload"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
           }
         },
-        "title": "TicketUpdate",
+        "required": [
+          "id",
+          "created_at",
+          "actor_user_id",
+          "action",
+          "entity_type",
+          "entity_id",
+          "summary",
+          "payload"
+        ],
+        "title": "TimelineEntry",
         "type": "object"
       },
       "TokenResponse": {
@@ -1367,11 +3025,13 @@
           },
           "first_name": {
             "maxLength": 100,
+            "minLength": 1,
             "title": "First Name",
             "type": "string"
           },
           "last_name": {
             "maxLength": 100,
+            "minLength": 1,
             "title": "Last Name",
             "type": "string"
           },
@@ -1467,6 +3127,67 @@
         "title": "UserRead",
         "type": "object"
       },
+      "UserUpdate": {
+        "description": "PATCH /users/me. Omitted fields are left alone; email and password\nhave their own flows.",
+        "properties": {
+          "first_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "enum": [
+                  "kk",
+                  "ru",
+                  "en"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "title": "UserUpdate",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -1522,6 +3243,486 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/events": {
+      "get": {
+        "description": "Every event in any status, by title or slug (\u00a74.12 \"search for events\").",
+        "operationId": "search_events_api_v1_admin_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventRead"
+                  },
+                  "title": "Response Search Events Api V1 Admin Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search Events",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/events/{event_id}/activation": {
+      "get": {
+        "description": "\u00a74.12 \"Inspect paid-sales activation records\".",
+        "operationId": "inspect_activation_api_v1_admin_events__event_id__activation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inspect Activation",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/events/{event_id}/activation/reinstate": {
+      "post": {
+        "operationId": "reinstate_activation_api_v1_admin_events__event_id__activation_reinstate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reinstate Activation",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/events/{event_id}/activation/suspend": {
+      "post": {
+        "description": "\u00a74.5: stop paid sales on suspicion of fraud. Free tickets keep working.",
+        "operationId": "suspend_activation_api_v1_admin_events__event_id__activation_suspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Suspend Activation",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/events/{event_id}/cancel": {
+      "post": {
+        "description": "suspended -> cancelled (or any live event), with the same refunds as an\norganizer's cancellation.",
+        "operationId": "cancel_event_api_v1_admin_events__event_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CancelRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Event",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/events/{event_id}/suspend": {
+      "post": {
+        "operationId": "suspend_event_api_v1_admin_events__event_id__suspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Suspend Event",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/events/{event_id}/timeline": {
+      "get": {
+        "description": "\u00a74.16: \"Platform Admins may view history for moderation or support\".",
+        "operationId": "event_timeline_api_v1_admin_events__event_id__timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TimelineEntry"
+                  },
+                  "title": "Response Event Timeline Api V1 Admin Events  Event Id  Timeline Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Event Timeline",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/events/{event_id}/unsuspend": {
+      "post": {
+        "operationId": "unsuspend_event_api_v1_admin_events__event_id__unsuspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unsuspend Event",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "description": "Exchange credentials for an access/refresh pair.\n\nThe password is checked before the status is, so a suspended account is only\ndistinguishable to someone who already knows its password (01-identity.md:\nsuspension must not be distinguishable to strangers).",
@@ -1602,6 +3803,85 @@
         ]
       }
     },
+    "/api/v1/auth/password-reset": {
+      "post": {
+        "description": "Email a reset link (\u00a74.1). The same 202 whether or not the address has\nan account, so this cannot be used to learn who is registered.",
+        "operationId": "request_password_reset_api_v1_auth_password_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Request Password Reset Api V1 Auth Password Reset Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Password Reset",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password-reset/confirm": {
+      "post": {
+        "description": "Set a new password with the emailed token. The link works once.",
+        "operationId": "confirm_password_reset_api_v1_auth_password_reset_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Password Reset",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/refresh": {
       "post": {
         "description": "Trade a refresh token for a fresh pair.\n\nThe token comes from the body for clients in bearer mode and from the\nhttpOnly cookie for browsers. A cookie-borne token additionally has to pass\nthe CSRF check, because unlike a body it is sent without the caller asking.\n\nThe status is re-read here rather than trusted from the token, so suspending\nan account takes effect at the next refresh instead of at the token's expiry.",
@@ -1671,7 +3951,7 @@
     },
     "/api/v1/auth/register": {
       "post": {
-        "description": "Create an account. The new user is active but not email-verified.",
+        "description": "Create an account. The new user is active but not email-verified; a\nverification link is emailed (\u00a74.1).",
         "operationId": "register_api_v1_auth_register_post",
         "requestBody": {
           "content": {
@@ -1711,8 +3991,44 @@
         ]
       }
     },
+    "/api/v1/auth/verify-email": {
+      "post": {
+        "description": "Mark the address verified with the emailed token (\u00a74.1).",
+        "operationId": "confirm_email_api_v1_auth_verify_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailVerificationConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Email",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/events": {
       "get": {
+        "description": "Published, public events that have not ended, soonest first.",
         "operationId": "list_events_api_v1_events_get",
         "parameters": [
           {
@@ -1736,6 +4052,82 @@
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Title or venue contains",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Title or venue contains",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "concert",
+                    "conference",
+                    "sport",
+                    "theater",
+                    "other"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "starts_after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Starts After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "starts_before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Starts Before"
             }
           }
         ],
@@ -1815,75 +4207,6 @@
         ]
       }
     },
-    "/api/v1/events/{event_id}/tickets": {
-      "get": {
-        "operationId": "list_event_tickets_api_v1_events__event_id__tickets_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "event_id",
-            "required": true,
-            "schema": {
-              "title": "Event Id",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/TicketRead"
-                  },
-                  "title": "Response List Event Tickets Api V1 Events  Event Id  Tickets Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "List Event Tickets",
-        "tags": [
-          "tickets"
-        ]
-      }
-    },
     "/api/v1/events/{slug}": {
       "get": {
         "operationId": "read_event_api_v1_events__slug__get",
@@ -1903,7 +4226,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EventRead"
+                  "$ref": "#/components/schemas/EventDetail"
                 }
               }
             },
@@ -1923,6 +4246,64 @@
         "summary": "Read Event",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/api/v1/events/{slug}/orders": {
+      "post": {
+        "description": "Reserve and order in one request. Free orders come back `confirmed`\nwith tickets; paid ones come back `pending`, to be paid within\n`expires_at` through POST /orders/{order_number}/pay.",
+        "operationId": "checkout_api_v1_events__slug__orders_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Checkout",
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -1993,126 +4374,35 @@
         ]
       }
     },
-    "/api/v1/orders": {
+    "/api/v1/orders/{order_number}": {
       "get": {
-        "operationId": "list_my_orders_api_v1_orders_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OrderRead"
-                  },
-                  "title": "Response List My Orders Api V1 Orders Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List My Orders",
-        "tags": [
-          "orders"
-        ]
-      },
-      "post": {
-        "operationId": "create_order_api_v1_orders_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OrderCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrderRead"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Create Order",
-        "tags": [
-          "orders"
-        ]
-      }
-    },
-    "/api/v1/orders/{order_id}": {
-      "get": {
-        "operationId": "read_order_api_v1_orders__order_id__get",
+        "operationId": "read_order_api_v1_orders__order_number__get",
         "parameters": [
           {
             "in": "path",
-            "name": "order_id",
+            "name": "order_number",
             "required": true,
             "schema": {
-              "title": "Order Id",
-              "type": "integer"
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
             }
           }
         ],
@@ -2149,17 +4439,36 @@
         ]
       }
     },
-    "/api/v1/orders/{order_id}/cancel": {
+    "/api/v1/orders/{order_number}/cancel": {
       "post": {
-        "operationId": "cancel_order_api_v1_orders__order_id__cancel_post",
+        "description": "The buyer abandons a pending order; its tickets go back on sale now\ninstead of when the hold times out. Confirmed orders are cancelled or\nrefunded by the organizer (\u00a74.9), not here.",
+        "operationId": "cancel_order_api_v1_orders__order_number__cancel_post",
         "parameters": [
           {
             "in": "path",
-            "name": "order_id",
+            "name": "order_number",
             "required": true,
             "schema": {
-              "title": "Order Id",
-              "type": "integer"
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
             }
           }
         ],
@@ -2196,6 +4505,99 @@
         ]
       }
     },
+    "/api/v1/orders/{order_number}/pay": {
+      "post": {
+        "description": "Pay a pending order through the simulated provider (\u00a74.6).\n\nSend the same `Idempotency-Key` header when retrying: a repeated request\nreturns the first result and charges nothing (state-machines.md \u00a74).\nA declined payment answers 402 and cancels the order, releasing its tickets.",
+        "operationId": "pay_order_api_v1_orders__order_number__pay_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_number",
+            "required": true,
+            "schema": {
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulatedPayment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pay Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
     "/api/v1/organizer/events": {
       "get": {
         "operationId": "list_my_events_api_v1_organizer_events_get",
@@ -2227,6 +4629,51 @@
       }
     },
     "/api/v1/organizer/events/{event_id}": {
+      "get": {
+        "operationId": "read_my_event_api_v1_organizer_events__event_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read My Event",
+        "tags": [
+          "events"
+        ]
+      },
       "patch": {
         "operationId": "update_event_api_v1_organizer_events__event_id__patch",
         "parameters": [
@@ -2280,6 +4727,1052 @@
         "summary": "Update Event",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/activation": {
+      "get": {
+        "description": "The activation checklist (\u00a74.5). Starts a pending activation on first view.",
+        "operationId": "read_activation_api_v1_organizer_events__event_id__activation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Activation",
+        "tags": [
+          "paid sales activation"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/activation/activate": {
+      "post": {
+        "description": "pending -> active once every checklist item holds. Paid checkout opens\nfor this event only (\u00a74.5).",
+        "operationId": "activate_api_v1_organizer_events__event_id__activation_activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Activate",
+        "tags": [
+          "paid sales activation"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/activation/fee": {
+      "post": {
+        "description": "\u00a73.2 step 3: pay the activation fee, simulated. A decline answers 402.",
+        "operationId": "pay_fee_api_v1_organizer_events__event_id__activation_fee_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulatedPayment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pay Fee",
+        "tags": [
+          "paid sales activation"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/activation/terms": {
+      "post": {
+        "description": "\u00a73.2 step 5: accept the paid-event terms.",
+        "operationId": "accept_terms_api_v1_organizer_events__event_id__activation_terms_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept Terms",
+        "tags": [
+          "paid sales activation"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/attendees": {
+      "get": {
+        "operationId": "list_attendees_api_v1_organizer_events__event_id__attendees_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AttendeeRow"
+                  },
+                  "title": "Response List Attendees Api V1 Organizer Events  Event Id  Attendees Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Attendees",
+        "tags": [
+          "organizer reports"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/cancel": {
+      "post": {
+        "description": "Cancel the event. Pending orders are released, free registrations\ncancelled and paid orders refunded in full, all in one transaction.",
+        "operationId": "cancel_event_api_v1_organizer_events__event_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CancelRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/duplicate": {
+      "post": {
+        "description": "A new draft copying configuration and ticket types, never orders or\nattendees (\u00a74.16, UC12).",
+        "operationId": "duplicate_event_api_v1_organizer_events__event_id__duplicate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Duplicate Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/images": {
+      "get": {
+        "operationId": "list_images_api_v1_organizer_events__event_id__images_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventImageRead"
+                  },
+                  "title": "Response List Images Api V1 Organizer Events  Event Id  Images Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Images",
+        "tags": [
+          "events"
+        ]
+      },
+      "post": {
+        "description": "Add a JPEG, PNG or WebP (up to 2 MB, up to 5 per event). The first image\nis the cover. The type is checked from the file's bytes, not its name.",
+        "operationId": "upload_image_api_v1_organizer_events__event_id__images_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventImageRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Image",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/images/{image_id}": {
+      "delete": {
+        "operationId": "delete_image_api_v1_organizer_events__event_id__images__image_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Image",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/orders": {
+      "get": {
+        "operationId": "list_orders_api_v1_organizer_events__event_id__orders_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizerOrderRow"
+                  },
+                  "title": "Response List Orders Api V1 Organizer Events  Event Id  Orders Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Orders",
+        "tags": [
+          "organizer reports"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/orders/{order_number}/cancel": {
+      "post": {
+        "description": "Cancel a free registration (\u00a74.9). Its tickets become invalid at once.",
+        "operationId": "cancel_registration_api_v1_organizer_events__event_id__orders__order_number__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_number",
+            "required": true,
+            "schema": {
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerOrderRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Registration",
+        "tags": [
+          "organizer reports"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/orders/{order_number}/refund": {
+      "post": {
+        "description": "A full refund of a paid order (\u00a74.9, UC5), through the simulated provider.",
+        "operationId": "refund_order_api_v1_organizer_events__event_id__orders__order_number__refund_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_number",
+            "required": true,
+            "schema": {
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerOrderRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Refund Order",
+        "tags": [
+          "organizer reports"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/preview": {
+      "get": {
+        "description": "The event as attendees will see it, plus what still blocks publishing\nand which actions are allowed next (\u00a74.2 \"Preview an event\").",
+        "operationId": "preview_event_api_v1_organizer_events__event_id__preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/publish": {
+      "post": {
+        "operationId": "publish_event_api_v1_organizer_events__event_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/staff": {
+      "get": {
+        "operationId": "list_staff_api_v1_organizer_events__event_id__staff_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffRead"
+                  },
+                  "title": "Response List Staff Api V1 Organizer Events  Event Id  Staff Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Staff",
+        "tags": [
+          "organizer"
+        ]
+      },
+      "post": {
+        "description": "Make an existing account an event admin for this event (\u00a72.3 \"assign\ncheck-in staff\"). They then see it in the mobile app's event list.",
+        "operationId": "assign_staff_api_v1_organizer_events__event_id__staff_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffAssign"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffRead"
+                  },
+                  "title": "Response Assign Staff Api V1 Organizer Events  Event Id  Staff Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assign Staff",
+        "tags": [
+          "organizer"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/staff/{user_id}": {
+      "delete": {
+        "operationId": "remove_staff_api_v1_organizer_events__event_id__staff__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Staff",
+        "tags": [
+          "organizer"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/summary": {
+      "get": {
+        "description": "Capacity, sales, money and attendance for one event (\u00a74.6, \u00a74.15).",
+        "operationId": "event_summary_api_v1_organizer_events__event_id__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Event Summary",
+        "tags": [
+          "organizer reports"
         ]
       }
     },
@@ -2455,9 +5948,365 @@
         ]
       }
     },
-    "/api/v1/organizer/events/{event_id}/tickets": {
+    "/api/v1/organizer/events/{event_id}/timeline": {
+      "get": {
+        "description": "\u00a74.16: the event's history, newest first, filterable by date range and\nactivity type. Read-only: no route edits or deletes an entry.",
+        "operationId": "event_timeline_api_v1_organizer_events__event_id__timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "description": "Repeat to filter by several",
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Repeat to filter by several",
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TimelineEntry"
+                  },
+                  "title": "Response Event Timeline Api V1 Organizer Events  Event Id  Timeline Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Event Timeline",
+        "tags": [
+          "organizer reports"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/unpublish": {
       "post": {
-        "operationId": "create_ticket_api_v1_organizer_events__event_id__tickets_post",
+        "operationId": "unpublish_event_api_v1_organizer_events__event_id__unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unpublish Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/profile": {
+      "get": {
+        "description": "404 until the user has saved a profile: that is what \"not an organizer\nyet\" looks like (01-identity.md, roles are relationships).",
+        "operationId": "read_profile_api_v1_organizer_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Profile",
+        "tags": [
+          "organizer"
+        ]
+      },
+      "put": {
+        "description": "Create or replace the caller's organizer profile and sandbox payout\naccount (\u00a74.1 \"a profile containing contact and payout information\").\nThe first save is what makes an account an organizer.",
+        "operationId": "save_profile_api_v1_organizer_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizerProfileWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save Profile",
+        "tags": [
+          "organizer"
+        ]
+      }
+    },
+    "/api/v1/organizer/profile/verify": {
+      "post": {
+        "description": "Simulated identity verification (\u00a73.2 step 2). Real KYC is out of\nscope (\u00a78); this accepts immediately and the payout account it pairs with\nis marked is_simulated.",
+        "operationId": "verify_profile_api_v1_organizer_profile_verify_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Verify Profile",
+        "tags": [
+          "organizer"
+        ]
+      }
+    },
+    "/api/v1/staff/events": {
+      "get": {
+        "description": "\u00a74.8 \"view only assigned events\": those assigned to the caller, plus the\nones they organize. Drafts are left out; nobody checks in to a draft.",
+        "operationId": "my_staff_events_api_v1_staff_events_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffEventRead"
+                  },
+                  "title": "Response My Staff Events Api V1 Staff Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Staff Events",
+        "tags": [
+          "check-in"
+        ]
+      }
+    },
+    "/api/v1/staff/events/{event_id}/attendance": {
+      "get": {
+        "description": "\u00a74.8 \"the total number of registered and checked-in attendees\".",
+        "operationId": "attendance_api_v1_staff_events__event_id__attendance_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Attendance",
+        "tags": [
+          "check-in"
+        ]
+      }
+    },
+    "/api/v1/staff/events/{event_id}/scan": {
+      "post": {
+        "description": "Validate a scanned QR and check the ticket in if it is valid.\n\nAlways 200 with an `outcome`; a rejected ticket is a normal answer at a\ndoor, not an error. Campaign QR codes come back `invalid` (\u00a711).",
+        "operationId": "scan_api_v1_staff_events__event_id__scan_post",
         "parameters": [
           {
             "in": "path",
@@ -2473,64 +6322,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TicketCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TicketRead"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Create Ticket",
-        "tags": [
-          "tickets"
-        ]
-      }
-    },
-    "/api/v1/organizer/tickets/{ticket_id}": {
-      "patch": {
-        "operationId": "update_ticket_api_v1_organizer_tickets__ticket_id__patch",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "ticket_id",
-            "required": true,
-            "schema": {
-              "title": "Ticket Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TicketUpdate"
+                "$ref": "#/components/schemas/ScanRequest"
               }
             }
           },
@@ -2541,7 +6333,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TicketRead"
+                  "$ref": "#/components/schemas/ScanResponse"
                 }
               }
             },
@@ -2563,22 +6355,34 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Update Ticket",
+        "summary": "Scan",
         "tags": [
-          "tickets"
+          "check-in"
         ]
       }
     },
-    "/api/v1/tickets/{ticket_code}": {
+    "/api/v1/staff/events/{event_id}/search": {
       "get": {
-        "operationId": "read_ticket_api_v1_tickets__ticket_code__get",
+        "description": "Find a ticket by attendee name or ticket code (\u00a74.8 \"search manually\").",
+        "operationId": "search_api_v1_staff_events__event_id__search_get",
         "parameters": [
           {
             "in": "path",
-            "name": "ticket_code",
+            "name": "event_id",
             "required": true,
             "schema": {
-              "title": "Ticket Code",
+              "title": "Event Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 2,
+              "title": "Q",
               "type": "string"
             }
           }
@@ -2588,7 +6392,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TicketRead"
+                  "items": {
+                    "$ref": "#/components/schemas/ScannedTicket"
+                  },
+                  "title": "Response Search Api V1 Staff Events  Event Id  Search Get",
+                  "type": "array"
                 }
               }
             },
@@ -2605,9 +6413,162 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Read Ticket",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search",
         "tags": [
-          "tickets"
+          "check-in"
+        ]
+      }
+    },
+    "/api/v1/staff/events/{event_id}/tickets/{public_code}/check-in": {
+      "post": {
+        "description": "Check in by ticket code, after a manual search (\u00a74.8). Same rules as a scan.",
+        "operationId": "manual_check_in_api_v1_staff_events__event_id__tickets__public_code__check_in_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_code",
+            "required": true,
+            "schema": {
+              "title": "Public Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DeviceInfo"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Manual Check In",
+        "tags": [
+          "check-in"
+        ]
+      }
+    },
+    "/api/v1/staff/events/{event_id}/tickets/{public_code}/reverse": {
+      "post": {
+        "description": "Undo an accidental check-in (\u00a74.8). For the MVP every event admin who\nmay check in may also reverse; the record says who did.",
+        "operationId": "reverse_check_in_api_v1_staff_events__event_id__tickets__public_code__reverse_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_code",
+            "required": true,
+            "schema": {
+              "title": "Public Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DeviceInfo"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannedTicket"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reverse Check In",
+        "tags": [
+          "check-in"
         ]
       }
     },
@@ -2619,7 +6580,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserRead"
+                  "$ref": "#/components/schemas/MeRead"
                 }
               }
             },
@@ -2632,6 +6593,110 @@
           }
         ],
         "summary": "Read Current User",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "description": "Change name, phone or locale. Omitted fields are left alone.",
+        "operationId": "update_current_user_api_v1_users_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Current User",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/me/orders": {
+      "get": {
+        "operationId": "list_my_orders_api_v1_users_me_orders_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrderRead"
+                  },
+                  "title": "Response List My Orders Api V1 Users Me Orders Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Orders",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/users/me/verify-email": {
+      "post": {
+        "description": "Email a fresh verification link (\u00a74.1). Earlier links stop working.",
+        "operationId": "resend_verification_api_v1_users_me_verify_email_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resend Verification Api V1 Users Me Verify Email Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resend Verification",
         "tags": [
           "users"
         ]

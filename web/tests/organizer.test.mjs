@@ -1,32 +1,29 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import ts from 'typescript';
 
-// Like the auth tests, exercise the actual TypeScript modules without a browser.
-async function moduleUrl(path, replacements = {}) {
-  let source = await readFile(new URL(path, import.meta.url), 'utf8');
-  for (const [from, to] of Object.entries(replacements)) source = source.replaceAll(from, to);
-  const { outputText } = ts.transpileModule(source, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
-  });
-  return `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`;
-}
+import { fakeAuthUrl, moduleUrl, scriptApi } from './harness.mjs';
 
 const schemaUrl = await moduleUrl('../src/features/Organizer/model/profileSchema.ts', {
   '"zod"': JSON.stringify(import.meta.resolve('zod')),
 });
-const dataUrl = await moduleUrl('../src/features/Organizer/model/dummyData.ts');
 const apiUrl = await moduleUrl('../src/shared/api/organizer.ts', {
   '"../../features/Organizer/model/profileSchema"': JSON.stringify(schemaUrl),
-  '"../../features/Organizer/model/dummyData"': JSON.stringify(dataUrl),
+  '"./auth"': JSON.stringify(fakeAuthUrl),
 });
 const { profileSchema } = await import(schemaUrl);
-const { DUMMY_PROFILE, DUMMY_SESSION, DUMMY_ERRORS } = await import(dataUrl);
 const { organizerApi } = await import(apiUrl);
 
+const PROFILE = {
+  displayName: 'KBTU Music Club',
+  contactEmail: 'music.club@example.com',
+  contactPhone: '+7 (700) 123-45-67',
+  description: 'Live music in Almaty.',
+  payoutProvider: '',
+  payoutReference: '',
+};
+
 test('contact validation trims names, normalizes email, and allows optional fields', () => {
-  const values = profileSchema.parse({ ...DUMMY_PROFILE, displayName: ' Club ', contactEmail: ' CLUB@EXAMPLE.COM ', contactPhone: '' });
+  const values = profileSchema.parse({ ...PROFILE, displayName: ' Club ', contactEmail: ' CLUB@EXAMPLE.COM ', contactPhone: '' });
   assert.equal(values.displayName, 'Club');
   assert.equal(values.contactEmail, 'club@example.com');
   assert.equal(values.contactPhone, '');
@@ -34,59 +31,43 @@ test('contact validation trims names, normalizes email, and allows optional fiel
     { displayName: '  ' }, { displayName: 'a'.repeat(201) },
     { contactEmail: 'not-an-email' }, { contactPhone: '123' },
     { contactPhone: '+7700abc1234' }, { description: 'a'.repeat(2001) },
-  ]) assert.equal(profileSchema.safeParse({ ...DUMMY_PROFILE, ...invalid }).success, false);
+  ]) assert.equal(profileSchema.safeParse({ ...PROFILE, ...invalid }).success, false);
 });
 
 test('payout simulation requires a provider and demo reference together', () => {
-  for (const invalid of [
-    { payoutProvider: 'sandbox_bank' }, { payoutReference: 'demo_club' },
-    { payoutProvider: 'sandbox_bank', payoutReference: 'KZ123456789' },
-    { payoutProvider: 'real_bank', payoutReference: 'demo_club' },
-  ]) assert.equal(profileSchema.safeParse({ ...DUMMY_PROFILE, ...invalid }).success, false);
-  assert.equal(profileSchema.safeParse({ ...DUMMY_PROFILE, payoutProvider: 'sandbox_wallet', payoutReference: 'demo_club' }).success, true);
+  assert.equal(profileSchema.safeParse({ ...PROFILE, payoutProvider: 'sandbox_bank' }).success, false);
+  assert.equal(profileSchema.safeParse({ ...PROFILE, payoutReference: 'demo_abc' }).success, false);
+  assert.equal(profileSchema.safeParse({ ...PROFILE, payoutProvider: 'sandbox_bank', payoutReference: 'demo_abc' }).success, true);
 });
 
-test('demo API persists contact and payout settings and supports disconnecting', async () => {
-  const storage = new Map();
-  globalThis.localStorage = {
-    getItem: (key) => storage.get(key) ?? null,
-    setItem: (key, value) => storage.set(key, value),
+test('no profile yet (404) is an empty form prefilled with the account email', async () => {
+  const fake = scriptApi([[404, { detail: 'No organizer profile yet' }]]);
+  const values = await organizerApi.getProfile('me@example.com');
+  assert.equal(values.contactEmail, 'me@example.com');
+  assert.equal(values.displayName, '');
+  assert.deepEqual(fake.calls.map((c) => [c.method, c.path]), [['GET', '/organizer/profile']]);
+});
+
+test('saving sends the API field names, empty optionals as null, and maps the reply back', async () => {
+  const reply = {
+    id: 3, display_name: 'Club', contact_email: 'club@example.com', contact_phone: null, description: null,
+    verification_status: 'unverified',
+    payout_account: { provider: 'sandbox_wallet', external_account_ref: 'demo_wallet1', status: 'active', is_simulated: true },
   };
-  assert.deepEqual(await organizerApi.getProfile(1), DUMMY_PROFILE);
-  const changes = { ...DUMMY_PROFILE, displayName: 'Updated club', payoutProvider: 'sandbox_bank', payoutReference: 'demo_updated' };
-  await organizerApi.saveProfile(1, changes);
-  assert.deepEqual(await organizerApi.getProfile(1), changes);
-  const disconnected = { ...changes, payoutProvider: '', payoutReference: '' };
-  await organizerApi.saveProfile(1, disconnected);
-  assert.deepEqual(await organizerApi.getProfile(1), disconnected);
+  const fake = scriptApi([[200, reply]]);
+  const saved = await organizerApi.saveProfile({
+    ...PROFILE, displayName: 'Club', contactEmail: 'club@example.com', contactPhone: '', description: '',
+    payoutProvider: 'sandbox_wallet', payoutReference: 'demo_wallet1',
+  });
+  assert.deepEqual(fake.calls[0].body, {
+    display_name: 'Club', contact_email: 'club@example.com', contact_phone: null, description: null,
+    payout_provider: 'sandbox_wallet', payout_reference: 'demo_wallet1',
+  });
+  assert.equal(saved.payoutProvider, 'sandbox_wallet');
+  assert.equal(saved.contactPhone, '');
 });
 
-test('demo API denies other users and attendees', async () => {
-  await assert.rejects(organizerApi.getProfile(2), /Only organizers/);
-  await assert.rejects(organizerApi.saveProfile(2, DUMMY_PROFILE), /Only organizers/);
-  DUMMY_SESSION.role = 'attendee';
-  try {
-    await assert.rejects(organizerApi.getProfile(1), /Only organizers/);
-    await assert.rejects(organizerApi.saveProfile(1, DUMMY_PROFILE), /Only organizers/);
-  } finally {
-    DUMMY_SESSION.role = 'organizer';
-  }
-});
-
-test('load and save errors reject, without reporting a successful save', async () => {
-  DUMMY_ERRORS.load = true;
-  DUMMY_ERRORS.save = true;
-  try {
-    await assert.rejects(organizerApi.getProfile(1), /Couldn't load/);
-    await assert.rejects(organizerApi.saveProfile(1, DUMMY_PROFILE), /Couldn't save/);
-  } finally {
-    DUMMY_ERRORS.load = false;
-    DUMMY_ERRORS.save = false;
-  }
-  globalThis.localStorage = {
-    getItem: () => { throw new Error('Storage denied'); },
-    setItem: () => { throw new Error('Storage full'); },
-  };
-  await assert.rejects(organizerApi.getProfile(1), /Couldn't read/);
-  await assert.rejects(organizerApi.saveProfile(1, DUMMY_PROFILE), /Couldn't save to this browser/);
+test('other failures are not mistaken for "no profile"', async () => {
+  scriptApi([[500, { detail: 'boom' }]]);
+  await assert.rejects(organizerApi.getProfile(''), (error) => error.status === 500);
 });

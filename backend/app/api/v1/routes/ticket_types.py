@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.deps import CurrentOrganizer, DbSession
+from app.api.deps import CurrentOrganizer, CurrentUser, DbSession
 from app.models.event import Event
 from app.models.organizer import OrganizerProfile
 from app.models.ticket_type import TicketType
@@ -72,6 +72,7 @@ def update_ticket_type(
     ticket_type_id: int,
     data: TicketTypeUpdate,
     organizer: CurrentOrganizer,
+    user: CurrentUser,
     db: DbSession,
 ) -> TicketType:
     event = _owned_event(db, organizer, event_id)
@@ -79,7 +80,7 @@ def update_ticket_type(
     if ticket_type is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket type not found")
     try:
-        return ticket_type_service.update_ticket_type(db, event, ticket_type, data)
+        return ticket_type_service.update_ticket_type(db, event, ticket_type, data, user)
     except ticket_type_service.EventClosedForChanges:
         raise EVENT_CANCELLED from None
     except ticket_type_service.QuantityBelowCommitted as exc:

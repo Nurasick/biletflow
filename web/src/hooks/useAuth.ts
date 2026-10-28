@@ -15,8 +15,15 @@ export const useAuth = () => {
       void queryClient.cancelQueries({ queryKey: authKeys.me });
       queryClient.setQueryData(authKeys.me, null);
     };
+    // A different account signed in elsewhere: everything cached belonged to
+    // the previous one, so drop it all and let `me` load the new account.
+    const onSessionChanged = () => { queryClient.clear(); void queryClient.invalidateQueries(); };
     window.addEventListener("biletflow:session-ended", onSessionEnded);
-    return () => window.removeEventListener("biletflow:session-ended", onSessionEnded);
+    window.addEventListener("biletflow:session-changed", onSessionChanged);
+    return () => {
+      window.removeEventListener("biletflow:session-ended", onSessionEnded);
+      window.removeEventListener("biletflow:session-changed", onSessionChanged);
+    };
   }, [queryClient]);
 
   const me = useQuery({

@@ -326,17 +326,20 @@ with no assignments is a normal state, not an error. Design that empty screen.
 
 ## Build checklist
 
-- [ ] `app/models/user.py` — `users`
-- [ ] `app/models/organizer.py` — `organizer_profiles`, `payout_accounts`
-- [ ] `app/models/staff.py` — `staff_assignments`
-- [ ] `app/models/token.py` — `user_tokens`
-- [ ] Import **every one** of them in `app/db/base.py`
-- [ ] `alembic revision --autogenerate -m "identity"` — then **read the file**
+- [x] `app/models/user.py` — `users`
+- [x] `app/models/organizer.py` — `organizer_profiles`, `payout_accounts`
+- [x] `app/models/staff.py` — `staff_assignments` (shipped with 02, as recommended below)
+- [x] `app/models/token.py` — `user_tokens`
+- [x] Import **every one** of them in `app/db/base.py`
+- [x] `alembic revision --autogenerate -m "identity"` — then **read the file**
 - [ ] `alembic upgrade head`, then `downgrade -1`, then upgrade again
-- [ ] `app/core/security.py` — password hashing (pwdlib/argon2), JWT sign/verify
-- [ ] `app/api/deps.py` — `get_current_user`, and event-scoped permission helpers
-- [ ] Tests: email case-insensitivity, token single-use, token expiry,
-      suspended user cannot log in, and each row of the permission matrix
+- [x] `app/core/security.py` — password hashing (pwdlib/argon2), JWT sign/verify
+- [x] `app/api/deps.py` — `get_current_user`, `get_current_organizer`
+- [x] `app/api/deps.py` — event-scoped permission helper (is this user staff
+      for event N?). Needed by check-in (04)
+- [x] Tests: email case-insensitivity, JWT expiry, suspended user cannot log in
+- [x] Tests: `user_tokens` single-use and expiry (no flow consumes them yet),
+      and each row of the permission matrix
 
 `staff_assignments.event_id` references `events`, which doesn't exist yet.
 Either put this slice's migration after [02](02-events.md), or split

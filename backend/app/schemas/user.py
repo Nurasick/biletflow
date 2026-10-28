@@ -1,7 +1,11 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator
+
+# Required and trimmed, with the web form's limit: "  " is not a name (audit #24).
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+Locale = Literal["kk", "ru", "en"]
 
 
 class UserBase(BaseModel):
@@ -14,11 +18,11 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    first_name: str = Field(max_length=100)
-    last_name: str = Field(max_length=100)
+    first_name: Name
+    last_name: Name
     password: str = Field(min_length=8, max_length=50)
     phone: str | None = Field(default=None, max_length=32)
-    locale: Literal["kk", "ru", "en"]
+    locale: Locale
 
 
 class UserRead(UserBase):
@@ -33,8 +37,21 @@ class UserRead(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MeRead(UserRead):
+    """GET /users/me: the account plus what it may do, so a client derives
+    roles from the real session instead of a local fixture (audit #9).
+    Event admin is per event, so it is not here: see GET /staff/events."""
+
+    phone: str | None
+    is_platform_admin: bool
+    is_organizer: bool
+
+
 class UserUpdate(BaseModel):
-    first_name: str | None = Field(default=None, max_length=100)
-    last_name: str | None = Field(default=None, max_length=100)
+    """PATCH /users/me. Omitted fields are left alone; email and password
+    have their own flows."""
+
+    first_name: Name | None = None
+    last_name: Name | None = None
     phone: str | None = Field(default=None, max_length=32)
-    locale: Literal["kk", "ru", "en"] | None = Field(default=None)
+    locale: Locale | None = None

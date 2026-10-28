@@ -1,7 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
+import { resolveLocale } from "../../../i18n/config";
 import { useAuth } from "../../../hooks/useAuth";
 import { ApiError } from "../../../shared/api/auth";
 import { passwordSchema } from "./passwordSchema";
@@ -24,6 +26,8 @@ type SignupValues = z.infer<typeof signupSchema>;
 
 export const useSignupForm = (onSuccess: (email: string) => void) => {
   const { registration } = useAuth();
+  const { i18n } = useTranslation();
+  const locale = resolveLocale(i18n.language);
   const {
     control,
     register,
@@ -49,7 +53,8 @@ export const useSignupForm = (onSuccess: (email: string) => void) => {
         last_name: values.lastName,
         email: values.email,
         password: values.password,
-        locale: "en",
+        // The language the person is using right now (audit #23).
+        locale,
       });
       onSuccess(values.email);
     } catch (error) {

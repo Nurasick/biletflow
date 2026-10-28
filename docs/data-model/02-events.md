@@ -321,21 +321,45 @@ error toast.
 
 ---
 
+## Decisions made while building
+
+- **`event_images`** (with a migration alongside `event_activations`) holds
+  up to 5 images per event; position 0 is the cover and `events.cover_image_url`
+  mirrors it. Files go through `app/services/storage.py` (local disk now, the
+  one module to change for S3). Uploads are data URLs, the form the web editor
+  already holds, and the type is checked from the file's bytes.
+- **`events.refund_policy`** (free text, §4.9) is shown to attendees and never
+  parsed: refunds are always organizer-initiated.
+- **`slug` is optional on create**; a missing one is generated from the title
+  with Cyrillic, including Kazakh letters, transliterated (`app/services/slugs.py`).
+- **One validation rule set with the web form:** registration may not open or
+  close after the event starts; timezones are `UTC` or a canonical
+  `Area/Location` name (aliases such as `GMT` are refused); the same length
+  limits on title, description and address.
+- **Activation fee** is `ACTIVATION_FEE_MINOR` (placeholder 5 000 ₸, open
+  question #4), copied onto the row when it is created. Identity verification
+  and the payout account are simulated and accepted at once.
+- **`phase`** (upcoming / active / completed) is a computed field on every
+  event response, never stored.
+
 ## Build checklist
 
-- [ ] `app/models/event.py` — `events`
-- [ ] `app/models/ticket_type.py` — `ticket_types` with all three CHECK constraints
-- [ ] `app/models/activation.py` — `event_activations`
-- [ ] `app/models/staff.py` — `staff_assignments`, if deferred from 01
-- [ ] Import all of them in `app/db/base.py`
-- [ ] `alembic revision --autogenerate -m "events and inventory"` — **read it**
-- [ ] Verify the CHECK constraints reached the migration. Autogenerate is
+- [x] `app/models/event.py` — `events`
+- [x] `app/models/ticket_type.py` — `ticket_types` with all three CHECK constraints
+- [x] `app/models/activation.py` — `event_activations`
+- [x] `app/models/staff.py` — `staff_assignments`, if deferred from 01
+- [x] Import all of them in `app/db/base.py`
+- [x] `alembic revision --autogenerate -m "events and inventory"` — **read it**
+- [x] Verify the CHECK constraints reached the migration. Autogenerate is
       unreliable about these; if they're missing, add them by hand
+- [x] Publish transition (`draft → published`) with the ≥1 ticket type guard.
+      Nothing can be bought until this exists — `PATCH` deliberately refuses
+      `status`
 - [ ] Prove the constraint works: try `UPDATE ticket_types SET quantity_sold =
       quantity_total + 1` in `psql` and confirm Postgres refuses
-- [ ] Derived-status helper for Upcoming/Active/Completed — with the clock frozen
+- [x] Derived-status helper for Upcoming/Active/Completed — with the clock frozen
       in its tests
-- [ ] Tests: publish guard (≥1 ticket type), `ends_at > starts_at`, timezone
+- [x] Tests: publish guard (≥1 ticket type), `ends_at > starts_at`, timezone
       round-trip through `.ics`, activation's five preconditions
 
 ---

@@ -99,6 +99,10 @@ class Event(Base):
     capacity: Mapped[int | None] = mapped_column(Integer)
     registration_opens_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     registration_closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Free text the organizer writes and attendees read before buying (§4.9
+    # "Organizers shall be able to define a refund policy"). Display only:
+    # refunds are always organizer-initiated, so nothing parses this.
+    refund_policy: Mapped[str | None] = mapped_column(Text)
 
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

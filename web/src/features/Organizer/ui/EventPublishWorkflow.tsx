@@ -8,7 +8,11 @@ import { useLocale } from "../../../i18n/useLocale";
 import { EventWorkflowError } from "../../../shared/api/eventLifecycle";
 import type { EventAction } from "../../../shared/api/eventLifecycle";
 import { useEventLifecycle } from "../model/useEventLifecycle";
+import { ActivationPanel } from "./ActivationPanel";
 import { EventPreviewContent } from "./EventPreviewContent";
+import { EventSalesPanel } from "./EventSalesPanel";
+import { StaffPanel } from "./StaffPanel";
+import { TicketTypesPanel } from "./TicketTypesPanel";
 import { EventStatusBadge } from "./EventStatusBadge";
 
 export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; userId: number }) => {
@@ -46,8 +50,8 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
     && transition.data.event.updated_at === event.updated_at;
   const actionError = transition.isError && <Alert role="alert" type="error" showIcon className="mt-4"
     title={t("eventWorkflow.actionError")}
-    description={t(transition.error instanceof EventWorkflowError
-      ? `eventWorkflow.error.${transition.error.code}` : "eventWorkflow.networkError")} />;
+    description={transition.error instanceof EventWorkflowError
+      ? transition.error.detail ?? t(`eventWorkflow.error.${transition.error.code}`) : t("eventWorkflow.networkError")} />;
 
   return <>
     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -63,13 +67,11 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
         {t("eventWorkflow.refresh")}
       </Button>
     </div>
-    {snapshot.event.status === "draft" && <Link to="/organizer/events/new" className="mt-4 inline-block text-sm font-semibold text-[#A93216]">
+    {(snapshot.event.status === "draft" || snapshot.event.status === "published") && <Link to={`/organizer/events/${eventId}/edit`}
+      className="mt-4 inline-block text-sm font-semibold text-[#A93216]">
       {t("eventWorkflow.editDetails")}
     </Link>}
     <p className="mt-3 text-sm leading-6 text-[#667085]">{t("eventWorkflow.previewDescription")}</p>
-    <p className="mt-4 rounded-lg border border-[#D0D5DD] px-4 py-3 text-xs leading-5 text-[#667085]">
-      <span className="font-semibold">{t("organizer.demoWorkspace")}</span> {t("eventWorkflow.demoDescription")}
-    </p>
     <div aria-live="polite" className="my-6">
       <Alert type={event.status === "cancelled" ? "error" : event.status === "published" ? "success" : "info"} showIcon
         title={t(`eventWorkflow.state.${event.status}`)}
@@ -81,7 +83,13 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
       action={<Button onClick={() => void preview.refetch()} loading={preview.isFetching}>{t("common.retry")}</Button>} />}
     {!confirmation && actionError}
     <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]" aria-busy={transition.isPending}>
-      <EventPreviewContent snapshot={snapshot} />
+      <div className="min-w-0 space-y-6">
+        <EventPreviewContent snapshot={snapshot} />
+        <TicketTypesPanel eventId={eventId} userId={userId} editable={event.status === "draft" || event.status === "published"} />
+        <ActivationPanel eventId={eventId} />
+        <EventSalesPanel eventId={eventId} />
+        <StaffPanel eventId={eventId} />
+      </div>
       <section aria-labelledby="event-publishing" className="rounded-xl border border-[#D0D5DD] bg-white p-5">
         <h2 id="event-publishing" className="font-semibold">{t("eventWorkflow.publishing")}</h2>
         {event.status === "draft" && <>

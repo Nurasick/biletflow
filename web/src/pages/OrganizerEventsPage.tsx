@@ -23,9 +23,6 @@ export const OrganizerEventsPage = () => {
   return <OrganizerWorkspace>
     <h1 className="text-3xl font-bold tracking-tight">{t("eventWorkflow.myEvents")}</h1>
     <p className="mt-3 text-sm leading-6 text-[#667085]">{t("eventWorkflow.listDescription")}</p>
-    <p className="mt-4 rounded-lg border border-[#D0D5DD] px-4 py-3 text-xs leading-5 text-[#667085]">
-      <span className="font-semibold">{t("organizer.demoWorkspace")}</span> {t("eventWorkflow.demoDescription")}
-    </p>
     {events.isPending ? <div role="status" className="flex items-center gap-2 py-16 text-sm text-[#667085]">
       <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("eventWorkflow.loading")}
     </div> : events.isError ? <Alert role="alert" type="error" showIcon className="mt-6"

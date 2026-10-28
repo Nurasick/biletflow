@@ -1,38 +1,38 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { eventLifecycleApi } from "../../../shared/api/eventLifecycle";
-import { OrganizerEventError, organizerEventApi } from "../../../shared/api/organizerEvents";
+import { organizerEventApi } from "../../../shared/api/organizerEvents";
 import type { OrganizerEventValues } from "./eventSchema";
 import { organizerEventKeys } from "./useEventLifecycle";
 
-export const useOrganizerEvent = (userId: number) => {
+/**
+ * One event's editable values. `eventId` null means a new event: the form
+ * starts empty and the first save creates the draft and reports its id.
+ */
+export const useOrganizerEvent = (userId: number, eventId: number | null) => {
   const queryClient = useQueryClient();
-  const queryKey = ["organizer", "event-draft", userId];
+  const queryKey = organizerEventKeys.edit(userId, eventId ?? 0);
   const draft = useQuery({
     queryKey,
-    queryFn: () => organizerEventApi.getDraft(userId),
+    queryFn: async () => eventId === null
+      ? { event: null, values: organizerEventApi.empty() }
+      : organizerEventApi.get(eventId),
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
   const saveDraft = useMutation({
-    mutationFn: async (values: OrganizerEventValues) => {
-      const [current] = await eventLifecycleApi.list(userId);
-      if (current && current.status !== "draft") throw new OrganizerEventError("organizerEvent.saveError");
-      return organizerEventApi.saveDraft(userId, values);
+    mutationFn: async (values: OrganizerEventValues): Promise<{ id: number; values: OrganizerEventValues }> => {
+      if (eventId === null) {
+        const id = await organizerEventApi.create(values);
+        return { id, values: (await organizerEventApi.get(id)).values };
+      }
+      return { id: eventId, values: await organizerEventApi.update(eventId, values) };
     },
-    onSuccess: async (values) => {
-      queryClient.setQueryData(queryKey, values);
-      // The first save enables the status query. Fetch explicitly so saving
-      // stays pending until the initial status has loaded, keeping the form mounted.
-      await queryClient.fetchQuery({
-        queryKey: organizerEventKeys.preview(userId, 1),
-        queryFn: () => eventLifecycleApi.preview(userId, 1),
-        retry: false,
-      }).catch(() => undefined);
+    onSuccess: async ({ id }) => {
+      await queryClient.invalidateQueries({ queryKey: organizerEventKeys.edit(userId, id) });
+      await queryClient.invalidateQueries({ queryKey: organizerEventKeys.preview(userId, id) });
       await queryClient.invalidateQueries({ queryKey: organizerEventKeys.list(userId) });
     },
-    onError: () => queryClient.invalidateQueries({ queryKey: organizerEventKeys.preview(userId, 1) }),
   });
   return { draft, saveDraft };
 };

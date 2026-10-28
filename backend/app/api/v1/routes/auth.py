@@ -6,8 +6,16 @@ from app.api.deps import BearerMode, CurrentUser, DbSession
 from app.core.cookies import REFRESH_COOKIE, clear_refresh_cookie, set_refresh_cookie
 from app.core.security import generate_url_token
 from app.models.user import User, UserStatus
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
+from app.schemas.auth import (
+    EmailVerificationConfirm,
+    LoginRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    RefreshRequest,
+    TokenResponse,
+)
 from app.schemas.user import UserCreate, UserRead
+from app.services import account_tokens
 from app.services import auth as auth_service
 from app.services import user as user_service
 
@@ -58,11 +66,14 @@ def _verify_csrf(request: Request, refresh_token: str) -> None:
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def register(data: UserCreate, db: DbSession) -> User:
-    """Create an account. The new user is active but not email-verified."""
+    """Create an account. The new user is active but not email-verified; a
+    verification link is emailed (§4.1)."""
     try:
-        return user_service.create_user(db, data)
+        user = user_service.create_user(db, data)
     except user_service.EmailAlreadyRegistered:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered") from None
+    account_tokens.send_verification(db, user)
+    return user
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -129,3 +140,33 @@ def logout(user: CurrentUser, response: Response) -> None:
     """
     clear_refresh_cookie(response)
     return None
+
+
+@router.post("/password-reset", status_code=status.HTTP_202_ACCEPTED)
+def request_password_reset(data: PasswordResetRequest, db: DbSession) -> dict:
+    """Email a reset link (§4.1). The same 202 whether or not the address has
+    an account, so this cannot be used to learn who is registered."""
+    account_tokens.request_password_reset(db, data.email)
+    return {"detail": "If an account uses this email, a reset link is on its way"}
+
+
+@router.post("/password-reset/confirm", status_code=status.HTTP_204_NO_CONTENT)
+def confirm_password_reset(data: PasswordResetConfirm, db: DbSession) -> None:
+    """Set a new password with the emailed token. The link works once."""
+    try:
+        account_tokens.reset_password(db, data.token, data.new_password)
+    except account_tokens.InvalidToken:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "This link is invalid or has expired"
+        ) from None
+
+
+@router.post("/verify-email", status_code=status.HTTP_204_NO_CONTENT)
+def confirm_email(data: EmailVerificationConfirm, db: DbSession) -> None:
+    """Mark the address verified with the emailed token (§4.1)."""
+    try:
+        account_tokens.verify_email(db, data.token)
+    except account_tokens.InvalidToken:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "This link is invalid or has expired"
+        ) from None
