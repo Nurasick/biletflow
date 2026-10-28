@@ -31,3 +31,16 @@ test('event dates use the event timezone', () => {
  assert.match(date,/29 Oct 2026/);assert.match(date,/01:00/);
  assert.equal(money('8500.50'),'8,500.50 KZT');
 });
+
+test('checkout uses ticket types and named attendees for the current backend contract', () => {
+ const type = {id:7,available:5,max_per_order:2,sales_start_at:null,sales_end_at:null};
+ assert.deepEqual(api.exports.checkoutItems('{"7":2}',[type],{'7-0':' Alice ','7-1':'Bob'}), [{ticket_type_id:7,attendees:[{full_name:'Alice'},{full_name:'Bob'}]}]);
+ assert.throws(()=>api.exports.checkoutItems('{"7":3}',[type],{}),/no longer available/);
+ assert.throws(()=>api.exports.checkoutItems('{"8":1}',[type],{}),/no longer available/);
+ assert.throws(()=>api.exports.checkoutItems('{"7":1}',[type],{}),/name for every attendee/);
+});
+test('closed sales and the global quantity limit cannot proceed', () => {
+ const type={id:7,available:100,max_per_order:null,sales_start_at:null,sales_end_at:'2000-01-01T00:00:00Z'};
+ assert.equal(api.exports.ticketLimit(type),0);
+ assert.equal(api.exports.ticketLimit({...type,sales_end_at:null}),20);
+});

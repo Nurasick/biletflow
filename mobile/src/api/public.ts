@@ -11,20 +11,51 @@ export type Event = {
     starts_at: string;
     timezone: string;
 };
-export type Ticket = {
+export type TicketType = {
     id: number;
-    event_id: number;
-    seat_number: string | null;
-    price: string;
-    status: string;
+    name: string;
+    price_minor: number;
+    currency: string;
+    available: number;
+    max_per_order: number | null;
+    sales_start_at: string | null;
+    sales_end_at: string | null;
 };
 export type Order = {
-    id: number;
-    total_amount: string;
+    order_number: string;
+    total_minor: number;
+    currency: string;
     status: string;
     expires_at: string | null;
-    tickets: Ticket[];
 };
+export const price = (minor: number, currency: string) => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(minor / 100);
+export function ticketLimit(type: TicketType) {
+    const now = Date.now();
+    if ((type.sales_start_at && now < Date.parse(type.sales_start_at)) || (type.sales_end_at && now >= Date.parse(type.sales_end_at)))
+        return 0;
+    return Math.max(0, Math.min(type.available, type.max_per_order ?? 20, 20));
+}
+export function checkoutItems(raw: string, types: TicketType[], names: Record<string, string>) {
+    const quantities: unknown = JSON.parse(raw);
+    if (!quantities || typeof quantities !== 'object' || Array.isArray(quantities))
+        throw new Error('Choose tickets first.');
+    const items = Object.entries(quantities).map(([key, quantity]) => {
+        const type = types.find(t => String(t.id) === key);
+        if (!type || typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < 1 || quantity > ticketLimit(type))
+            throw new Error('Selection is no longer available. Choose tickets again.');
+        const attendees = Array.from({ length: quantity }, (_, index) => {
+            const full_name = names[`${key}-${index}`]?.trim() ?? '';
+            if (!full_name || full_name.length > 200)
+                throw new Error('Enter a name for every attendee (up to 200 characters).');
+            return { full_name };
+        });
+        return { ticket_type_id: type.id, attendees };
+    });
+    const count = items.reduce((sum, item) => sum + item.attendees.length, 0);
+    if (!count || count > 20)
+        throw new Error('Choose between 1 and 20 tickets.');
+    return items;
+}
 export async function decode<T>(response: Response): Promise<T> {
     const body = await response.json();
     if (!response.ok) {

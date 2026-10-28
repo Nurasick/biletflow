@@ -1,42 +1,71 @@
 import { useCallback, useRef, useState } from 'react';
+import { TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { all, get, decode, money, type Event, type Ticket, type Order } from '@/api/public';
+import { get, decode, price, checkoutItems, type TicketType, type Order } from '@/api/public';
 import { useAuth } from '@/hooks/use-auth';
 import { Screen, Label, Button } from '@/components/api-screen';
 export default function Checkout() {
-    const { slug, tickets: ids } = useLocalSearchParams<{
+    const { slug, selection } = useLocalSearchParams<{
         slug: string;
-        tickets: string;
+        selection: string;
     }>();
     const router = useRouter();
-    const { authenticatedFetch } = useAuth();
-    const [tickets, setTickets] = useState<Ticket[]>([]);
+    const { authenticatedFetch, user } = useAuth();
+    const [types, setTypes] = useState<TicketType[]>([]);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const lock = useRef(false);
     const [order, setOrder] = useState<Order | null>(null);
-    const [retry, setRetry] = useState(0);
-    useFocusEffect(useCallback(() => { let active = true; setLoading(true); setError(''); const load = async () => { const selected = [...new Set((ids ?? '').split(',').map(Number))]; if (!slug || !selected.length || selected.some(id => !Number.isSafeInteger(id) || id <= 0))
-        throw new Error('Choose tickets before checkout.'); const event = await get<Event>(`/events/${encodeURIComponent(slug)}`); if (event.status !== 'published')
-        throw new Error('Event is not available for booking.'); const available = await all<Ticket>(`/events/${event.id}/tickets`); const chosen = available.filter(t => selected.includes(t.id)); if (chosen.length !== selected.length)
-        throw new Error('Some tickets are no longer available. Go back and choose again.'); return chosen; }; load().then(data => { if (active)
-        setTickets(data); }).catch(e => { if (active) {
-        setTickets([]);
-        setError(e.message);
-    } }).finally(() => { if (active)
-        setLoading(false); }); return () => { active = false; }; }, [slug, ids, retry]));
-    const reserve = async () => { if (lock.current || order)
-        return; lock.current = true; setBusy(true); setError(''); try {
-        setOrder(await decode<Order>(await authenticatedFetch('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_ids: tickets.map(t => t.id) }) })));
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState(user?.email ?? '');
+    const [names, setNames] = useState<Record<string, string>>({});
+    useFocusEffect(useCallback(() => { let active = true; setLoading(true); setError(''); get<TicketType[]>(`/events/${encodeURIComponent(slug ?? '')}/ticket-types`).then(data => { if (active)
+        setTypes(data); }).catch(e => { if (active)
+        setError(e.message); }).finally(() => { if (active)
+        setLoading(false); }); return () => { active = false; }; }, [slug]));
+    let attendees: {
+        key: string;
+        label: string;
+    }[] = [];
+    let estimated = 0;
+    let selectionError = '';
+    try {
+        const values = JSON.parse(selection ?? '{}');
+        const placeholder: Record<string, string> = {};
+        for (const [id, q] of Object.entries(values)) {
+            if (typeof q !== 'number' || !Number.isInteger(q) || q < 1 || q > 20)
+                throw new Error('Invalid quantity.');
+            for (let i = 0; i < q; i++) {
+                placeholder[`${id}-${i}`] = 'Attendee';
+                attendees.push({ key: `${id}-${i}`, label: `${types.find(t => String(t.id) === id)?.name ?? 'Ticket'} attendee ${i + 1}` });
+            }
+        }
+        if (!loading) {
+            const items = checkoutItems(selection ?? '{}', types, placeholder);
+            estimated = items.reduce((sum, item) => sum + (types.find(t => t.id === item.ticket_type_id)?.price_minor ?? 0) * item.attendees.length, 0);
+        }
     }
     catch (e) {
-        setTickets([]);
-        setError(`${e instanceof Error ? e.message : 'Reservation failed.'} Review availability before trying again.`);
+        selectionError = e instanceof Error ? e.message : 'Invalid selection.';
+        attendees = [];
+    }
+    const reserve = async () => { if (lock.current || order)
+        return; setError(''); try {
+        if (!name.trim() || !email.trim())
+            throw new Error('Enter your contact name and email.');
+        const items = checkoutItems(selection ?? '{}', types, names);
+        lock.current = true;
+        setBusy(true);
+        setOrder(await decode<Order>(await authenticatedFetch(`/events/${encodeURIComponent(slug)}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact_name: name.trim(), contact_email: email.trim(), items }) })));
+    }
+    catch (e) {
+        setError(e instanceof Error ? e.message : 'Reservation failed.');
     }
     finally {
         lock.current = false;
         setBusy(false);
     } };
-    return <Screen title={order ? 'Reservation confirmed' : 'Review reservation'}>{order ? <><Label>Order #{order.id} ? {order.status}</Label><Label>Total: {money(order.total_amount)}</Label><Label>{order.expires_at ? `Reserved until ${new Date(order.expires_at).toLocaleString()}` : 'Reservation created.'}</Label><Label>This is a reservation. Payment has not been collected.</Label><Button title="Back to events" onPress={() => router.replace('/')}/></> : <>{loading && <Label>Checking availability...</Label>}{error && <><Label>{error}</Label><Button title="Refresh availability" disabled={busy} onPress={() => setRetry(v => v + 1)}/><Button title="Choose tickets again" disabled={busy} onPress={() => router.replace({ pathname: '/seat-selection', params: { slug } })}/></>}{tickets.map(t => <Label key={t.id}>{t.seat_number ?? `Admission ticket ${t.id}`} ? {money(t.price)}</Label>)}{!!tickets.length && <Label>Total: {money(tickets.reduce((sum, t) => sum + Number(t.price), 0))}</Label>}<Button title={busy ? 'Reserving...' : 'Reserve tickets'} disabled={busy || loading || !tickets.length} onPress={() => void reserve()}/></>}</Screen>;
+    const field = (label: string, value: string, change: (s: string) => void) => <TextInput accessibilityLabel={label} placeholder={label} placeholderTextColor="#98A2B3" value={value} onChangeText={change} editable={!busy} maxLength={label === 'Contact email' ? 254 : 200} keyboardType={label === 'Contact email' ? 'email-address' : 'default'} className="rounded border border-gray-500 p-3 text-white"/>;
+    return <Screen title={order ? 'Order created' : 'Review reservation'}>{order ? <><Label>Order {order.order_number}: {order.status}</Label><Label>Total: {price(order.total_minor, order.currency)}</Label><Label>{order.expires_at ? `Reserved until ${new Date(order.expires_at).toLocaleString()}` : 'Order confirmed.'}</Label><Label>{order.status === 'pending' ? 'Payment is still required. No payment was collected by this screen.' : 'Your free order is confirmed.'}</Label><Button title="Back to events" onPress={() => router.replace('/')}/></> : <>{loading && <Label>Checking availability...</Label>}{(error || selectionError) && <Label>{error || selectionError}</Label>}{!loading && !selectionError && <><Label>Ticket subtotal: {price(estimated, types[0]?.currency ?? 'KZT')}</Label>{field('Contact name', name, setName)}{field('Contact email', email, setEmail)}{attendees.map(a => <View key={a.key}>{field(a.label, names[a.key] ?? '', value => setNames(n => ({ ...n, [a.key]: value })))}</View>)}</>}<Button title={busy ? 'Reserving...' : 'Reserve tickets'} disabled={busy || loading || !!selectionError || !types.length} onPress={() => void reserve()}/><Button title="Choose tickets again" disabled={busy} onPress={() => router.replace({ pathname: '/seat-selection', params: { slug } })}/></>}</Screen>;
 }
