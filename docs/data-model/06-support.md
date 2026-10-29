@@ -152,7 +152,8 @@ Access for a guest works the same way as guest order retrieval: a signed link.
 |---|---|---|---|
 | `id` | bigint PK | no | |
 | `support_case_id` | bigint FK | no | |
-| `author_user_id` | bigint FK → `users` | yes | `NULL` = system message |
+| `sender` | varchar | no | `requester` \| `staff` \| `system` — see below |
+| `author_user_id` | bigint FK → `users` | yes | `NULL` for a system message **and** for a guest requester |
 | `body` | text | no | |
 | `is_internal_note` | boolean | no | default `false`. Staff-only |
 | `created_at` | timestamptz | no | |
@@ -308,23 +309,51 @@ ones nobody has picked up — surface them first.
 
 ---
 
+## Decisions made while building
+
+- **`support_messages.sender` was added.** "`author_user_id` NULL = system"
+  breaks for guests: a guest requester has no user either, so their messages
+  would read as system notices. `sender` (`requester`/`staff`/`system`) says
+  which side wrote it; CHECKs keep it honest (`staff` has an author, `system`
+  has none, and only `staff` can write an internal note).
+- **Routes.** The requester side is `/support/cases/…`, for members, guests
+  (`?token=…`) and organizers writing to the platform (`audience="organizer"`).
+  The answering side is `/staff/support/cases/…`; its one scoped query
+  (`services/support.py: staff_scope`) gives the event owner their attendee
+  cases and Platform Admins the organizer cases. Missing and not-yours are
+  both `404`.
+- **Guests get a signed link**, like guest orders: `access_token` in the
+  create response and in every email, JWT `type="support_case"`,
+  `SUPPORT_LINK_EXPIRE_DAYS` (90).
+- **Context is checked, not trusted.** A ticket implies its order, an order
+  its event. Citing an order needs the same access as viewing it (owner or
+  its signed link), so a case cannot attach someone else's order. An attendee
+  case needs at least an event; an organizer case may cite only its own event.
+- **Assignable = can see the case**: the staff scope applied to the assignee.
+  Assigning an `open` case moves it to `in_progress` (§8).
+- **Every status change leaves a system message**, so the thread is the
+  history (§4.13).
+- **Notifications are sent inline** through `services/mailer.py`, as the
+  account emails are, until 07 puts its queue in front.
+
 ## Build checklist
 
-- [ ] `app/models/support.py` — both tables
-- [ ] Import in `app/db/base.py`
-- [ ] `alembic revision --autogenerate -m "support cases"` — **read it**
-- [ ] `case_number` generator
-- [ ] **Scoped queries** — authorization in the `WHERE` clause, not in Python
-- [ ] Two serializers: staff (with internal notes) and requester (without)
-- [ ] Signed-link access for guests
+- [x] `app/models/support.py` — both tables
+- [x] Import in `app/db/base.py`
+- [x] `alembic revision --autogenerate -m "support cases"` — **read it**
+- [x] `case_number` generator
+- [x] **Scoped queries** — authorization in the `WHERE` clause, not in Python
+- [x] Two serializers: staff (with internal notes) and requester (without)
+- [x] Signed-link access for guests
 - [ ] Notifications on new message, assignment, and status change (§4.10)
-- [ ] Tests:
-  - [ ] Attendee A cannot read attendee B's case
-  - [ ] An unrelated organizer cannot read a case for someone else's event
-  - [ ] An attendee never receives `is_internal_note` messages
-  - [ ] `resolved` → reply → `in_progress` works
-  - [ ] A guest can open and read a case with no account
-  - [ ] Context FKs are populated from the page the case was opened on
+      — sent inline by the mailer; move onto the 07 queue when it lands
+- [x] Tests:
+  - [x] Attendee A cannot read attendee B's case
+  - [x] An unrelated organizer cannot read a case for someone else's event
+  - [x] An attendee never receives `is_internal_note` messages
+  - [x] `resolved` → reply → `in_progress` works
+  - [x] A guest can open and read a case with no account
+  - [x] Context FKs are populated from the page the case was opened on
 
 ---
 

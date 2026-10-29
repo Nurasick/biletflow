@@ -68,6 +68,15 @@ def create_order_token(order_id: int) -> str:
     return _create_token(order_id, "order", timedelta(days=settings.ORDER_LINK_EXPIRE_DAYS))
 
 
+def create_support_case_token(case_id: int) -> str:
+    """The signed link that lets a guest follow their support case (06-support.md).
+
+    Typed "support_case" so it opens this one case and nothing else: not an
+    order, and never a session.
+    """
+    return _create_token(case_id, "support_case", timedelta(days=settings.SUPPORT_LINK_EXPIRE_DAYS))
+
+
 def decode_token(token: str) -> dict:
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
 

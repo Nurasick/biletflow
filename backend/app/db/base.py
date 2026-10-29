@@ -10,6 +10,7 @@ from app.models.order import Order, OrderItem
 from app.models.organizer import OrganizerProfile, PayoutAccount
 from app.models.payment import Payment, Refund
 from app.models.staff import StaffAssignment
+from app.models.support import SupportCase, SupportMessage
 from app.models.ticket import Ticket
 from app.models.ticket_type import TicketType
 from app.models.token import UserToken
