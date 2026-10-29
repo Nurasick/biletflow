@@ -1,5 +1,24 @@
 # BiletFlow web
 
+## Check-in and platform administration
+
+Signed-in users can open **Gate check-in** from the header or account page at
+`/staff/events`. The API lists events assigned to that account, including events
+they organize. Each event has live attendance counts, admission QR validation,
+attendee/ticket-code search, manual check-in, and confirmed reversal of an
+accidental check-in. A successful QR scan admits the ticket immediately.
+
+Camera scanning uses browser QR detection when available and requires a secure
+context (HTTPS or localhost) and camera permission. Pasting QR content and manual
+ticket lookup remain available when the browser cannot scan with a camera.
+
+Accounts with the backend `is_platform_admin` flag also see **Platform
+administration** at `/admin/events`. The workspace provides paginated event
+search, event details and history, event suspension/restoration/cancellation,
+and paid-sales activation inspection/suspension/reinstatement. Moderation
+actions require confirmation; suspensions require a reason. The frontend checks
+the role and the backend authorizes every request. Payment data remains simulated.
+
 ## Translations
 
 The web UI uses i18next and react-i18next. Static copy lives in

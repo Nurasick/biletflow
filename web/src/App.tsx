@@ -15,6 +15,11 @@ import { OrganizerEventsPage } from "./pages/OrganizerEventsPage";
 import { OrganizerEventPreviewPage } from "./pages/OrganizerEventPreviewPage";
 import { OrderPage } from "./pages/OrderPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
+import { StaffEventsPage } from "./pages/StaffEventsPage";
+import { StaffEventPage } from "./pages/StaffEventPage";
+import { AdminEventsPage } from "./pages/AdminEventsPage";
+import { AdminEventPage } from "./pages/AdminEventPage";
+import { AdminRoute } from "./shared/auth/AdminRoute";
 
 function App() {
   const router = createBrowserRouter([
@@ -53,7 +58,18 @@ function App() {
       children: [
         {
           element: <ProtectedRoute />,
-          children: [{ path: "/account", element: <AccountPage /> }],
+          children: [
+            { path: "/account", element: <AccountPage /> },
+            { path: "/staff/events", element: <StaffEventsPage /> },
+            { path: "/staff/events/:eventId", element: <StaffEventPage /> },
+          ],
+        },
+        {
+          element: <AdminRoute />,
+          children: [
+            { path: "/admin/events", element: <AdminEventsPage /> },
+            { path: "/admin/events/:eventId", element: <AdminEventPage /> },
+          ],
         },
         {
           path: "/",
