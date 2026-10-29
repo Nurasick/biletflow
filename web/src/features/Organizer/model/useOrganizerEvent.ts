@@ -20,7 +20,15 @@ export const useOrganizerEvent = (userId: number, eventId: number | null) => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+  const refreshSavedEvent = (id: number) => Promise.all([
+    queryClient.invalidateQueries({ queryKey: organizerEventKeys.edit(userId, id) }),
+    queryClient.invalidateQueries({ queryKey: organizerEventKeys.preview(userId, id) }),
+    queryClient.invalidateQueries({ queryKey: organizerEventKeys.list(userId) }),
+    queryClient.invalidateQueries({ queryKey: ["organizer", "timeline", userId, id] }),
+    queryClient.invalidateQueries({ queryKey: ["events"] }),
+  ]);
   const saveDraft = useMutation({
+    retry: false,
     mutationFn: async (values: OrganizerEventValues): Promise<{ id: number; values: OrganizerEventValues }> => {
       if (eventId === null) {
         const id = await organizerEventApi.create(values);
@@ -28,11 +36,9 @@ export const useOrganizerEvent = (userId: number, eventId: number | null) => {
       }
       return { id: eventId, values: await organizerEventApi.update(eventId, values) };
     },
-    onSuccess: async ({ id }) => {
-      await queryClient.invalidateQueries({ queryKey: organizerEventKeys.edit(userId, id) });
-      await queryClient.invalidateQueries({ queryKey: organizerEventKeys.preview(userId, id) });
-      await queryClient.invalidateQueries({ queryKey: organizerEventKeys.list(userId) });
-    },
+    onSuccess: async ({ id }) => { await refreshSavedEvent(id); },
+    // Detail/image requests can partially succeed before a later request fails.
+    onError: async () => { if (eventId !== null) await refreshSavedEvent(eventId); },
   });
   return { draft, saveDraft };
 };

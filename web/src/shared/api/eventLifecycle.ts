@@ -91,7 +91,8 @@ export const eventLifecycleApi = {
       ]);
       return {
         event: preview.event,
-        gallery_images: preview.images.slice(1).map((image) => image.url),
+        gallery_images: preview.images.filter((image, index) => preview.event.cover_image_url
+          ? image.url !== preview.event.cover_image_url : index > 0).map((image) => image.url),
         ticket_types: toPreviewTypes(types),
         publish_requirements: preview.publish_requirements,
         allowed_actions: preview.allowed_actions,

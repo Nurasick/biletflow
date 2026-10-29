@@ -154,7 +154,8 @@ test('an instant from the API is shown as wall-clock time in the event zone', ()
 });
 
 test('creating sends UTC instants resolved in the event zone, then uploads new images', async () => {
-  const fake = scriptApi([[201, record()], [200, []], [201, { id: 1, url: 'http://x/1.png', position: 0 }]]);
+  const fake = scriptApi([[201, record()], [200, []], [201, { id: 1, url: 'http://x/1.png', position: 0 }],
+    [200, record({ cover_image_url: 'http://x/1.png' })]]);
   const id = await organizerEventApi.create({
     ...validDraft(), timeZone: 'Asia/Almaty',
     images: [{ id: 'new', name: 'cover.png', dataUrl: 'data:image/png;base64,AAAA' }],
@@ -167,21 +168,24 @@ test('creating sends UTC instants resolved in the event zone, then uploads new i
   assert.equal(create.body.registration_opens_at, '2027-04-01T04:00:00.000Z');
   assert.deepEqual([list.method, list.path], ['GET', '/organizer/events/7/images']);
   assert.deepEqual(upload.body, { data_url: 'data:image/png;base64,AAAA' });
+  assert.deepEqual(fake.calls[3].body, { cover_image_url: 'http://x/1.png' });
 });
 
 test('loading maps stored images to server ids so a save keeps or deletes them', async () => {
   const images = [{ id: 11, url: 'http://x/a.png', position: 0 }, { id: 12, url: 'http://x/b.png', position: 1 }];
-  scriptApi([[200, record()], [200, images]]);
+  scriptApi([[200, record({ cover_image_url: images[0].url })], [200, images]]);
   const { values } = await organizerEventApi.get(7);
   assert.equal(values.startsAt, '2027-04-18T19:00');
   assert.deepEqual(values.images.map((i) => i.id), ['server-11', 'server-12']);
   assert.equal(eventSchema.safeParse(values).success, true);
 
-  const fake = scriptApi([[200, record()], [200, images], [204, null], [200, record()], [200, [images[0]]]]);
+  const saved = record({ cover_image_url: images[0].url });
+  const fake = scriptApi([[200, saved], [200, images], [204, null], [200, saved], [200, saved], [200, [images[0]]]]);
   await organizerEventApi.update(7, { ...values, images: [values.images[0]] });
   assert.deepEqual(fake.calls.map((c) => [c.method, c.path]), [
     ['PATCH', '/organizer/events/7'], ['GET', '/organizer/events/7/images'],
-    ['DELETE', '/organizer/events/7/images/12'], ['GET', '/organizer/events/7'], ['GET', '/organizer/events/7/images'],
+    ['DELETE', '/organizer/events/7/images/12'], ['PATCH', '/organizer/events/7'],
+    ['GET', '/organizer/events/7'], ['GET', '/organizer/events/7/images'],
   ]);
 });
 
@@ -191,4 +195,40 @@ test('not found and frozen events surface as typed errors', async () => {
   scriptApi([[409, { detail: 'A cancelled event cannot be edited' }]]);
   await assert.rejects(organizerEventApi.update(7, validDraft()),
     (e) => e instanceof OrganizerEventError && e.message === 'organizerEvent.notEditable');
+});
+
+test('editing persists the selected existing cover and refund policy without re-uploading images', async () => {
+  const images = [{ id: 11, url: 'http://x/a.png', position: 0 }, { id: 12, url: 'http://x/b.png', position: 1 }];
+  const original = record({ status: 'published', cover_image_url: images[0].url });
+  const saved = record({ ...original, refund_policy: 'Full refund until one week before the event.', cover_image_url: images[1].url });
+  const fake = scriptApi([[200, original], [200, images], [200, saved], [200, saved], [200, images]]);
+  const values = await organizerEventApi.update(7, {
+    ...validDraft(), refundPolicy: '  Full refund until one week before the event.  ',
+    images: [images[1], images[0]].map((image) => ({ id: `server-${image.id}`, name: 'image.png', dataUrl: image.url })),
+  });
+  assert.equal(fake.calls[0].body.refund_policy, saved.refund_policy);
+  assert.equal(Object.hasOwn(fake.calls[0].body, 'status'), false);
+  assert.deepEqual(fake.calls[2], { method: 'PATCH', path: '/organizer/events/7', body: { cover_image_url: images[1].url } });
+  assert.equal(fake.calls.some((call) => call.method === 'POST' || call.method === 'DELETE'), false);
+  assert.equal(values.images[0].id, 'server-12');
+  assert.equal(values.refundPolicy, saved.refund_policy);
+});
+
+test('refund policy can be cleared, and overlong policy text is rejected before saving', async () => {
+  const fake = scriptApi([[200, record()], [200, []], [200, record()], [200, []]]);
+  const saved = await organizerEventApi.update(7, { ...validDraft(), refundPolicy: ' ' });
+  assert.equal(fake.calls[0].body.refund_policy, null);
+  assert.equal(saved.refundPolicy, '');
+  errorAt({ refundPolicy: 'x'.repeat(2001) }, 'refundPolicy', 'validation.eventRefundPolicyMax');
+});
+
+test('server validation errors remain available to the edit form, and changed images fail explicitly', async () => {
+  scriptApi([[422, { detail: 'capacity must cover existing registrations' }]]);
+  await assert.rejects(organizerEventApi.update(7, validDraft()),
+    (error) => error.status === 422 && error.message.includes('capacity'));
+  const fake = scriptApi([[200, record()], [200, []]]);
+  await assert.rejects(organizerEventApi.update(7, { ...validDraft(), images: [
+    { id: 'server-99', name: 'deleted.png', dataUrl: 'http://x/deleted.png' },
+  ] }), (error) => error instanceof OrganizerEventError && error.message === 'eventEdit.imagesChanged');
+  assert.equal(fake.calls.length, 2);
 });

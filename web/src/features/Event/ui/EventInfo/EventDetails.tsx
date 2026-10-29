@@ -11,7 +11,7 @@ export const EventDetails = ({ event }: { event: EventDetail }) => {
   const dateTime = (value: string) => new Intl.DateTimeFormat(locale, {
     dateStyle: "full", timeStyle: "short", timeZone: event.timezone,
   }).format(new Date(value));
-  const gallery = event.images.slice(1);
+  const gallery = event.images.filter((image) => image.url !== event.cover_image_url);
 
   return (
     <article>

@@ -48,6 +48,10 @@ export const EventPreviewContent = ({ snapshot }: { snapshot: EventPreview }) =>
           <h3 id="preview-description" className="font-semibold">{t("organizerEvent.description")}</h3>
           <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#475467]">{event.description}</p>
         </section>}
+        {event.refund_policy && <section aria-labelledby="preview-refund-policy">
+          <h3 id="preview-refund-policy" className="font-semibold">{t("eventEdit.refundPolicy")}</h3>
+          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#475467]">{event.refund_policy}</p>
+        </section>}
         <section aria-labelledby="preview-tickets" className="border-t border-[#EAECF0] pt-6">
           <h3 id="preview-tickets" className="flex items-center gap-2 font-semibold">
             <Ticket size={18} aria-hidden="true" />{t("eventWorkflow.tickets")}
