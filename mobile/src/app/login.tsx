@@ -1,3 +1,4 @@
+import { RegisterForm } from '@/components/register-form';
 import { useState } from 'react';
 import { StatusBar, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function LoginScreen() {
+  const [registering, setRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,6 +32,8 @@ export default function LoginScreen() {
   };
 
   const displayedError = formError ?? error;
+
+  if (registering) return <RegisterForm onBack={() => setRegistering(false)} />;
 
   return (
     <SafeAreaView className="flex-1 bg-[#182230]">
@@ -91,7 +95,7 @@ export default function LoginScreen() {
               <TextInput
                 autoComplete="current-password"
                 editable={!loading}
-                placeholder="????????"
+                placeholder="Password"
                 placeholderTextColor="#98A2B3"
                 secureTextEntry={!showPassword}
                 className="flex-1 px-4 py-3 text-base text-[#F5F5F0]"
@@ -102,7 +106,7 @@ export default function LoginScreen() {
                 }}
               />
               <TouchableOpacity onPress={() => setShowPassword((visible) => !visible)} className="px-4">
-                <ThemedText className="text-lg">{showPassword ? '?' : '?'}</ThemedText>
+                <ThemedText className="text-lg">{showPassword ? 'Hide' : 'Show'}</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -116,7 +120,7 @@ export default function LoginScreen() {
                 className={`h-5 w-5 items-center justify-center rounded border-2 ${
                   rememberMe ? 'border-[#FF5C35] bg-[#FF5C35]' : 'border-[#344054]'
                 }`}>
-                {rememberMe && <ThemedText className="text-xs font-bold text-white">?</ThemedText>}
+                {rememberMe && <ThemedText className="text-xs font-bold text-white">x</ThemedText>}
               </TouchableOpacity>
               <ThemedText className="text-sm">Remember me</ThemedText>
             </View>
@@ -136,7 +140,7 @@ export default function LoginScreen() {
 
           <View className="flex-row justify-center gap-1">
             <ThemedText className="text-sm text-[#98A2B3]">Don&apos;t have an account?</ThemedText>
-            <TouchableOpacity onPress={() => router.push('/')}>
+            <TouchableOpacity onPress={() => setRegistering(true)}>
               <ThemedText className="text-sm font-bold text-[#FF5C35]">Sign up</ThemedText>
             </TouchableOpacity>
           </View>

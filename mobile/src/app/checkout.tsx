@@ -1,214 +1,71 @@
-import { type ReactNode, useMemo, useState } from 'react';
-import { Alert, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useColorScheme } from 'nativewind';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-
-import { EVENT, PROCESSING_FEE, formatTenge, getSeat, type Seat } from '@/constants/seating';
-
-type PaymentMethod = 'card' | 'kaspi' | 'bank';
-
-const PAYMENT_METHODS: { id: PaymentMethod; label: string; logos?: string }[] = [
-  { id: 'card', label: 'Credit / debit card', logos: 'VISA · MC' },
-  { id: 'kaspi', label: 'Kaspi / e-wallet', logos: 'KASPI' },
-  { id: 'bank', label: 'Bank transfer' },
-];
-
-// Sandbox-only promo code; real codes must be validated by the backend when checkout is wired to the API.
-const DEMO_PROMO_CODE = 'BILETFLOW10';
-const DEMO_PROMO_RATE = 0.1;
-
-export default function CheckoutScreen() {
-  const router = useRouter();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const params = useLocalSearchParams<{ seats?: string }>();
-
-  // Only seat IDs travel through the route; tier and price are looked up locally so they can't be edited via the URL.
-  const seats = useMemo(
-    () => [...new Set((params.seats ?? '').split(','))].map(getSeat).filter((seat): seat is Seat => seat !== null),
-    [params.seats],
-  );
-
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
-  const [promoCode, setPromoCode] = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
-  const [promoError, setPromoError] = useState<string | null>(null);
-
-  const subtotal = seats.reduce((sum, seat) => sum + seat.price, 0);
-  const discount = promoApplied ? Math.round(subtotal * DEMO_PROMO_RATE) : 0;
-  const total = seats.length ? subtotal + PROCESSING_FEE - discount : 0;
-
-  const goBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
+import { useCallback, useRef, useState } from 'react';
+import { TextInput, View } from 'react-native';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { get, decode, price, checkoutItems, type TicketType, type Order } from '@/api/public';
+import { useAuth } from '@/hooks/use-auth';
+import { Screen, Label, Button } from '@/components/api-screen';
+export default function Checkout() {
+    const { slug, selection } = useLocalSearchParams<{
+        slug: string;
+        selection: string;
+    }>();
+    const router = useRouter();
+    const { authenticatedFetch, user } = useAuth();
+    const [types, setTypes] = useState<TicketType[]>([]);
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [busy, setBusy] = useState(false);
+    const lock = useRef(false);
+    const [order, setOrder] = useState<Order | null>(null);
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState(user?.email ?? '');
+    const [names, setNames] = useState<Record<string, string>>({});
+    useFocusEffect(useCallback(() => { let active = true; setLoading(true); setError(''); get<TicketType[]>(`/events/${encodeURIComponent(slug ?? '')}/ticket-types`).then(data => { if (active)
+        setTypes(data); }).catch(e => { if (active)
+        setError(e.message); }).finally(() => { if (active)
+        setLoading(false); }); return () => { active = false; }; }, [slug]));
+    let attendees: {
+        key: string;
+        label: string;
+    }[] = [];
+    let estimated = 0;
+    let selectionError = '';
+    try {
+        const values = JSON.parse(selection ?? '{}');
+        const placeholder: Record<string, string> = {};
+        for (const [id, q] of Object.entries(values)) {
+            if (typeof q !== 'number' || !Number.isInteger(q) || q < 1 || q > 20)
+                throw new Error('Invalid quantity.');
+            for (let i = 0; i < q; i++) {
+                placeholder[`${id}-${i}`] = 'Attendee';
+                attendees.push({ key: `${id}-${i}`, label: `${types.find(t => String(t.id) === id)?.name ?? 'Ticket'} attendee ${i + 1}` });
+            }
+        }
+        if (!loading) {
+            const items = checkoutItems(selection ?? '{}', types, placeholder);
+            estimated = items.reduce((sum, item) => sum + (types.find(t => t.id === item.ticket_type_id)?.price_minor ?? 0) * item.attendees.length, 0);
+        }
     }
-
-    router.replace('/seat-selection');
-  };
-
-  const handleApplyPromo = () => {
-    const isValid = promoCode.trim().toUpperCase() === DEMO_PROMO_CODE;
-    setPromoApplied(isValid);
-    setPromoError(isValid ? null : 'This promo code is not valid.');
-  };
-
-  const finishCheckout = () => {
-    if (router.canDismiss()) {
-      router.dismissAll();
+    catch (e) {
+        selectionError = e instanceof Error ? e.message : 'Invalid selection.';
+        attendees = [];
     }
-    router.replace('/');
-  };
-
-  const handlePayment = () => {
-    const message = 'Your sandbox checkout was successful!';
-    // Alert buttons are not supported by react-native-web, so fall back to the browser dialog there.
-    if (Platform.OS === 'web') {
-      window.alert(`Order confirmed\n\n${message}`);
-      finishCheckout();
-      return;
+    const reserve = async () => { if (lock.current || order)
+        return; setError(''); try {
+        if (!name.trim() || !email.trim())
+            throw new Error('Enter your contact name and email.');
+        const items = checkoutItems(selection ?? '{}', types, names);
+        lock.current = true;
+        setBusy(true);
+        setOrder(await decode<Order>(await authenticatedFetch(`/events/${encodeURIComponent(slug)}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact_name: name.trim(), contact_email: email.trim(), items }) })));
     }
-
-    Alert.alert('Order confirmed', message, [{ text: 'Back to home', onPress: finishCheckout }], { cancelable: false });
-  };
-
-  return (
-    <SafeAreaView className="flex-1 bg-[#F5F5F0] dark:bg-[#101828]" edges={['top', 'left', 'right', 'bottom']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#182230' : '#FFFFFF'} />
-
-      <View className="h-14 flex-row items-center border-b border-[#D0D5DD] bg-white px-4 dark:border-[#344054] dark:bg-[#182230]">
-        <TouchableOpacity
-          accessibilityLabel="Go back to seat selection"
-          className="h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-[#F9FAF7] dark:border-[#344054] dark:bg-[#1D2939]"
-          onPress={goBack}>
-          <Text className="text-lg font-bold text-[#101828] dark:text-[#F5F5F0]">←</Text>
-        </TouchableOpacity>
-        <Text className="flex-1 text-center text-[15px] font-bold text-[#101828] dark:text-[#F5F5F0]">Checkout</Text>
-        <View className="w-[34px]" />
-      </View>
-
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 16 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        <View className="mb-3 flex-row gap-[10px] rounded-xl border border-[#D0D5DD] bg-white p-3 dark:border-[#344054] dark:bg-[#182230]">
-          <View className="h-[72px] w-[72px] items-center justify-center rounded-[10px] bg-[#3A2731]">
-            <Text className="text-[25px] text-[#FF5C35]">♪</Text>
-          </View>
-          <View className="flex-1 justify-center">
-            <Text className="mb-1 text-[13.5px] font-bold text-[#101828] dark:text-[#F5F5F0]">{EVENT.title}</Text>
-            <Text className="my-[2px] text-[10px] text-[#667085] dark:text-[#98A2B3]">{EVENT.date} · {EVENT.time}</Text>
-            <Text className="my-[2px] text-[10px] text-[#667085] dark:text-[#98A2B3]">{EVENT.venue} · {EVENT.hall}</Text>
-          </View>
-        </View>
-
-        <Card title="Order summary">
-          {seats.length === 0 ? (
-            <Text className="py-3 text-[11px] text-[#667085] dark:text-[#98A2B3]">No seats selected. Go back and choose seats on the map.</Text>
-          ) : seats.map((seat, index) => (
-            <View
-              key={seat.id}
-              className={`flex-row justify-between gap-3 py-[9px] ${index < seats.length - 1 ? 'border-b border-[#D0D5DD] dark:border-[#344054]' : ''}`}>
-              <View>
-                <Text className="text-[11.5px] font-bold text-[#101828] dark:text-[#F5F5F0]">Row {seat.row} · Seat {seat.number}</Text>
-                <Text className="mt-[3px] text-[9.5px] capitalize text-[#667085] dark:text-[#98A2B3]">{seat.type}</Text>
-              </View>
-              <Text className="text-[11.5px] text-[#101828] dark:text-[#F5F5F0]">{formatTenge(seat.price)}</Text>
-            </View>
-          ))}
-
-          <View className="mt-1 border-t border-[#D0D5DD] pt-[6px] dark:border-[#344054]">
-            <TotalLine label="Subtotal" amount={formatTenge(subtotal)} />
-            <TotalLine label="Processing fee" amount={formatTenge(seats.length ? PROCESSING_FEE : 0)} />
-            {discount > 0 && <TotalLine label={`Promo ${DEMO_PROMO_CODE}`} amount={`−${formatTenge(discount)}`} accent />}
-            <View className="flex-row justify-between pt-2">
-              <Text className="text-[15px] font-extrabold text-[#101828] dark:text-[#F5F5F0]">Total</Text>
-              <Text className="text-[15px] font-extrabold text-[#101828] dark:text-[#F5F5F0]">{formatTenge(total)}</Text>
-            </View>
-          </View>
-        </Card>
-
-        <Card title="Payment method">
-          {PAYMENT_METHODS.map((method, index) => {
-            const selected = paymentMethod === method.id;
-            return (
-              <TouchableOpacity
-                key={method.id}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                onPress={() => setPaymentMethod(method.id)}
-                className={`flex-row items-center gap-2 py-[10px] ${index < PAYMENT_METHODS.length - 1 ? 'border-b border-[#D0D5DD] dark:border-[#344054]' : ''}`}>
-                <View
-                  className={`h-[15px] w-[15px] items-center justify-center rounded-full border-[1.5px] ${selected ? 'border-[#FF5C35]' : 'border-[#667085] dark:border-[#98A2B3]'}`}>
-                  {selected && <View className="h-[7px] w-[7px] rounded-full bg-[#FF5C35]" />}
-                </View>
-                <Text className="text-[11px] text-[#101828] dark:text-[#F5F5F0]">{method.label}</Text>
-                {method.logos && (
-                  <Text className="ml-auto font-mono text-[8.5px] font-bold text-[#667085] dark:text-[#98A2B3]">{method.logos}</Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </Card>
-
-        <View className="flex-row items-center gap-2 rounded-[11px] border border-[#D0D5DD] bg-white px-3 py-[6px] dark:border-[#344054] dark:bg-[#182230]">
-          <TextInput
-            value={promoCode}
-            onChangeText={(value) => {
-              setPromoCode(value);
-              setPromoError(null);
-            }}
-            onSubmitEditing={handleApplyPromo}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            returnKeyType="done"
-            placeholder="Promo code"
-            placeholderTextColor={isDark ? '#98A2B3' : '#667085'}
-            className="h-8 min-w-0 flex-1 text-[12px] text-[#101828] dark:text-[#F5F5F0]"
-          />
-          <TouchableOpacity accessibilityRole="button" disabled={!promoCode.trim()} onPress={handleApplyPromo}>
-            <Text className={`text-[12px] font-extrabold ${promoCode.trim() ? 'text-[#FF5C35]' : 'text-[#98A2B3]'}`}>Apply</Text>
-          </TouchableOpacity>
-        </View>
-        {promoError && <Text className="mx-[2px] mt-[6px] text-[10px] text-[#F04438]">{promoError}</Text>}
-        {promoApplied && <Text className="mx-[2px] mt-[6px] text-[10px] text-[#FF5C35]">Promo code applied: 10% off seats.</Text>}
-
-        <Text className="mx-[2px] mt-[10px] text-[9.5px] leading-[14px] text-[#667085] dark:text-[#98A2B3]">
-          Tickets are issued only after payment confirmation. Abandoned checkouts release reserved seats automatically.
-        </Text>
-      </ScrollView>
-
-      <View className="border-t border-[#D0D5DD] bg-white px-[14px] py-3 dark:border-[#344054] dark:bg-[#182230]">
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityState={{ disabled: seats.length === 0 }}
-          disabled={seats.length === 0}
-          onPress={handlePayment}
-          className={`h-12 items-center justify-center rounded-xl ${seats.length ? 'bg-[#FF5C35]' : 'bg-[#98A2B3] dark:bg-[#667085]'}`}>
-          <Text className="text-sm font-extrabold text-[#101828]">Pay {formatTenge(total)}</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View className="mb-3 rounded-xl border border-[#D0D5DD] bg-white p-[13px] dark:border-[#344054] dark:bg-[#182230]">
-      <Text className="mb-[6px] text-[13.5px] font-bold text-[#101828] dark:text-[#F5F5F0]">{title}</Text>
-      {children}
-    </View>
-  );
-}
-
-function TotalLine({ label, amount, accent = false }: { label: string; amount: string; accent?: boolean }) {
-  const color = accent ? 'text-[#FF5C35]' : 'text-[#667085] dark:text-[#98A2B3]';
-  return (
-    <View className="flex-row justify-between py-1">
-      <Text className={`text-[11.5px] ${color}`}>{label}</Text>
-      <Text className={`text-[11.5px] ${color}`}>{amount}</Text>
-    </View>
-  );
+    catch (e) {
+        setError(e instanceof Error ? e.message : 'Reservation failed.');
+    }
+    finally {
+        lock.current = false;
+        setBusy(false);
+    } };
+    const field = (label: string, value: string, change: (s: string) => void) => <TextInput accessibilityLabel={label} placeholder={label} placeholderTextColor="#98A2B3" value={value} onChangeText={change} editable={!busy} maxLength={label === 'Contact email' ? 254 : 200} keyboardType={label === 'Contact email' ? 'email-address' : 'default'} className="rounded border border-gray-500 p-3 text-white"/>;
+    return <Screen title={order ? 'Order created' : 'Review reservation'}>{order ? <><Label>Order {order.order_number}: {order.status}</Label><Label>Total: {price(order.total_minor, order.currency)}</Label><Label>{order.expires_at ? `Reserved until ${new Date(order.expires_at).toLocaleString()}` : 'Order confirmed.'}</Label><Label>{order.status === 'pending' ? 'Payment is still required. No payment was collected by this screen.' : 'Your free order is confirmed.'}</Label><Button title="Back to events" onPress={() => router.replace('/')}/></> : <>{loading && <Label>Checking availability...</Label>}{(error || selectionError) && <Label>{error || selectionError}</Label>}{!loading && !selectionError && <><Label>Ticket subtotal: {price(estimated, types[0]?.currency ?? 'KZT')}</Label>{field('Contact name', name, setName)}{field('Contact email', email, setEmail)}{attendees.map(a => <View key={a.key}>{field(a.label, names[a.key] ?? '', value => setNames(n => ({ ...n, [a.key]: value })))}</View>)}</>}<Button title={busy ? 'Reserving...' : 'Reserve tickets'} disabled={busy || loading || !!selectionError || !types.length} onPress={() => void reserve()}/><Button title="Choose tickets again" disabled={busy} onPress={() => router.replace({ pathname: '/seat-selection', params: { slug } })}/></>}</Screen>;
 }

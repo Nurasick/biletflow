@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StatusBar, View } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { ticketLimit } from '@/api/public';
 import { eventsApi, formatEventDate, formatEventPrice, resolveEventImage, type EventDetail, type PublicTicketType } from '@/shared/api/events';
 
 const palette = {
@@ -50,6 +51,7 @@ export default function EventDetailsScreen() {
   }, [slug]);
 
   const imageUrl = useMemo(() => resolveEventImage(event?.cover_image_url), [event?.cover_image_url]);
+  const canBook = event?.status === 'published' && ticketTypes.some((ticket) => ticketLimit(ticket) > 0 && (ticket.price_minor === 0 || event.paid_sales_active));
   const goBack = () => router.canGoBack() ? router.back() : router.replace('/');
   const category = event?.category ? event.category.replace('_', ' ').toUpperCase() : 'EVENT';
 
@@ -121,9 +123,9 @@ export default function EventDetailsScreen() {
           </ScrollView>
 
           <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface }}>
-            <View style={{ alignItems: 'center', paddingVertical: 13, borderRadius: 12, backgroundColor: colors.accent, opacity: 0.72 }}>
-              <ThemedText style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Ticket booking coming soon</ThemedText>
-            </View>
+            <Pressable accessibilityRole="button" disabled={!canBook} onPress={() => router.push({ pathname: '/seat-selection', params: { slug: event.slug } })} style={{ alignItems: 'center', paddingVertical: 13, borderRadius: 12, backgroundColor: colors.accent, opacity: canBook ? 1 : 0.5 }}>
+              <ThemedText style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>{canBook ? 'Choose tickets' : 'Booking unavailable'}</ThemedText>
+            </Pressable>
           </View>
         </>
       ) : null}
