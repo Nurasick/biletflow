@@ -1,123 +1,160 @@
-import { ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
+import { ActivityIndicator, Pressable, ScrollView, StatusBar, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
-const TICKETS = [
-  { name: 'Standard', detail: 'Sections A–C · 340 left', price: '8 500 ₸' },
-  { name: 'Student', detail: 'ID required · 60 left', price: '5 000 ₸' },
-  { name: 'VIP', detail: 'Front rows + lounge · 12 left', price: '22 000 ₸' },
-];
+import { ThemedText } from '@/components/themed-text';
+import { eventsApi, formatEventDate, formatEventPrice, resolveEventImage, type EventDetail, type PublicTicketType } from '@/shared/api/events';
+
+const palette = {
+  dark: { background: '#101828', surface: '#182230', raised: '#1D2939', border: '#344054', text: '#F5F5F0', muted: '#98A2B3', accent: '#FF5C35', paleAccent: '#FFA38B' },
+  light: { background: '#F5F5F0', surface: '#FFFFFF', raised: '#F9FAF7', border: '#D0D5DD', text: '#101828', muted: '#667085', accent: '#D9431F', paleAccent: '#A93216' },
+};
 
 export default function EventDetailsScreen() {
   const router = useRouter();
+  const { slug: rawSlug } = useLocalSearchParams<{ slug?: string | string[] }>();
+  const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const goBack = () => {
-    if (router.canGoBack()) {
-      router.back();
+  const colors = isDark ? palette.dark : palette.light;
+  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [ticketTypes, setTicketTypes] = useState<PublicTicketType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!slug) {
+      setError('This event link is missing its event identifier.');
+      setIsLoading(false);
       return;
     }
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+    void Promise.all([
+      eventsApi.get(slug, controller.signal),
+      eventsApi.ticketTypes(slug, controller.signal),
+    ]).then(([eventInfo, types]) => {
+      setEvent(eventInfo);
+      setTicketTypes(types);
+    }).catch((requestError: unknown) => {
+      if (requestError instanceof Error && requestError.name === 'AbortError') return;
+      setError(requestError instanceof Error ? requestError.message : 'Could not load this event.');
+    }).finally(() => {
+      if (!controller.signal.aborted) setIsLoading(false);
+    });
+    return () => controller.abort();
+  }, [slug]);
 
-    router.replace('/');
-  };
+  const imageUrl = useMemo(() => resolveEventImage(event?.cover_image_url), [event?.cover_image_url]);
+  const goBack = () => router.canGoBack() ? router.back() : router.replace('/');
+  const category = event?.category ? event.category.replace('_', ' ').toUpperCase() : 'EVENT';
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F5F5F0] dark:bg-[#101828]" edges={['top', 'left', 'right']}>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={isDark ? '#182230' : '#FFFFFF'}
-      />
-
-      <View className="h-14 flex-row items-center border-b border-[#D0D5DD] bg-white px-4 dark:border-[#344054] dark:bg-[#182230]">
-        <TouchableOpacity
-          accessibilityLabel="Go back"
-          className="h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-[#F9FAF7] dark:border-[#344054] dark:bg-[#1D2939]"
-          onPress={goBack}>
-          <Text className="text-lg font-bold text-[#101828] dark:text-[#F5F5F0]">←</Text>
-        </TouchableOpacity>
-        <Text className="flex-1 text-center text-[15px] font-bold text-[#101828] dark:text-[#F5F5F0]">Event</Text>
-        <TouchableOpacity
-          accessibilityLabel="Share event"
-          className="h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[#D0D5DD] bg-[#F9FAF7] dark:border-[#344054] dark:bg-[#1D2939]">
-          <Text className="text-base font-bold text-[#101828] dark:text-[#F5F5F0]">↗</Text>
-        </TouchableOpacity>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right', 'bottom']}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
+      <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <Pressable accessibilityLabel="Go back" onPress={goBack} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
+          <ThemedText style={{ color: colors.text, fontSize: 19 }}>‹</ThemedText>
+        </Pressable>
+        <ThemedText style={{ flex: 1, color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '700' }}>Event details</ThemedText>
+        <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="h-[220px] justify-end overflow-hidden bg-[#3A2731] px-[18px] pb-[18px]">
-          <View className="absolute -right-8 top-3 h-44 w-44 rounded-full bg-[#FF5C35] opacity-25" />
-          <View className="absolute -right-1 top-8 h-32 w-32 rounded-full border-[18px] border-[#101828] opacity-40" />
-          <Text className="mb-1 text-[10px] font-bold tracking-[1px] text-[#FFA38B]">CONCERT · 16+</Text>
-          <Text className="text-[27px] font-extrabold leading-[29px] tracking-[-1.1px] text-white">Almaty Indie Night</Text>
-          <Text className="mt-1 text-[13px] text-[#F2F4F7]">Spring Edition</Text>
+      {isLoading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted }}>Loading event…</ThemedText></View>
+      ) : error ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <ThemedText style={{ color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '700' }}>Event unavailable</ThemedText>
+          <ThemedText style={{ marginTop: 8, color: colors.muted, textAlign: 'center', fontSize: 13 }}>{error}</ThemedText>
+          <Pressable onPress={goBack} style={{ marginTop: 18, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '700' }}>Back to events</ThemedText></Pressable>
         </View>
-
-        <View className="-mt-[10px] mx-[14px] rounded-[14px] border border-[#D0D5DD] bg-white p-[15px] shadow-sm dark:border-[#344054] dark:bg-[#182230]">
-          <InfoRow icon="◷" title="Sat, 18 Apr 2026 · 19:00" detail="Doors open 18:00" />
-          <InfoRow icon="⌖" title="Palace of Republic" detail="Dostyk Ave 56, Almaty" />
-          <View className="mt-[10px] flex-row flex-wrap gap-[7px]">
-            <Chip label="Live music" />
-            <Chip label="Assigned seating" />
-            <Chip label="120 min" />
-          </View>
-        </View>
-
-        <View className="px-4 pb-6 pt-5">
-          <Text className="mb-3 text-[17px] font-extrabold tracking-[-0.3px] text-[#101828] dark:text-[#F5F5F0]">About the event</Text>
-          <Text className="text-[12.5px] leading-5 text-[#667085] dark:text-[#98A2B3]">
-            A packed spring showcase featuring local indie acts, guest performers and a late-night finale in the main hall.
-          </Text>
-
-          <Text className="mb-[10px] mt-5 text-[17px] font-extrabold tracking-[-0.3px] text-[#101828] dark:text-[#F5F5F0]">Tickets</Text>
-          {TICKETS.map((ticket) => (
-            <View
-              className="mb-[10px] flex-row items-center justify-between rounded-xl border border-[#D0D5DD] bg-white px-3 py-[12px] dark:border-[#344054] dark:bg-[#182230]"
-              key={ticket.name}>
-              <View>
-                <Text className="text-[13px] font-bold text-[#101828] dark:text-[#F5F5F0]">{ticket.name}</Text>
-                <Text className="mt-[2px] text-[10.5px] text-[#667085] dark:text-[#98A2B3]">{ticket.detail}</Text>
-              </View>
-              <Text className="text-[13px] font-extrabold text-[#101828] dark:text-[#F5F5F0]">{ticket.price}</Text>
+      ) : event ? (
+        <>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+            <View style={{ height: 230, justifyContent: 'flex-end', overflow: 'hidden', backgroundColor: '#3A2731', padding: 18 }}>
+              {imageUrl && <Image source={{ uri: imageUrl }} contentFit="cover" transition={180} style={{ position: 'absolute', width: '100%', height: '100%' }} />}
+              <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: '#101828', opacity: imageUrl ? 0.48 : 1 }} />
+              {!imageUrl && <View style={{ position: 'absolute', right: -10, top: 6, width: 180, height: 180, borderRadius: 90, borderWidth: 25, borderColor: colors.accent, opacity: 0.22 }} />}
+              <ThemedText style={{ marginBottom: 5, color: colors.paleAccent, fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>{category}{event.phase === 'completed' ? ' · COMPLETED' : ''}</ThemedText>
+              <ThemedText style={{ color: '#FFFFFF', fontSize: 26, fontWeight: '900', lineHeight: 30 }}>{event.title}</ThemedText>
+              <ThemedText numberOfLines={1} style={{ marginTop: 6, color: '#EAECF0', fontSize: 13 }}>Presented by {event.organizer_name}</ThemedText>
             </View>
-          ))}
 
-          <Text className="mb-3 mt-5 text-[17px] font-extrabold tracking-[-0.3px] text-[#101828] dark:text-[#F5F5F0]">Refunds</Text>
-          <Text className="text-[12.5px] leading-5 text-[#667085] dark:text-[#98A2B3]">
-            Full refund until 11 Apr. After that date, ticket refunds follow the organizer&apos;s published policy.
-          </Text>
-        </View>
-      </ScrollView>
+            <View style={{ marginTop: -10, marginHorizontal: 14, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
+              <InfoRow icon="◷" title={formatEventDate(event.starts_at)} detail={`Ends ${formatEventDate(event.ends_at)}`} colors={colors} />
+              <InfoRow icon="⌖" title={event.venue_name} detail={event.venue_address} colors={colors} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 10 }}>
+                <Chip label={event.seating_mode === 'assigned' ? 'Assigned seating' : 'General admission'} colors={colors} />
+                {event.capacity !== null && <Chip label={`${event.capacity.toLocaleString()} capacity`} colors={colors} />}
+                {event.timezone && <Chip label={event.timezone} colors={colors} />}
+              </View>
+            </View>
 
-      <View className="border-t border-[#D0D5DD] bg-white px-[14px] pb-3 pt-3 dark:border-[#344054] dark:bg-[#182230]">
-        <TouchableOpacity
-          accessibilityRole="button"
-          className="h-12 items-center justify-center rounded-xl bg-[#FF5C35]"
-          onPress={() => router.push('/seat-selection')}>
-          <Text className="text-sm font-extrabold text-white">Select seats</Text>
-        </TouchableOpacity>
-      </View>
+            <View style={{ paddingHorizontal: 16, paddingTop: 21 }}>
+              {event.description ? <>
+                <ThemedText style={{ marginBottom: 8, color: colors.text, fontSize: 17, fontWeight: '800' }}>About the event</ThemedText>
+                <ThemedText style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>{event.description}</ThemedText>
+              </> : null}
+
+              {event.refund_policy ? <>
+                <ThemedText style={{ marginTop: 20, marginBottom: 7, color: colors.text, fontSize: 17, fontWeight: '800' }}>Refund policy</ThemedText>
+                <ThemedText style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>{event.refund_policy}</ThemedText>
+              </> : null}
+
+              <View style={{ marginTop: event.description || event.refund_policy ? 22 : 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <ThemedText style={{ color: colors.text, fontSize: 17, fontWeight: '800' }}>Tickets</ThemedText>
+                <ThemedText style={{ color: colors.muted, fontSize: 11 }}>{ticketTypes.length} {ticketTypes.length === 1 ? 'option' : 'options'}</ThemedText>
+              </View>
+
+              {ticketTypes.length === 0 ? (
+                <View style={{ marginTop: 10, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}><ThemedText style={{ color: colors.muted, fontSize: 13 }}>Ticket information is not available yet.</ThemedText></View>
+              ) : ticketTypes.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} colors={colors} paidSalesActive={event.paid_sales_active} />)}
+
+              {!event.paid_sales_active && ticketTypes.some((ticket) => ticket.price_minor > 0) && (
+                <ThemedText style={{ marginTop: 8, color: colors.paleAccent, fontSize: 12 }}>Paid ticket sales are not open for this event yet.</ThemedText>
+              )}
+            </View>
+          </ScrollView>
+
+          <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface }}>
+            <View style={{ alignItems: 'center', paddingVertical: 13, borderRadius: 12, backgroundColor: colors.accent, opacity: 0.72 }}>
+              <ThemedText style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Ticket booking coming soon</ThemedText>
+            </View>
+          </View>
+        </>
+      ) : null}
     </SafeAreaView>
   );
 }
 
-function InfoRow({ icon, title, detail }: { icon: string; title: string; detail: string }) {
+function InfoRow({ icon, title, detail, colors }: { icon: string; title: string; detail: string; colors: typeof palette.dark }) {
   return (
-    <View className="flex-row py-2">
-      <Text className="w-[22px] text-[15px] font-bold text-[#FF5C35]">{icon}</Text>
-      <Text className="flex-1 text-[12.5px] leading-[18px] text-[#101828] dark:text-[#F5F5F0]">
-        <Text className="font-bold">{title}</Text>
-        {`\n`}
-        <Text className="text-[#667085] dark:text-[#98A2B3]">{detail}</Text>
-      </Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+      <View style={{ width: 34, height: 34, marginRight: 10, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: colors.raised }}><ThemedText style={{ color: colors.accent, fontSize: 17 }}>{icon}</ThemedText></View>
+      <View style={{ flex: 1 }}><ThemedText style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>{title}</ThemedText><ThemedText style={{ marginTop: 3, color: colors.muted, fontSize: 11 }}>{detail}</ThemedText></View>
     </View>
   );
 }
 
-function Chip({ label }: { label: string }) {
+function Chip({ label, colors }: { label: string; colors: typeof palette.dark }) {
+  return <View style={{ paddingHorizontal: 9, paddingVertical: 6, borderRadius: 16, backgroundColor: colors.raised }}><ThemedText style={{ color: colors.muted, fontSize: 10 }}>{label}</ThemedText></View>;
+}
+
+function TicketCard({ ticket, colors, paidSalesActive }: { ticket: PublicTicketType; colors: typeof palette.dark; paidSalesActive: boolean }) {
+  const soldOut = ticket.available <= 0;
+  const unavailable = soldOut || (ticket.price_minor > 0 && !paidSalesActive);
   return (
-    <View className="rounded-full border border-[#D0D5DD] bg-[#F9FAF7] px-[9px] py-[6px] dark:border-[#344054] dark:bg-[#101828]">
-      <Text className="text-[10.5px] text-[#667085] dark:text-[#98A2B3]">{label}</Text>
+    <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: 13, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
+      <View style={{ flex: 1 }}>
+        <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{ticket.name}</ThemedText>
+        {!!ticket.description && <ThemedText style={{ marginTop: 4, color: colors.muted, fontSize: 11 }}>{ticket.description}</ThemedText>}
+        <ThemedText style={{ marginTop: 5, color: unavailable ? colors.paleAccent : colors.muted, fontSize: 11 }}>{soldOut ? 'Sold out' : `${ticket.available.toLocaleString()} available`}</ThemedText>
+      </View>
+      <ThemedText style={{ color: colors.accent, fontSize: 13, fontWeight: '800' }}>{formatEventPrice(ticket.price_minor)}</ThemedText>
     </View>
   );
 }
