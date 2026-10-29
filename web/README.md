@@ -19,6 +19,18 @@ and paid-sales activation inspection/suspension/reinstatement. Moderation
 actions require confirmation; suspensions require a reason. The frontend checks
 the role and the backend authorizes every request. Payment data remains simulated.
 
+## Attendees and event activity
+
+Open an event from **My events**, then use its preview page to view the attendee
+list and activity history. Both lists load from the authenticated organizer API
+and show 25 entries per page, with refresh and retry controls.
+
+The attendee list shows each ticket's attendee, contact details, ticket type,
+status, code, and order number. The activity history shows the timestamp, actor,
+action, affected record, description, and any recorded details. History is
+read-only and can be filtered by action and date/time range. Date/time filters
+use the device time zone shown beside the form; the end of the range is exclusive.
+
 ## Translations
 
 The web UI uses i18next and react-i18next. Static copy lives in
