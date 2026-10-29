@@ -20,6 +20,10 @@ export const AccountPage = () => {
     <main className="mx-auto w-full max-w-3xl px-7 py-12">
       <h1 className="text-3xl font-bold">{t("account.title")}</h1>
       <Link to={user.is_organizer ? "/organizer/events" : "/organizer/profile"} className="mt-4 inline-block text-sm font-semibold text-[#D9431F]">{t(user.is_organizer ? "account.organizerWorkspace" : "account.becomeOrganizer")}</Link>
+      <nav aria-label={t("account.title")} className="mt-4 flex flex-wrap gap-4 text-sm font-semibold text-[#D9431F]">
+        <Link to="/staff/events">{t("nav.checkIn")}</Link>
+        {user.is_platform_admin && <Link to="/admin/events">{t("nav.admin")}</Link>}
+      </nav>
       <dl className="my-8 space-y-4">
         <div><dt className="text-sm text-[#667085]">{t("account.name")}</dt><dd>{user.first_name} {user.last_name}</dd></div>
         <div><dt className="text-sm text-[#667085]">{t("account.email")}</dt><dd>{user.email}</dd></div>
