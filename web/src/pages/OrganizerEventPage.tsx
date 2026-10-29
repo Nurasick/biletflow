@@ -14,12 +14,9 @@ import type { OrganizerContext } from "../shared/auth/OrganizerRoute";
 // not. The backend enforces the same rule (audit #15).
 const EDITABLE = new Set(["draft", "published"]);
 
-export const OrganizerEventPage = () => {
+const OrganizerEventEditor = ({ userId, eventId }: { userId: number; eventId: number | null }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { userId } = useOutletContext<OrganizerContext>();
-  const { eventId: param } = useParams();
-  const eventId = param && /^[1-9]\d*$/.test(param) ? Number(param) : null;
   const { draft, saveDraft } = useOrganizerEvent(userId, eventId);
   const event = draft.data?.event ?? null;
   const previewHref = eventId ? `/organizer/events/${eventId}/preview` : undefined;
@@ -40,6 +37,7 @@ export const OrganizerEventPage = () => {
         {event && <EventStatusBadge status={event.status} />}
       </div>
       <p className="mt-2 mb-6 text-sm leading-6 text-[#667085]">{t("organizerEvent.pageDescription")}</p>
+      {event?.status === "published" && <Alert type="info" showIcon className="mb-6" title={t("eventEdit.publishedHint")} />}
       {draft.isPending ? (
         <div role="status" className="flex items-center justify-center gap-2 rounded-xl border border-[#D0D5DD] bg-white py-20 text-sm text-[#667085]">
           <LoaderCircle className="animate-spin text-[#FF5C35]" size={18} aria-hidden="true" />{t("organizerEvent.loading")}
@@ -54,9 +52,22 @@ export const OrganizerEventPage = () => {
           <Link to={previewHref!} className="mt-4 inline-block font-semibold text-[#A93216]">{t("eventWorkflow.preview")}</Link>
         </div>
       ) : (
-        <OrganizerEventForm key={eventId ?? "new"} draft={draft.data.values} saveDraft={save} previewHref={previewHref} />
+        <OrganizerEventForm key={eventId ?? "new"} draft={draft.data.values} saveDraft={save} previewHref={previewHref} editing={eventId !== null} />
       )}
       <p className="mt-6 text-xs text-[#667085]">{t("organizer.required")}</p>
     </OrganizerWorkspace>
   );
+};
+
+export const OrganizerEventPage = () => {
+  const { t } = useTranslation();
+  const { userId } = useOutletContext<OrganizerContext>();
+  const { eventId: param } = useParams();
+  const validId = param === undefined || (/^[1-9]\d*$/.test(param) && Number.isSafeInteger(Number(param)));
+  if (!validId) return <OrganizerWorkspace>
+    <Alert role="alert" type="error" title={t("eventWorkflow.notFound")} />
+    <Link to="/organizer/events" className="mt-4 inline-block font-semibold text-[#A93216]">{t("eventWorkflow.myEvents")}</Link>
+  </OrganizerWorkspace>;
+  const eventId = param === undefined ? null : Number(param);
+  return <OrganizerEventEditor key={`${userId}:${eventId ?? "new"}`} userId={userId} eventId={eventId} />;
 };

@@ -15,10 +15,11 @@ import { useUnsavedEvent } from "../model/useUnsavedEvent";
 import { EventFormField, EventFormSection, EventInput, eventInputClass } from "./EventFormField";
 import { EventImages } from "./EventImages";
 
-export const OrganizerEventForm = ({ draft, saveDraft, previewHref }: {
+export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = false }: {
   draft: OrganizerEventValues;
   saveDraft: (values: OrganizerEventValues) => Promise<OrganizerEventValues>;
   previewHref?: string;
+  editing?: boolean;
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -127,10 +128,18 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref }: {
           </div>
           <FieldError id="event-visibility-error" error={errors.visibility} />
         </EventFormSection>
+        <EventFormSection id="event-refund-policy-heading" number="07" title={t("eventEdit.refundPolicy")}
+          description={t("eventEdit.refundPolicyHint")}>
+          <EventFormField id="event-refund-policy" label={t("eventEdit.refundPolicy")} error={errors.refundPolicy}>
+            <textarea {...register("refundPolicy")} id="event-refund-policy" rows={4} maxLength={2_000}
+              className={`${eventInputClass} resize-y`} aria-invalid={Boolean(errors.refundPolicy)}
+              aria-describedby={errors.refundPolicy ? "event-refund-policy-error" : undefined} />
+          </EventFormField>
+        </EventFormSection>
       </fieldset>
 
       <div aria-live="polite" className="mt-6">
-        {saved && <Alert role="status" type="success" showIcon title={t("organizerEvent.saved")} className="mb-4" />}
+        {saved && <Alert role="status" type="success" showIcon title={t(editing ? "eventEdit.saved" : "organizerEvent.saved")} className="mb-4" />}
         {errors.root && <Alert role="alert" type="error" showIcon title={validationMessage(t, errors.root)} className="mb-4" />}
       </div>
       <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-4 border-t border-[#D0D5DD] bg-[#F5F5F0]/95 px-1 py-5 backdrop-blur-sm">
@@ -144,7 +153,7 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref }: {
             onClick={() => { if (previewHref) void navigate(previewHref); }}>{t("eventWorkflow.preview")}</Button>
           <Button htmlType="submit" type="primary" loading={isSubmitting} disabled={!isDirty || busy}
             icon={<Save size={16} aria-hidden="true" />}>
-            {isSubmitting ? t("organizer.saving") : t("organizerEvent.saveDraft")}
+            {isSubmitting ? t("organizer.saving") : t(editing ? "eventEdit.saveChanges" : "organizerEvent.saveDraft")}
           </Button>
         </div>
       </div>
