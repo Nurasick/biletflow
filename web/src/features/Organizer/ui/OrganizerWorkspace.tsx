@@ -1,5 +1,5 @@
 import { ConfigProvider } from "antd";
-import { ArrowLeft, BadgeCheck, CalendarDays, CalendarPlus, UserRound } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarDays, CalendarPlus, ScanLine, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink } from "react-router-dom";
@@ -12,6 +12,7 @@ export const OrganizerWorkspace = ({ children }: { children: ReactNode }) => {
     { to: "/organizer/events", label: t("eventWorkflow.myEvents"), Icon: CalendarDays, end: true },
     { to: "/organizer/events/new", label: t("nav.createEvent"), Icon: CalendarPlus },
     { to: "/organizer/profile", label: t("organizer.profile"), Icon: UserRound },
+    { to: "/staff/events", label: t("nav.checkIn"), Icon: ScanLine },
   ];
 
   return (

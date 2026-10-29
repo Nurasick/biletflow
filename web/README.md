@@ -1,5 +1,44 @@
 # BiletFlow web
 
+## Check-in and platform administration
+
+Signed-in users can open **Gate check-in** from the header or account page at
+`/staff/events`. The API lists events assigned to that account, including events
+they organize. Each event has live attendance counts, admission QR validation,
+attendee/ticket-code search, manual check-in, and confirmed reversal of an
+accidental check-in. A successful QR scan admits the ticket immediately.
+
+Camera scanning uses browser QR detection when available and requires a secure
+context (HTTPS or localhost) and camera permission. Pasting QR content and manual
+ticket lookup remain available when the browser cannot scan with a camera.
+
+Accounts with the backend `is_platform_admin` flag also see **Platform
+administration** at `/admin/events`. The workspace provides paginated event
+search, event details and history, event suspension/restoration/cancellation,
+and paid-sales activation inspection/suspension/reinstatement. Moderation
+actions require confirmation; suspensions require a reason. The frontend checks
+the role and the backend authorizes every request. Payment data remains simulated.
+
+## Attendees and event activity
+
+Open an event from **My events**, then use its preview page to view the attendee
+list and activity history. Both lists load from the authenticated organizer API
+and show 25 entries per page, with refresh and retry controls.
+
+The attendee list shows each ticket's attendee, contact details, ticket type,
+status, code, and order number. The activity history shows the timestamp, actor,
+action, affected record, description, and any recorded details. History is
+read-only and can be filtered by action and date/time range. Date/time filters
+use the device time zone shown beside the form; the end of the range is exclusive.
+
+## Account editing
+
+At `/account`, update your first name, last name, optional phone, and preferred
+language. Save sends `PATCH /users/me` and updates the account header from the
+server response. Clearing the phone removes it; saving a language also switches
+the interface language. Email is shown read-only because this endpoint does not
+change it. Unsaved navigation, reloads, and sign-out are guarded.
+
 ## Translations
 
 The web UI uses i18next and react-i18next. Static copy lives in
@@ -80,44 +119,25 @@ and competing transitions. Manual checks should also cover confirmation
 dismissal, cross-tab updates, failed refreshes, locale switching, and narrow
 screens.
 
-## Organizer event form (frontend demo)
+## Organizer event creation and editing
 
-Open `/organizer/events/new`, use **Create event** in the public header, or choose
-**Create event** in the organizer workspace. The form follows the existing
-`features/Organizer/model` and `ui` structure, using React Hook Form, Zod, React
-Query and the shared organizer layout. All new copy is translated into English,
-Kazakh and Russian. No backend changes or API requests are involved.
+Use **Edit event details** in **My events** or an event preview to open
+`/organizer/events/:eventId/edit`. Draft and published events can be edited;
+suspended and cancelled events are read-only. Saving an existing event keeps
+its status, including published events.
 
-The form saves one event draft per demo organizer in IndexedDB, including image
-data. Reloading restores the last successful save. Images support JPEG, PNG and
-WebP, up to five files of 2 MB each, with previews, removal and cover selection.
-Saving is acknowledged only after the storage transaction completes. Failed
-saves retain the entered values and images; storage/load errors offer retry.
-`EVENT_DEMO_ERRORS` in `src/shared/api/organizerEvents.ts` can simulate load/save
-failures. The existing dummy organizer session controls access.
+The form edits the title, description, category, venue, schedule, time zone,
+registration window, capacity, visibility, refund policy, and images. Images
+support JPEG, PNG, and WebP, up to five files of 2 MB each. Selecting a cover is
+saved to the API and reflected in organizer previews and public event pages.
+Refund policies may be cleared and are limited to 2,000 characters.
 
-Validation covers required event details, field lengths, supported categories,
-positive integer capacity, visibility, valid calendar dates and IANA zones,
-event end after start, registration close after open, and registration no later
-than event start. Registration boundaries, capacity and images are optional.
-Dates use the selected event zone, independently of the browser zone. Clock
-changes that skip or repeat a local time produce a field error rather than
-silently changing the intended time. Changing zones keeps entered wall times.
-Drafts can include past dates so previously saved events remain editable.
-
-Unsaved changes are marked beside the save action. Discard requires confirmation
-and restores the last saved values. Internal navigation offers keep-editing/leave
-choices, while reload and tab close use the browser's native unsaved prompt.
-Saving only stores a draft; use **Preview event** to access the simulated
-publication workflow above. Live publishing, invitations, discovery visibility
-and server authorization require backend integration. The draft storage adapter
-is isolated in `src/shared/api/organizerEvents.ts`.
-
-`npm test` includes event schema, time zone/DST, image validation and draft
-persistence/error tests. For a manual check: enter event details, select images,
-make a different image the cover, save and reload. Then edit a field and test
-navigation cancellation, discard, invalid date/registration ranges and the demo
-load/save switches. Check narrow screens and change language while editing.
+**Save changes** persists existing events; **Save draft** creates a new event
+at `/organizer/events/new`. Dates are resolved in the selected event time zone.
+Validation and server errors preserve the entered values. Image and detail
+updates use several API calls, so a failed save may have saved some changes.
+Unsaved navigation and reloads are guarded, and discarding edits requires
+confirmation.
 
 ## Organizer profile (frontend demo)
 

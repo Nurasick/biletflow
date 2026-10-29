@@ -34,7 +34,7 @@ export type ServerImage = { id: number; url: string; position: number };
 
 export class OrganizerEventError extends Error {
   constructor(message: "organizerEvent.loadError" | "organizerEvent.saveError" | "organizerEvent.accessError"
-    | "organizerEvent.notEditable") {
+    | "organizerEvent.notEditable" | "eventEdit.imagesChanged") {
     super(message);
     this.name = "OrganizerEventError";
   }
@@ -52,6 +52,7 @@ const optionalInstant = (value: string, zone: string) => (value ? instant(value,
 const toBody = (values: OrganizerEventValues) => ({
   title: values.title,
   description: values.description,
+  refund_policy: values.refundPolicy || null,
   category: values.category,
   venue_name: values.venueName,
   venue_address: values.venueAddress,
@@ -69,8 +70,9 @@ const toValues = (event: OrganizerEventRecord, images: ServerImage[]): Organizer
   return {
     title: event.title,
     description: event.description ?? "",
+    refundPolicy: event.refund_policy ?? "",
     category: event.category ?? "other",
-    images: images.map((image) => ({
+    images: [...images].sort((a, b) => Number(b.url === event.cover_image_url) - Number(a.url === event.cover_image_url)).map((image) => ({
       id: `${SERVER_IMAGE}${image.id}`, name: `image-${image.position + 1}`, dataUrl: image.url,
     })),
     venueName: event.venue_name,
@@ -88,16 +90,33 @@ const toValues = (event: OrganizerEventRecord, images: ServerImage[]): Organizer
 const path = (eventId: number) => `/organizer/events/${eventId}`;
 
 /** Make the server's images match the form: delete removed ones, upload new ones. */
-const syncImages = async (eventId: number, images: EventImage[]) => {
+const syncImages = async (event: OrganizerEventRecord, images: EventImage[]) => {
+  const eventId = event.id;
   const stored = await api.get<ServerImage[]>(`${path(eventId)}/images`);
   const kept = new Set(images.filter((i) => i.id.startsWith(SERVER_IMAGE)).map((i) => Number(i.id.slice(SERVER_IMAGE.length))));
+  if ([...kept].some((id) => !stored.some((image) => image.id === id))) {
+    throw new OrganizerEventError("eventEdit.imagesChanged");
+  }
+  const urls = new Map(stored.map((image) => [`${SERVER_IMAGE}${image.id}`, image.url]));
+  let changed = false;
   for (const image of stored) {
-    if (!kept.has(image.id)) await api.delete<null>(`${path(eventId)}/images/${image.id}`);
+    if (!kept.has(image.id)) {
+      await api.delete<null>(`${path(eventId)}/images/${image.id}`);
+      changed = true;
+    }
   }
   for (const image of images) {
     if (image.dataUrl.startsWith("data:")) {
-      await api.post<ServerImage>(`${path(eventId)}/images`, { data_url: image.dataUrl });
+      const uploaded = await api.post<ServerImage>(`${path(eventId)}/images`, { data_url: image.dataUrl });
+      urls.set(image.id, uploaded.url);
+      changed = true;
     }
+  }
+  // Upload/delete endpoints reset the cover to the first stored image. Apply
+  // the form's selected cover after those operations, including existing images.
+  const cover = images.length ? urls.get(images[0].id) : stored.length ? null : event.cover_image_url;
+  if (changed || cover !== event.cover_image_url) {
+    await api.patch<OrganizerEventRecord>(path(eventId), { cover_image_url: cover ?? null });
   }
 };
 
@@ -106,8 +125,9 @@ const wrap = async <T>(code: "organizerEvent.loadError" | "organizerEvent.saveEr
     return await run();
   } catch (error) {
     if (error instanceof OrganizerEventError) throw error;
-    if (error instanceof ApiError && error.status === 404) throw new OrganizerEventError("organizerEvent.accessError");
+    if (error instanceof ApiError && [403, 404].includes(error.status)) throw new OrganizerEventError("organizerEvent.accessError");
     if (error instanceof ApiError && error.status === 409) throw new OrganizerEventError("organizerEvent.notEditable");
+    if (error instanceof ApiError && error.status === 422) throw error;
     throw new OrganizerEventError(code);
   }
 };
@@ -125,13 +145,13 @@ export const organizerEventApi = {
   create: (values: OrganizerEventValues) => wrap("organizerEvent.saveError", async () => {
     const draft = eventSchema.parse(values);
     const event = await api.post<OrganizerEventRecord>("/events", toBody(draft));
-    await syncImages(event.id, draft.images);
+    await syncImages(event, draft.images);
     return event.id;
   }),
   update: (eventId: number, values: OrganizerEventValues) => wrap("organizerEvent.saveError", async () => {
     const draft = eventSchema.parse(values);
-    await api.patch<OrganizerEventRecord>(path(eventId), toBody(draft));
-    await syncImages(eventId, draft.images);
+    const event = await api.patch<OrganizerEventRecord>(path(eventId), toBody(draft));
+    await syncImages(event, draft.images);
     return (await organizerEventApi.get(eventId)).values;
   }),
 };

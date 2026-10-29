@@ -27,6 +27,7 @@ const optionalDateTime = z.union([z.literal(""), dateTime]);
 export const eventSchema = z.object({
   title: z.string().trim().min(1, "validation.eventTitle").max(300, "validation.eventTitleMax"),
   description: z.string().trim().min(1, "validation.eventDescription").max(10_000, "validation.eventDescriptionMax"),
+  refundPolicy: z.string().trim().max(2_000, "validation.eventRefundPolicyMax"),
   category: z.enum(EVENT_CATEGORIES, { error: "validation.eventCategory" }),
   images: z.array(eventImageSchema).max(MAX_EVENT_IMAGES, "validation.eventImageCount"),
   venueName: z.string().trim().min(1, "validation.eventVenue").max(300, "validation.eventVenueMax"),
@@ -70,7 +71,7 @@ export const eventSchema = z.object({
 export type OrganizerEventValues = z.infer<typeof eventSchema>;
 
 export const emptyOrganizerEvent = (): OrganizerEventValues => ({
-  title: "", description: "", category: "other", images: [],
+  title: "", description: "", refundPolicy: "", category: "other", images: [],
   venueName: "", venueAddress: "", timeZone: "Asia/Almaty", startsAt: "", endsAt: "",
   registrationOpensAt: "", registrationClosesAt: "", capacity: "", visibility: "public",
 });

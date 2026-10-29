@@ -3,8 +3,16 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { OrganizerEventError } from "../../../shared/api/organizerEvents";
+import { ApiError } from "../../../shared/api/auth";
 import { eventSchema } from "./eventSchema";
 import type { OrganizerEventValues } from "./eventSchema";
+
+const serverFields: Record<string, keyof OrganizerEventValues> = {
+  title: "title", description: "description", category: "category", refund_policy: "refundPolicy",
+  venue_name: "venueName", venue_address: "venueAddress", timezone: "timeZone",
+  starts_at: "startsAt", ends_at: "endsAt", capacity: "capacity", visibility: "visibility",
+  registration_opens_at: "registrationOpensAt", registration_closes_at: "registrationClosesAt",
+};
 
 export const useOrganizerEventForm = (
   draft: OrganizerEventValues,
@@ -27,6 +35,13 @@ export const useOrganizerEventForm = (
       setResetVersion((version) => version + 1);
       setSaved(true);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 422) {
+        for (const [field, message] of Object.entries(error.fieldErrors)) {
+          if (serverFields[field]) form.setError(serverFields[field], { type: "server", message });
+        }
+        form.setError("root", { type: "server", message: error.message });
+        return;
+      }
       form.setError("root", {
         type: "client", message: error instanceof OrganizerEventError ? error.message : "organizerEvent.saveError",
       });

@@ -35,6 +35,12 @@ test('preview combines the server preview with visible ticket types and their av
   assert.deepEqual(snapshot.allowed_actions, ['publish', 'cancel']);
 });
 
+test('preview excludes the saved selected cover rather than the first uploaded image', async () => {
+  scriptApi([[200, { ...preview, event: { ...event, cover_image_url: preview.images[1].url } }], [200, types]]);
+  const snapshot = await eventLifecycleApi.preview(1, 7);
+  assert.deepEqual(snapshot.gallery_images, [preview.images[0].url]);
+});
+
 test('a transition posts the action and returns the fresh preview', async () => {
   const published = { ...preview, event: { ...event, status: 'published' }, allowed_actions: ['unpublish', 'cancel'] };
   const fake = scriptApi([[200, published.event], [200, published], [200, types]]);

@@ -31,9 +31,10 @@ export const OrganizerEventsPage = () => {
       : events.data.length === 0 ? <p className="mt-8 rounded-xl border border-[#D0D5DD] bg-white p-6 text-sm text-[#667085]">
         {t("eventWorkflow.empty")}
       </p> : <ul className="mt-6 space-y-4">
-        {events.data.map((event) => <li key={event.id}>
+        {events.data.map((event) => <li key={event.id}
+          className="rounded-xl border border-[#D0D5DD] bg-white p-5">
           <Link to={`/organizer/events/${event.id}/preview`}
-            className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#D0D5DD] bg-white p-5 transition-colors hover:border-[#FF5C35] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF5C35]">
+            className="flex flex-wrap items-center justify-between gap-4 rounded transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF5C35]">
             <div className="min-w-0 flex-1">
               <h2 className="break-words text-lg font-semibold">{event.title}</h2>
               <p className="mt-2 text-xs text-[#667085]">{new Intl.DateTimeFormat(locale, {
@@ -45,6 +46,10 @@ export const OrganizerEventsPage = () => {
               {t("eventWorkflow.preview")}<ArrowRight size={16} aria-hidden="true" />
             </span>
           </Link>
+          {(event.status === "draft" || event.status === "published") && <Link to={`/organizer/events/${event.id}/edit`}
+            className="mt-4 inline-flex rounded-lg border border-[#D0D5DD] px-4 py-2 text-sm font-semibold text-[#A93216] hover:border-[#FF5C35] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5C35]">
+            {t("eventWorkflow.editDetails")}
+          </Link>}
         </li>)}
       </ul>}
   </OrganizerWorkspace>;
