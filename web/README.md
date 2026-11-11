@@ -43,8 +43,8 @@ change it. Unsaved navigation, reloads, and sign-out are guarded.
 
 The web UI uses i18next and react-i18next. Static copy lives in
 `src/i18n/locales/kk.json`, `ru.json`, and `en.json`. English defines the typed
-translation keys and is the fallback for missing or empty translations, so new
-Kazakh and Russian copy can be added progressively.
+translation keys and provides the runtime fallback. The tests require matching
+keys and interpolation parameters across all three files.
 
 Language buttons are available in the public header, authentication pages, and
 organizer workspace. The app uses a saved `biletflow.locale` preference first,
@@ -53,9 +53,9 @@ the browser, and switching updates the document language, UI component locale,
 dates, prices, plurals, and client validation messages without clearing forms or
 ticket selections. Language codes are `kk`, `ru`, and `en`.
 
-For new static text, add a semantic key to `en.json` and use
+For new interface text, add a semantic key to all three locale files and use
 `const { t } = useTranslation()` with `t("your.key")` in the component. Use
-interpolation for complete messages (`t("common.fromPrice", { price })`) and
+interpolation for complete messages (`t("orders.qrLabel", { code })`) and
 i18next plural suffixes (`_one`, `_few`, `_many`, `_other`) with `{ count }`.
 Keep interpolation placeholders consistent across locales. Use `useLocale()`
 for `Intl` formatting. Ant Design strings follow the same locale through
@@ -64,60 +64,29 @@ for `Intl` formatting. Ant Design strings follow the same locale through
 Client validation schemas store `validation.*` keys, which `FieldError`
 translates when rendered. Mark service field errors with `type: "server"` so
 their messages remain unchanged. Event data, profile values, user input, and
-service messages must never be used as translation keys. Local event examples
-use `demo.*` copy; the service adapters and demo organizer profile are unchanged.
+service messages must never be used as translation keys.
 
 `npm test` covers language detection and persistence, fallback, interpolation,
-Russian plurals, validation messages, stable booking identifiers, and locale
-placeholder consistency.
+Russian plurals, price formatting, validation messages, and translation parity.
 
-## Event preview and publication (frontend demo)
+## Event preview and publication
 
 Save a draft at `/organizer/events/new`, then choose **Preview event**. **My
 events** in the organizer navigation opens `/organizer/events`; each saved event
-links to `/organizer/events/:eventId/preview`. The existing demo supports one
-event per organizer. Preview is disabled while the form has unsaved changes.
+links to `/organizer/events/:eventId/preview`. Preview is disabled while the
+form has unsaved changes.
 
 The preview shows the saved cover and gallery, plain-text description, venue,
 schedule in the event's time zone, registration boundaries, visibility,
-capacity, and visible tickets. It has no checkout controls. A clearly labelled
-sample free admission ticket lets the demo exercise publishing without creating
-backend inventory.
+capacity, and visible ticket types loaded from the API.
 
-**Publish event** is enabled only when the adapter reports all requirements met:
-a title, venue and address, ordered event times, a future start, and at least one
-visible ticket type. The checklist explains each missing requirement.
+The API checks that an event has a title, venue and address, ordered event
+times, a future start, and at least one visible ticket type before it can be
+published. The checklist explains each missing requirement.
 **Unpublish event** requires confirmation and returns the event to draft for
 editing. **Cancel event** requires confirmation, preserves the saved event, and
-is permanent. Published events must be unpublished before editing; cancelled and
-suspended events remain read-only.
-
-The web adapter in `src/shared/api/eventLifecycle.ts` owns state transitions and
-returns complete snapshots with status, requirements, and permitted actions.
-The UI updates after a successful response, refreshes after failed actions,
-disables mutations when a refresh fails, and prevents duplicate submissions.
-Status persists in localStorage per demo organizer; details and images retain
-their existing IndexedDB persistence. Other tabs refresh through storage events,
-and focus and periodic refreshes recheck requirements. Stale confirmation dialogs
-and success messages are dismissed when the saved state changes.
-
-This is a web-only simulation, consistent with the existing organizer workspace.
-It does not publish to the live platform. The current backend contract does not
-provide event lifecycle endpoints. A future HTTP adapter must implement `list`,
-`preview`, `transition`, and a change subscription, returning the same snapshot contract with
-server-authorized actions and requirements. Backend authorization, ticket
-invalidation, notifications, and refunds remain server responsibilities.
-
-Set `EVENT_WORKFLOW_DEMO.errors.load`, `.publish`, `.unpublish`, or `.cancel` to
-exercise failures. Set `EVENT_WORKFLOW_DEMO.ticketTypes` to `[]` and refresh to
-exercise missing tickets; a saved event with a past start exercises the time
-requirement. Failures preserve the previous status and support retry.
-
-`npm test` covers the status/action matrix, publish requirements and their
-revalidation, reload persistence, corrupt storage, failed writes and retries,
-and competing transitions. Manual checks should also cover confirmation
-dismissal, cross-tab updates, failed refreshes, locale switching, and narrow
-screens.
+is permanent. The preview refreshes after each action to show the latest event
+status, requirements, and permitted actions.
 
 ## Organizer event creation and editing
 
@@ -139,23 +108,12 @@ updates use several API calls, so a failed save may have saved some changes.
 Unsaved navigation and reloads are guarded, and discarding edits requires
 confirmation.
 
-## Organizer profile (frontend demo)
+## Organizer profile
 
-Open `/organizer/profile` to preview the light organizer form without a backend.
-It uses the dummy session and profile in `src/features/Organizer/model/dummyData.ts`.
-Values are saved in localStorage per demo user and survive a reload. Contact and
-payout fields use React Hook Form + Zod, with React Query for loading/saving.
-
-Change `DUMMY_SESSION` to `null` to preview the login redirect, or change its role
-to `attendee` to preview denied access. Set `DUMMY_ERRORS.load` or `.save` to `true`
-to preview errors; failed saves keep entered values. This is a simulated frontend
-guard, not server authorization. Replace the dummy session/API adapter with real
-authenticated organizer endpoints when the backend is ready.
-
-Payouts are simulation-only: choose a demo provider and a reference such as
-`demo_music_club`. Clear both fields to disconnect. No real payout is performed.
-To check: edit and save, reload, discard an edit, try invalid email/phone/reference
-values, then exercise the error and access states above.
+Sign in and open `/organizer/profile` to manage public details and contact
+information through the organizer API. Saving a profile for the first time
+grants access to the organizer workspace. Payouts and identity verification
+use the backend sandbox.
 
 Run `npm install`, then `npm run dev`. The backend must be running with its
 migrations applied. The default API URL is `http://localhost:8000/api/v1`;
@@ -177,9 +135,8 @@ tab and a Web Lock across tabs when supported. The backend controls the session
 lifetime (seven days by default); there is no separate remember-me setting.
 
 `/account` requires authentication and provides sign-out. Public event pages
-remain accessible to guests. Password recovery, email verification, and social
-sign-in are not implemented by the backend yet; recovery pages explain this
-and social sign-in buttons are disabled.
+are accessible to guests. Password recovery and email verification use links
+sent by the backend.
 
 Validation:
 

@@ -39,7 +39,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
   };
 
   if (preview.isPending) return <div role="status" className="flex items-center justify-center gap-2 py-20 text-sm text-[#667085]">
-    <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("eventWorkflow.loading")}
+    <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("common.loading")}
   </div>;
 
   if (!snapshot) return <Alert role="alert" type="error" showIcon

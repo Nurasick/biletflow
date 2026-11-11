@@ -12,14 +12,13 @@ type AuthFieldProps = {
   errorId?: string;
   type?: "text" | "email" | "password" | "tel";
   autoComplete?: string;
-  placeholder?: string;
   className?: string;
   labelAction?: ReactNode;
 };
 
 export const AuthField = ({
   id, label, registration, error, errorId = `${id}-error`,
-  type = "text", autoComplete, placeholder, className, labelAction,
+  type = "text", autoComplete, className, labelAction,
 }: AuthFieldProps) => {
   const { ref, ...field } = registration;
   const FieldInput = type === "password" ? Input.Password : Input;
@@ -36,7 +35,6 @@ export const AuthField = ({
         id={id}
         type={type}
         autoComplete={autoComplete ?? (type === "password" ? "current-password" : undefined)}
-        placeholder={placeholder}
         status={error ? "error" : undefined}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}

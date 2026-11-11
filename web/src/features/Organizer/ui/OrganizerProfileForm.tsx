@@ -36,13 +36,13 @@ export const OrganizerProfileForm = ({ profile, saveProfile }: OrganizerProfileF
             <AuthField id="organizer-email" label={t("organizer.email")} type="email" autoComplete="email"
               registration={register("contactEmail")} error={errors.contactEmail} />
             <AuthField id="organizer-phone" label={t("organizer.phone")} type="tel" autoComplete="tel"
-              placeholder="+7 (700) 123-45-67" registration={register("contactPhone")} error={errors.contactPhone} />
+              registration={register("contactPhone")} error={errors.contactPhone} />
           </div>
           <div className="mt-5">
             <label htmlFor="organizer-description" className="mb-1.5 block text-[11.5px] font-semibold">{t("organizer.about")}</label>
             <Input.TextArea {...descriptionField}
               ref={(instance) => descriptionRef(instance?.resizableTextArea?.textArea ?? null)}
-              id="organizer-description" rows={4} placeholder={t("organizer.aboutPlaceholder")}
+              id="organizer-description" rows={4}
               status={errors.description ? "error" : undefined} aria-invalid={Boolean(errors.description)}
               aria-describedby={errors.description ? "organizer-description-error" : "organizer-description-hint"} />
             <FieldError id="organizer-description-error" error={errors.description} />
@@ -54,10 +54,7 @@ export const OrganizerProfileForm = ({ profile, saveProfile }: OrganizerProfileF
           <div className="mb-5 flex items-start gap-3">
             <span className="rounded-lg bg-[#FFF0EA] p-2.5 text-[#D9431F]"><FlaskConical size={20} aria-hidden="true" /></span>
             <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 id="payout-heading" className="font-semibold">{t("organizer.payout")}</h2>
-                <span className="rounded-full bg-[#FFF0EA] px-2.5 py-1 font-mono text-[10px] font-semibold text-[#A93216]">{t("organizer.demoOnly")}</span>
-              </div>
+              <h2 id="payout-heading" className="font-semibold">{t("organizer.payout")}</h2>
               <p className="mt-1 text-xs leading-5 text-[#667085]">{t("organizer.payoutDescription")}</p>
             </div>
           </div>
@@ -73,7 +70,7 @@ export const OrganizerProfileForm = ({ profile, saveProfile }: OrganizerProfileF
               </select>
               <FieldError id="payout-provider-error" error={errors.payoutProvider} />
             </div>
-            <AuthField id="payout-reference" label={t("organizer.reference")} placeholder="demo_music_club" autoComplete="off"
+            <AuthField id="payout-reference" label={t("organizer.reference")} autoComplete="off"
               registration={register("payoutReference")} error={errors.payoutReference} />
           </div>
           <p className="mt-4 rounded-lg bg-[#F5F5F0] px-4 py-3 text-xs leading-5 text-[#667085]">

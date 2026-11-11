@@ -8,7 +8,7 @@ export const ForgotPasswordPage = () => {
   const { t } = useTranslation();
   return (
     <AuthShell top={<AuthSwitchLink prompt={t("auth.backToAccount")} to="/login" label={t("common.signIn")} />}>
-      <AuthHeading eyebrow={t("auth.recovery")} title={t("auth.sendReset")} description={t("auth.tryEmail")} />
+      <AuthHeading title={t("auth.forgotPassword")} />
       <ForgotPasswordForm />
     </AuthShell>
   );

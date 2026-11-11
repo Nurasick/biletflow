@@ -1,13 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { AuthHeading } from "./AuthHeading";
 
 export const SignupSuccess = ({ email }: { email: string }) => {
   const { t } = useTranslation();
   return (
     <div role="status">
-      <h2 className="text-[29px] font-bold leading-[1.15] tracking-[-0.035em]">
-        {t("auth.created")}
-      </h2>
+      <AuthHeading title={t("auth.created")} />
       <p className="mt-3 text-[12.5px] leading-[1.55] text-[#667085]">
         {t("auth.registeredWith", { email })}
       </p>

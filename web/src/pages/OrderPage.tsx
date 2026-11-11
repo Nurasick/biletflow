@@ -55,7 +55,7 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
       <Link to="/" className="text-sm text-[#667085]">{t("common.backToEvents")}</Link>
       <h1 className="mt-3 text-3xl font-bold">{t("orders.title")}</h1>
       {order.isPending ? <div role="status" className="flex items-center gap-2 py-16 text-sm text-[#667085]">
-        <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("eventWorkflow.loading")}
+        <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("common.loading")}
       </div> : order.isError ? <Alert className="mt-6" type="error" showIcon
         title={t(order.error instanceof ApiError && order.error.status === 404 ? "orders.notFound" : "errors.unavailable")}
         action={<Button size="small" loading={order.isFetching} onClick={() => void order.refetch()}>{t("common.retry")}</Button>} />
