@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { TicketQr } from '@/components/ticket-qr';
 import { useAuth } from '@/hooks/use-auth';
+import { downloadOrderTicketsPdf, openEventCalendar } from '@/shared/api/documents';
 import { formatEventDate } from '@/shared/api/events';
 import { formatOrderMoney, ordersApi, type Order, type OrderStatus } from '@/shared/api/orders';
 
@@ -27,6 +28,8 @@ export default function TicketsScreen() {
   const [openOrder, setOpenOrder] = useState<string | null>(null);
   const [busyOrder, setBusyOrder] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [documentBusy, setDocumentBusy] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState<string | null>(null);
 
   const loadOrders = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
@@ -76,6 +79,27 @@ export default function TicketsScreen() {
   };
 
   const refresh = () => void loadOrders();
+
+  const savePdf = async (order: Order) => {
+    setDocumentBusy(order.order_number);
+    setDocumentError(null);
+    try {
+      await downloadOrderTicketsPdf(authenticatedFetch, order.order_number);
+    } catch (failure) {
+      setDocumentError(failure instanceof Error ? failure.message : 'Could not download ticket PDF.');
+    } finally {
+      setDocumentBusy(null);
+    }
+  };
+
+  const addToCalendar = async (order: Order) => {
+    setDocumentError(null);
+    try {
+      await openEventCalendar(order.event.slug);
+    } catch (failure) {
+      setDocumentError(failure instanceof Error ? failure.message : 'Could not open the calendar file.');
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
@@ -136,6 +160,14 @@ export default function TicketsScreen() {
                     {order.items.map((item) => <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>{item.quantity} × ticket</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(item.subtotal_minor, order.currency)}</ThemedText></View>)}
                     {order.fee_minor > 0 && <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 7 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>Processing fee</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(order.fee_minor, order.currency)}</ThemedText></View>}
                   </View>
+
+                  <View style={{ flexDirection: 'row', gap: 9, marginTop: 13 }}>
+                    {order.tickets.some((ticket) => ticket.status === 'valid' || ticket.status === 'checked_in') && (
+                      <ActionButton label={documentBusy === order.order_number ? 'Preparing PDF…' : 'Download tickets PDF'} disabled={documentBusy !== null} colors={colors} onPress={() => void savePdf(order)} />
+                    )}
+                    <ActionButton label="Add to calendar" disabled={documentBusy !== null} secondary colors={colors} onPress={() => void addToCalendar(order)} />
+                  </View>
+                  {documentError && <ThemedText style={{ marginTop: 8, color: colors.danger, fontSize: 12 }}>{documentError}</ThemedText>}
 
                   {order.status === 'pending' && (
                     <View style={{ flexDirection: 'row', gap: 9, marginTop: 13 }}>
