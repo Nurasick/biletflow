@@ -4,12 +4,6 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { LanguageSwitcher } from "../../../i18n/LanguageSwitcher";
 
-const highlights = [
-  { value: "48K+", label: "auth.ticketsIssued" },
-  { value: "120+", label: "auth.liveEvents" },
-  { value: "4.9", label: "auth.rating" },
-] as const;
-
 type AuthShellProps = {
   children: ReactNode;
   top?: ReactNode;
@@ -29,75 +23,27 @@ export const AuthShell = ({ children, top }: AuthShellProps) => {
           controlHeight: 46,
           fontSize: 13,
         },
-        components: { Checkbox: { borderRadiusSM: 4 } },
       }}
     >
-      <main className="grid min-h-screen bg-[#F5F5F0] text-[#101828] lg:grid-cols-[43%_57%]">
-        <section className="relative flex min-h-[250px] flex-col overflow-hidden bg-[#101828] px-7 py-7 text-[#F5F5F0] sm:px-10 sm:py-9 lg:min-h-screen">
-          <div
-            aria-hidden="true"
-            className="absolute -right-40 -top-40 h-80 w-80 rounded-full border-[74px] border-[#FF5C35]/15"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute -bottom-20 -left-24 h-48 w-48 rounded-full border border-white/10"
-          />
-
-          <Link
-            to="/"
-            aria-label={t("common.home")}
-            className="relative z-10 w-fit text-[23px] font-bold tracking-[-0.03em]"
-          >
-            Bilet<span className="text-[#FF5C35]">Flow</span>
-          </Link>
-
-          <div className="relative z-10 my-auto max-w-[330px] py-10 lg:pb-7 lg:pt-16">
-            <p className="font-mono text-[10px] font-semibold tracking-[0.16em] text-[#FF8B70]">
-              {t("auth.tagline")}
-            </p>
-            <h1 className="mt-3 text-[34px] font-bold leading-[1.08] tracking-[-0.045em]">
-              {t("auth.headline")}
-            </h1>
-            <p className="mt-4 text-[13.5px] leading-[1.65] text-[#98A2B3]">
-              {t("auth.description")}
-            </p>
-
-            <div className="mt-7 hidden grid-cols-3 gap-2.5 sm:grid">
-              {highlights.map((item) => (
-                <div
-                  key={item.label}
-                  className="h-[78px] rounded-xl border border-[#344054] bg-[#182230] p-3"
-                >
-                  <p className="text-lg font-bold text-white">{item.value}</p>
-                  <p className="mt-1 text-[10px] leading-4 text-[#98A2B3]">
-                    {t(item.label)}
-                  </p>
-                </div>
-              ))}
-            </div>
+      <div className="flex min-h-screen flex-col bg-[#F5F5F0] text-[#101828]">
+        <header className="bg-[#101828] text-white">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-7 py-4">
+            <Link to="/" aria-label={t("common.home")} className="text-2xl font-bold tracking-tight">
+              Bilet<span className="text-[#FF5C35]">Flow</span>
+            </Link>
+            <div className="text-xs"><LanguageSwitcher /></div>
           </div>
+        </header>
 
-          <div className="relative z-10 hidden items-center gap-2 text-[11px] text-[#98A2B3] lg:flex">
-            <span className="h-[7px] w-[7px] rounded-full bg-[#35B887]" />
-            {t("auth.protected")}
-          </div>
-        </section>
+        <main className="mx-auto flex w-full max-w-[438px] flex-1 flex-col justify-center px-6 py-10">
+          {top && <div className="mb-5 flex justify-end text-xs text-[#667085]">{top}</div>}
+          {children}
+        </main>
 
-        <section className="flex min-h-screen flex-col px-6 py-7 sm:px-12 lg:px-14 lg:py-8">
-          <div className="flex min-h-5 items-center justify-center text-[11px] text-[#667085] sm:justify-end">
-            {top}
-          </div>
-
-          <div className="mx-auto my-auto w-full max-w-[390px] py-10">
-            {children}
-          </div>
-
-          <footer className="flex justify-center gap-4 text-[9.5px] text-[#667085]">
-            <LanguageSwitcher />
-            <button type="button">{t("common.help")}</button>
-          </footer>
-        </section>
-      </main>
+        <footer className="px-6 pb-7 text-center text-xs text-[#667085]">
+          <Link to="/support" className="hover:underline">{t("common.help")}</Link>
+        </footer>
+      </div>
     </ConfigProvider>
   );
 };

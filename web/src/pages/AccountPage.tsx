@@ -35,7 +35,7 @@ export const AccountPage = () => {
       <AccountForm key={user.id} user={user} onEditingChange={setAccountEditing} />
       <section aria-labelledby="my-orders" className="my-10">
         <h2 id="my-orders" className="text-xl font-bold">{t("nav.myTickets")}</h2>
-        {orders.isPending ? <p className="mt-3 text-sm text-[#667085]">{t("eventWorkflow.loading")}</p>
+        {orders.isPending ? <p className="mt-3 text-sm text-[#667085]">{t("common.loading")}</p>
           : orders.isError ? <p role="alert" className="mt-3 text-sm">{t("errors.unavailable")}</p>
           : orders.data.length === 0 ? <p className="mt-3 text-sm text-[#667085]">{t("orders.none")}</p>
           : <div className="mt-4 space-y-4">{orders.data.map((order) => <OrderCard key={order.order_number}

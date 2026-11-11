@@ -12,7 +12,7 @@ export const ResetPasswordPage = () => {
   const token = params.get("token") ?? "";
   return (
     <AuthShell top={<AuthSwitchLink prompt={t("auth.backToAccount")} to="/login" label={t("common.signIn")} />}>
-      <AuthHeading eyebrow={t("auth.recovery")} title={t("auth.resetPassword")} description={t("auth.passwordHint")} />
+      <AuthHeading title={t("auth.resetPassword")} />
       <ResetPasswordForm token={token} />
     </AuthShell>
   );

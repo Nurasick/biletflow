@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 import { EventCard } from "../features/Main/ui/EventCard/EventCard";
-import { Hero } from "../features/Main/ui/Hero/Hero";
 import { eventsApi } from "../shared/api/events";
 
 const CATEGORIES = ["concert", "conference", "sport", "theater", "other"] as const;
@@ -27,22 +26,21 @@ export const HomePage = () => {
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-7 py-6">
-      <Hero />
-      <section className="mt-8" aria-labelledby="afisha">
+    <main className="mx-auto w-full max-w-7xl px-7 py-8">
+      <section aria-labelledby="afisha">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 id="afisha" className="text-2xl font-bold tracking-tight">{t("nav.afisha")}</h2>
+          <h1 id="afisha" className="text-2xl font-bold tracking-tight">{t("catalogue.title")}</h1>
           <div className="flex flex-wrap gap-2" role="group" aria-label={t("organizerEvent.category")}>
             {(["", ...CATEGORIES] as const).map((value) => <button key={value || "all"} type="button" aria-pressed={category === value}
               onClick={() => setCategory(value)}
               className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${category === value
                 ? "border-[#101828] bg-[#101828] text-white" : "border-[#D0D5DD] text-[#667085] hover:border-[#101828]"}`}>
-              {value ? t(`organizerEvent.category.${value}`) : t("dates.all")}
+              {value ? t(`organizerEvent.category.${value}`) : t("catalogue.allCategories")}
             </button>)}
           </div>
         </div>
         {events.isPending ? <div role="status" className="flex items-center gap-2 py-16 text-sm text-[#667085]">
-          <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("eventWorkflow.loading")}
+          <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("common.loading")}
         </div> : events.isError ? <div role="alert" className="py-16 text-sm">
           {t("errors.unavailable")} <button type="button" className="font-semibold text-[#D9431F]"
             onClick={() => void events.refetch()}>{t("common.retry")}</button>

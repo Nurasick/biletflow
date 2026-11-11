@@ -22,7 +22,7 @@ export const EventPage = () => {
   });
 
   if (event.isPending) return <div role="status" className="flex items-center justify-center gap-2 py-24 text-sm text-[#667085]">
-    <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("eventWorkflow.loading")}
+    <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("common.loading")}
   </div>;
   if (event.isError) {
     const missing = event.error instanceof ApiError && event.error.status === 404;

@@ -21,7 +21,7 @@ export const EventCard = ({ event }: { event: PublicEvent }) => {
           {t(`organizerEvent.category.${event.category ?? "other"}`)}
         </span>
       </div>
-      <h3 className="mt-3 font-semibold transition-colors group-hover:text-[#FF5C35]">{event.title}</h3>
+      <h2 className="mt-3 font-semibold transition-colors group-hover:text-[#FF5C35]">{event.title}</h2>
       <p className="mt-1 text-sm text-[#667085]">{when} · {event.venue_name}</p>
     </Link>
   );
