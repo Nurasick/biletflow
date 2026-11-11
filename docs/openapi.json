@@ -231,6 +231,285 @@
         "title": "CancelRequest",
         "type": "object"
       },
+      "CaseAudience": {
+        "enum": [
+          "attendee",
+          "organizer"
+        ],
+        "title": "CaseAudience",
+        "type": "string"
+      },
+      "CaseCategory": {
+        "enum": [
+          "ticket_delivery",
+          "payment",
+          "refund",
+          "seating",
+          "event_info",
+          "check_in",
+          "account",
+          "technical"
+        ],
+        "title": "CaseCategory",
+        "type": "string"
+      },
+      "CaseContext": {
+        "description": "The attached context, shown so the requester can confirm it is the right\nticket. Public identifiers only: order numbers and ticket codes, not ids.",
+        "properties": {
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "event_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Title"
+          },
+          "order_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number"
+          },
+          "ticket_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Code"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_title",
+          "order_number",
+          "ticket_code"
+        ],
+        "title": "CaseContext",
+        "type": "object"
+      },
+      "CaseCreate": {
+        "description": "What the requester sends. Context comes from the page the case was\nopened on (\u00a74.13), so the client fills it in, never the user.\n\nAttendee cases name at least one of event, order or ticket: that is how\nthe case finds the organizer who must answer it. A guest proves the order\nis theirs with the order's signed link token.",
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/CaseAudience",
+            "default": "attendee"
+          },
+          "body": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "contact_email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "order_number": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number"
+          },
+          "order_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Token"
+          },
+          "ticket_code": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Code"
+          }
+        },
+        "required": [
+          "category",
+          "body"
+        ],
+        "title": "CaseCreate",
+        "type": "object"
+      },
+      "CaseCreated": {
+        "properties": {
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Token"
+          },
+          "audience": {
+            "$ref": "#/components/schemas/CaseAudience"
+          },
+          "case_number": {
+            "title": "Case Number",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "context": {
+            "$ref": "#/components/schemas/CaseContext"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/RequesterMessageRead"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CaseStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_number",
+          "audience",
+          "category",
+          "status",
+          "created_at",
+          "updated_at",
+          "resolved_at",
+          "context",
+          "messages",
+          "access_token"
+        ],
+        "title": "CaseCreated",
+        "type": "object"
+      },
+      "CaseStatus": {
+        "enum": [
+          "open",
+          "in_progress",
+          "waiting_for_customer",
+          "resolved"
+        ],
+        "title": "CaseStatus",
+        "type": "string"
+      },
+      "CaseUpdate": {
+        "description": "Staff actions. `waiting_for_customer -> in_progress` is not here: per\nstate-machines.md \u00a78 only the requester's reply makes that move.",
+        "properties": {
+          "assigned_to_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To User Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "in_progress",
+                  "waiting_for_customer",
+                  "resolved"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "CaseUpdate",
+        "type": "object"
+      },
       "ChecklistRead": {
         "description": "\u00a74.5 \"The organizer shall see an activation checklist\": \u00a73.2's five steps.",
         "properties": {
@@ -1609,6 +1888,30 @@
         "title": "MeRead",
         "type": "object"
       },
+      "MessageCreate": {
+        "properties": {
+          "body": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "MessageCreate",
+        "type": "object"
+      },
+      "MessageSender": {
+        "enum": [
+          "requester",
+          "staff",
+          "system"
+        ],
+        "title": "MessageSender",
+        "type": "string"
+      },
       "OrderEvent": {
         "description": "Enough of the event to render an order without a second request.",
         "properties": {
@@ -2145,6 +2448,146 @@
         "title": "RefundRequest",
         "type": "object"
       },
+      "RequesterCaseRead": {
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/CaseAudience"
+          },
+          "case_number": {
+            "title": "Case Number",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "context": {
+            "$ref": "#/components/schemas/CaseContext"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/RequesterMessageRead"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CaseStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_number",
+          "audience",
+          "category",
+          "status",
+          "created_at",
+          "updated_at",
+          "resolved_at",
+          "context",
+          "messages"
+        ],
+        "title": "RequesterCaseRead",
+        "type": "object"
+      },
+      "RequesterCaseSummary": {
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/CaseAudience"
+          },
+          "case_number": {
+            "title": "Case Number",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CaseStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_number",
+          "audience",
+          "category",
+          "status",
+          "created_at",
+          "updated_at",
+          "resolved_at"
+        ],
+        "title": "RequesterCaseSummary",
+        "type": "object"
+      },
+      "RequesterMessageRead": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/MessageSender"
+          }
+        },
+        "required": [
+          "id",
+          "sender",
+          "body",
+          "created_at"
+        ],
+        "title": "RequesterMessageRead",
+        "type": "object"
+      },
       "Requirement": {
         "properties": {
           "code": {
@@ -2288,6 +2731,200 @@
         "title": "StaffAssign",
         "type": "object"
       },
+      "StaffCaseRead": {
+        "properties": {
+          "assigned_to_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To User Id"
+          },
+          "audience": {
+            "$ref": "#/components/schemas/CaseAudience"
+          },
+          "case_number": {
+            "title": "Case Number",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "context": {
+            "$ref": "#/components/schemas/CaseContext"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/StaffMessageRead"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "opened_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened By User Id"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CaseStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_number",
+          "audience",
+          "category",
+          "status",
+          "created_at",
+          "updated_at",
+          "resolved_at",
+          "contact_email",
+          "opened_by_user_id",
+          "assigned_to_user_id",
+          "event_id",
+          "context",
+          "messages"
+        ],
+        "title": "StaffCaseRead",
+        "type": "object"
+      },
+      "StaffCaseSummary": {
+        "properties": {
+          "assigned_to_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To User Id"
+          },
+          "audience": {
+            "$ref": "#/components/schemas/CaseAudience"
+          },
+          "case_number": {
+            "title": "Case Number",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "opened_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened By User Id"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CaseStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_number",
+          "audience",
+          "category",
+          "status",
+          "created_at",
+          "updated_at",
+          "resolved_at",
+          "contact_email",
+          "opened_by_user_id",
+          "assigned_to_user_id",
+          "event_id"
+        ],
+        "title": "StaffCaseSummary",
+        "type": "object"
+      },
       "StaffEventRead": {
         "properties": {
           "ends_at": {
@@ -2345,6 +2982,71 @@
           "role"
         ],
         "title": "StaffEventRead",
+        "type": "object"
+      },
+      "StaffMessageCreate": {
+        "properties": {
+          "body": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "is_internal_note": {
+            "default": false,
+            "title": "Is Internal Note",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "StaffMessageCreate",
+        "type": "object"
+      },
+      "StaffMessageRead": {
+        "properties": {
+          "author_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author User Id"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_internal_note": {
+            "title": "Is Internal Note",
+            "type": "boolean"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/MessageSender"
+          }
+        },
+        "required": [
+          "id",
+          "sender",
+          "body",
+          "created_at",
+          "author_user_id",
+          "is_internal_note"
+        ],
+        "title": "StaffMessageRead",
         "type": "object"
       },
       "StaffRead": {
@@ -6569,6 +7271,495 @@
         "summary": "Reverse Check In",
         "tags": [
           "check-in"
+        ]
+      }
+    },
+    "/api/v1/staff/support/cases": {
+      "get": {
+        "description": "The cases the caller may answer. Empty, not 403, for a user who may\nanswer none: the queue is simply theirs, and it is empty.",
+        "operationId": "list_staff_cases_api_v1_staff_support_cases_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CaseStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CaseCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffCaseSummary"
+                  },
+                  "title": "Response List Staff Cases Api V1 Staff Support Cases Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Staff Cases",
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/staff/support/cases/{case_number}": {
+      "get": {
+        "operationId": "read_staff_case_api_v1_staff_support_cases__case_number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffCaseRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Staff Case",
+        "tags": [
+          "support"
+        ]
+      },
+      "patch": {
+        "description": "Change status, assign, or both. Moves follow state-machines.md \u00a78.",
+        "operationId": "update_staff_case_api_v1_staff_support_cases__case_number__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffCaseRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Staff Case",
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/staff/support/cases/{case_number}/messages": {
+      "post": {
+        "operationId": "reply_as_staff_api_v1_staff_support_cases__case_number__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffMessageCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffCaseRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reply As Staff",
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/support/cases": {
+      "get": {
+        "operationId": "list_my_cases_api_v1_support_cases_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RequesterCaseSummary"
+                  },
+                  "title": "Response List My Cases Api V1 Support Cases Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Cases",
+        "tags": [
+          "support"
+        ]
+      },
+      "post": {
+        "description": "Open a case. Guests may, and get back the token for their signed link.",
+        "operationId": "open_case_api_v1_support_cases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Open Case",
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/support/cases/{case_number}": {
+      "get": {
+        "operationId": "read_my_case_api_v1_support_cases__case_number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequesterCaseRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read My Case",
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/support/cases/{case_number}/messages": {
+      "post": {
+        "operationId": "reply_to_my_case_api_v1_support_cases__case_number__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequesterCaseRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reply To My Case",
+        "tags": [
+          "support"
         ]
       }
     },

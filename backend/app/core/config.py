@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     # Lifetime of the signed "view my order" link guests receive. It has to
     # outlive the event, since the link is how a guest reaches their tickets.
     ORDER_LINK_EXPIRE_DAYS: int = 365
+    # Lifetime of the signed link a guest uses to follow their support case.
+    SUPPORT_LINK_EXPIRE_DAYS: int = 90
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
     # How often the app releases expired checkout holds. 0 turns the sweeper
     # off, which the test suite does so no test touches the real database.

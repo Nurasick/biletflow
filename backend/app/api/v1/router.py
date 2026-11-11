@@ -11,6 +11,7 @@ from app.api.v1.routes import (
     health,
     orders,
     organizer,
+    support,
     ticket_types,
     users,
 )
@@ -28,3 +29,4 @@ api_router.include_router(activation.router)
 api_router.include_router(event_reports.router)
 api_router.include_router(check_in.router)
 api_router.include_router(admin.router)
+api_router.include_router(support.router)
