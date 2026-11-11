@@ -75,7 +75,7 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
           </div>}
           {act.isError && <Alert role="alert" type="error" showIcon
             title={errorMessage(act.error, t("eventWorkflow.networkError"))} />}
-          <OrderCard order={order.data} downloads={{ token }} />
+          <OrderCard order={order.data} access={{ token }} />
         </div>}
     </main>
   );

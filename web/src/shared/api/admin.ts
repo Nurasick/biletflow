@@ -35,6 +35,16 @@ export type AdminTimelineEntry = {
   summary: string;
   payload: Record<string, unknown> | null;
 };
+export type AdminUser = {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  status: "active" | "suspended";
+  is_email_verified: boolean;
+  is_platform_admin: boolean;
+  created_at: string;
+};
 
 const base = (eventId: number) => `/admin/events/${eventId}`;
 const params = (limit: number, offset: number, query?: string) => {
@@ -44,6 +54,8 @@ const params = (limit: number, offset: number, query?: string) => {
 };
 
 export const adminApi = {
+  users: (query: string, limit: number, offset: number, signal?: AbortSignal) =>
+    api.get<AdminUser[]>(`/admin/users?${params(limit, offset, query)}`, { signal }),
   events: (query = "", limit = 20, offset = 0, signal?: AbortSignal) =>
     api.get<AdminEvent[]>(`/admin/events?${params(limit, offset, query)}`, { signal }),
   // The current backend exposes event reads only through its paginated admin

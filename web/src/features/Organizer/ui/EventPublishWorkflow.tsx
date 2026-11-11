@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useLocale } from "../../../i18n/useLocale";
 import { EventWorkflowError } from "../../../shared/api/eventLifecycle";
 import type { EventAction } from "../../../shared/api/eventLifecycle";
+import { SupportRequestButton } from "../../Support/ui/SupportRequestButton";
 import { useEventLifecycle } from "../model/useEventLifecycle";
 import { ActivationPanel } from "./ActivationPanel";
 import { AttendeesPanel } from "./AttendeesPanel";
@@ -65,10 +66,14 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
           <span aria-live="polite"><EventStatusBadge status={event.status} /></span>
         </div>
       </div>
-      <Button icon={<RefreshCw size={15} aria-hidden="true" />} loading={preview.isFetching}
-        disabled={transition.isPending} onClick={() => { transition.reset(); void preview.refetch(); }}>
-        {t("eventWorkflow.refresh")}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <SupportRequestButton target={{ audience: "organizer", event_id: eventId }}
+          eventTitle={event.title} label={t("support.contactPlatform")} />
+        <Button icon={<RefreshCw size={15} aria-hidden="true" />} loading={preview.isFetching}
+          disabled={transition.isPending} onClick={() => { transition.reset(); void preview.refetch(); }}>
+          {t("eventWorkflow.refresh")}
+        </Button>
+      </div>
     </div>
     {(snapshot.event.status === "draft" || snapshot.event.status === "published") && <Link to={`/organizer/events/${eventId}/edit`}
       className="mt-4 inline-block text-sm font-semibold text-[#A93216]">
@@ -79,6 +84,9 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
       <a href="#event-campaigns" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("campaigns.title")}</a>
       <a href="#event-attendees" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("reports.attendeesTitle")}</a>
       <a href="#event-timeline" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("reports.timelineTitle")}</a>
+      <Link to={`/staff/support?event_id=${eventId}`} className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">
+        {t("support.queue")}
+      </Link>
     </nav>}
     <div aria-live="polite" className="my-6">
       <Alert type={event.status === "cancelled" ? "error" : event.status === "published" ? "success" : "info"} showIcon

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { useLocale } from "../../../../i18n/useLocale";
 import type { EventDetail } from "../../../../shared/api/events";
+import { SupportRequestButton } from "../../../Support/ui/SupportRequestButton";
 import { EventCalendarButton } from "../EventCalendarButton";
 
 export const EventDetails = ({ event }: { event: EventDetail }) => {
@@ -34,7 +35,11 @@ export const EventDetails = ({ event }: { event: EventDetail }) => {
               <span>{dateTime(event.starts_at)}<span className="block text-xs text-[#667085]">{t("eventWorkflow.ends", { date: dateTime(event.ends_at) })} · {event.timezone}</span></span></p>
             <p className="flex gap-2"><MapPin size={18} className="shrink-0 text-[#FF5C35]" aria-hidden="true" />
               <span className="break-words">{event.venue_name}<span className="block text-xs text-[#667085]">{event.venue_address}</span></span></p>
-            <EventCalendarButton slug={event.slug} cancelled={event.status === "cancelled"} />
+            <div className="flex flex-wrap items-start gap-2">
+              <EventCalendarButton slug={event.slug} cancelled={event.status === "cancelled"} />
+              <SupportRequestButton target={{ audience: "attendee", event_id: event.id }}
+                eventTitle={event.title} label={t("support.contactOrganizer")} />
+            </div>
           </div>
         </div>
       </div>

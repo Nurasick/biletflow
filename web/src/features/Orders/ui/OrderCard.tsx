@@ -7,18 +7,25 @@ import type { Order, OrderTicket } from "../../../shared/api/events";
 import { formatMinor } from "../../../shared/lib/formatPrice";
 import { FileDownloadButton } from "../../../shared/ui/FileDownloadButton";
 import { EventCalendarButton } from "../../Event/ui/EventCalendarButton";
+import { SupportRequestButton } from "../../Support/ui/SupportRequestButton";
 import { TicketQr } from "./TicketQr";
 
 const printable = (ticket: OrderTicket) => ticket.status === "valid" || ticket.status === "checked_in";
 
-type Props = { order: Order; showQr?: boolean; detailHref?: string; downloads?: { token: string | null } };
+type Props = { order: Order; showQr?: boolean; detailHref?: string; access?: { token: string | null } };
 
-export const OrderCard = ({ order, showQr = true, detailHref, downloads }: Props) => {
+export const OrderCard = ({ order, showQr = true, detailHref, access }: Props) => {
   const { t } = useTranslation();
   const locale = useLocale();
   const when = new Intl.DateTimeFormat(locale, {
     dateStyle: "full", timeStyle: "short", timeZone: order.event.timezone,
   }).format(new Date(order.event.starts_at));
+  const supportTarget = {
+    audience: "attendee" as const,
+    event_id: order.event_id,
+    order_number: order.order_number,
+    ...(access?.token && { order_token: access.token }),
+  };
 
   return (
     <article className="rounded-2xl border border-[#D0D5DD] bg-white p-5">
@@ -43,12 +50,13 @@ export const OrderCard = ({ order, showQr = true, detailHref, downloads }: Props
           <dd className="shrink-0">{formatMinor(0 - order.discount_minor, locale)}</dd>
         </div>
       </dl>}
-      {downloads && <div className="mt-4 flex flex-wrap items-start gap-2">
+      {access && <div className="mt-4 flex flex-wrap items-start gap-2">
         {order.tickets.some(printable) && <FileDownloadButton label={t("orders.downloadAll")}
           filename={`biletflow-${order.order_number}.pdf`}
-          getFile={() => ordersApi.ticketsPdf(order.order_number, downloads.token)} />}
+          getFile={() => ordersApi.ticketsPdf(order.order_number, access.token)} />}
         {order.event.status !== "draft" && <EventCalendarButton key={order.event.slug}
           slug={order.event.slug} cancelled={order.event.status === "cancelled"} />}
+        <SupportRequestButton target={supportTarget} eventTitle={order.event.title} label={t("support.orderHelp")} />
       </div>}
       {order.tickets.length > 0 && <ul className="mt-5 grid gap-4 sm:grid-cols-2">
         {order.tickets.map((ticket) => <li key={ticket.public_code} className="flex flex-wrap gap-4 rounded-xl border border-[#EAECF0] p-4">
@@ -60,10 +68,12 @@ export const OrderCard = ({ order, showQr = true, detailHref, downloads }: Props
             <p className="text-[#667085]">{ticket.ticket_type_name}</p>
             <p className="mt-2 font-mono text-xs">{ticket.public_code}</p>
             <p className="mt-1 text-xs font-semibold">{t(`ticketStatus.${ticket.status}`)}</p>
-            {downloads && printable(ticket) && <div className="mt-2">
-              <FileDownloadButton label={t("orders.downloadTicket")} accessibleLabel={t("orders.downloadTicketFor", { code: ticket.public_code })}
+            {access && <div className="mt-2 flex flex-wrap items-start gap-2">
+              {printable(ticket) && <FileDownloadButton label={t("orders.downloadTicket")} accessibleLabel={t("orders.downloadTicketFor", { code: ticket.public_code })}
                 filename={`biletflow-${ticket.public_code}.pdf`}
-                getFile={() => ordersApi.ticketsPdf(order.order_number, downloads.token, ticket.public_code)} />
+                getFile={() => ordersApi.ticketsPdf(order.order_number, access.token, ticket.public_code)} />}
+              <SupportRequestButton target={{ ...supportTarget, ticket_code: ticket.public_code }} eventTitle={order.event.title}
+                label={t("support.ticketHelp")} accessibleLabel={t("support.ticketHelpFor", { code: ticket.public_code })} />
             </div>}
           </div>
         </li>)}

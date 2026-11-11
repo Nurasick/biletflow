@@ -20,6 +20,11 @@ import { StaffEventPage } from "./pages/StaffEventPage";
 import { AdminEventsPage } from "./pages/AdminEventsPage";
 import { AdminEventPage } from "./pages/AdminEventPage";
 import { AdminRoute } from "./shared/auth/AdminRoute";
+import { NotificationsPage } from "./pages/NotificationsPage";
+import { SupportPage } from "./pages/SupportPage";
+import { SupportCasePage } from "./pages/SupportCasePage";
+import { StaffSupportPage } from "./pages/StaffSupportPage";
+import { StaffSupportCasePage } from "./pages/StaffSupportCasePage";
 
 function App() {
   const router = createBrowserRouter([
@@ -60,8 +65,11 @@ function App() {
           element: <ProtectedRoute />,
           children: [
             { path: "/account", element: <AccountPage /> },
+            { path: "/notifications", element: <NotificationsPage /> },
             { path: "/staff/events", element: <StaffEventsPage /> },
             { path: "/staff/events/:eventId", element: <StaffEventPage /> },
+            { path: "/staff/support", element: <StaffSupportPage /> },
+            { path: "/staff/support/:caseNumber", element: <StaffSupportCasePage /> },
           ],
         },
         {
@@ -77,6 +85,8 @@ function App() {
         },
         { path: "/events/:slug", element: <EventPage /> },
         { path: "/orders/:orderNumber", element: <OrderPage /> },
+        { path: "/support", element: <SupportPage /> },
+        { path: "/support/:caseNumber", element: <SupportCasePage /> },
       ],
     },
   ]);
