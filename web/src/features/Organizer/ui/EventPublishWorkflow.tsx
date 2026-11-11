@@ -10,6 +10,7 @@ import type { EventAction } from "../../../shared/api/eventLifecycle";
 import { useEventLifecycle } from "../model/useEventLifecycle";
 import { ActivationPanel } from "./ActivationPanel";
 import { AttendeesPanel } from "./AttendeesPanel";
+import { CampaignsPanel } from "./CampaignsPanel";
 import { EventPreviewContent } from "./EventPreviewContent";
 import { EventSalesPanel } from "./EventSalesPanel";
 import { StaffPanel } from "./StaffPanel";
@@ -75,6 +76,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
     </Link>}
     <p className="mt-3 text-sm leading-6 text-[#667085]">{t("eventWorkflow.previewDescription")}</p>
     {!preview.isError && <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-[#A93216]">
+      <a href="#event-campaigns" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("campaigns.title")}</a>
       <a href="#event-attendees" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("reports.attendeesTitle")}</a>
       <a href="#event-timeline" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("reports.timelineTitle")}</a>
     </nav>}
@@ -93,6 +95,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
         <EventPreviewContent snapshot={snapshot} />
         <TicketTypesPanel eventId={eventId} userId={userId} editable={event.status === "draft" || event.status === "published"} />
         <ActivationPanel eventId={eventId} />
+        <CampaignsPanel eventId={eventId} userId={userId} timeZone={event.timezone} />
         <EventSalesPanel eventId={eventId} />
         {!preview.isError && <>
           <AttendeesPanel key={`attendees:${userId}:${eventId}`} eventId={eventId} userId={userId} />

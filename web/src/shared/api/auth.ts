@@ -81,7 +81,7 @@ const parseError = async (response: Response) => {
   return new ApiError(message, response.status, fieldErrors);
 };
 
-export const rawRequest = async <T>(path: string, init?: RequestInit) => {
+const rawResponse = async (path: string, init?: RequestInit) => {
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
   const response = await fetch(`${API_URL}${path}`, {
@@ -93,7 +93,10 @@ export const rawRequest = async <T>(path: string, init?: RequestInit) => {
   if (!response.ok) {
     throw await parseError(response);
   }
+  return response;
+};
 
+const readJson = async <T>(response: Response) => {
   if (response.status === 204) {
     return null as T;
   }
@@ -101,6 +104,9 @@ export const rawRequest = async <T>(path: string, init?: RequestInit) => {
   const body = await response.text();
   return (body ? JSON.parse(body) : null) as T;
 };
+
+export const rawRequest = async <T>(path: string, init?: RequestInit) =>
+  readJson<T>(await rawResponse(path, init));
 
 type TokenResponse = {
   access_token: string;
@@ -147,12 +153,12 @@ const refreshSession = () => {
   return refreshPromise;
 };
 
-export const authenticatedRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
+const authenticatedResponse = async (path: string, init?: RequestInit) => {
   if (!accessToken) await refreshSession();
   const request = () => {
     const headers = new Headers(init?.headers);
     headers.set("Authorization", `Bearer ${accessToken}`);
-    return rawRequest<T>(path, { ...init, headers });
+    return rawResponse(path, { ...init, headers });
   };
   const attemptedToken = accessToken;
   try {
@@ -165,6 +171,9 @@ export const authenticatedRequest = async <T>(path: string, init?: RequestInit):
     return request();
   }
 };
+
+export const authenticatedRequest = async <T>(path: string, init?: RequestInit) =>
+  readJson<T>(await authenticatedResponse(path, init));
 
 // Another tab signing out removes the CSRF proof; another tab signing in as a
 // different account replaces it. Either way the access token held here belongs
@@ -186,17 +195,31 @@ const json = (method: string, body?: unknown): RequestInit => ({
 
 // For endpoints that work signed in or out (checkout, guest order links):
 // attach the session when there is one, never force a sign-in.
-export const optionalAuthRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
+const optionalAuthResponse = async (path: string, init?: RequestInit) => {
   if (accessToken || localStorage.getItem(CSRF_KEY)) {
     try {
-      return await authenticatedRequest<T>(path, init);
+      return await authenticatedResponse(path, init);
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 401) throw error;
       clearSession();
     }
   }
-  return rawRequest<T>(path, init);
+  return rawResponse(path, init);
 };
+
+export const optionalAuthRequest = async <T>(path: string, init?: RequestInit) =>
+  readJson<T>(await optionalAuthResponse(path, init));
+
+const fileRequest = async (request: typeof rawResponse, path: string, mediaType: string) => {
+  const response = await request(path, { headers: { Accept: mediaType } });
+  if (response.headers.get("Content-Type")?.split(";")[0]?.trim().toLowerCase() !== mediaType) {
+    throw new ApiError("Unexpected download format", 502);
+  }
+  return response.blob();
+};
+
+export const publicFile = (path: string, mediaType: string) => fileRequest(rawResponse, path, mediaType);
+export const optionalAuthFile = (path: string, mediaType: string) => fileRequest(optionalAuthResponse, path, mediaType);
 
 export const api = {
   get: <T>(path: string, init?: RequestInit) => authenticatedRequest<T>(path, init),
@@ -204,6 +227,7 @@ export const api = {
   put: <T>(path: string, body: unknown) => authenticatedRequest<T>(path, json("PUT", body)),
   patch: <T>(path: string, body: unknown) => authenticatedRequest<T>(path, json("PATCH", body)),
   delete: <T>(path: string) => authenticatedRequest<T>(path, { method: "DELETE" }),
+  file: (path: string, mediaType: string) => fileRequest(authenticatedResponse, path, mediaType),
   json,
 };
 

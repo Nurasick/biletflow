@@ -43,7 +43,7 @@ test('the app compiler accepts known translation keys and rejects unknown keys',
   assert.equal(config.error, undefined);
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, fileURLToPath(new URL('../', import.meta.url)));
   assert.deepEqual(parsed.errors, []);
-  const probePath = fileURLToPath(new URL('../src/i18n/translation-typecheck.ts', import.meta.url));
+  const probePath = fileURLToPath(new URL('../src/i18n/translation-typecheck.ts', import.meta.url)).replaceAll('\\', '/');
   const declarationsPath = fileURLToPath(new URL('../src/i18n/i18next.d.ts', import.meta.url));
   const probe = `
     import { useTranslation } from 'react-i18next';

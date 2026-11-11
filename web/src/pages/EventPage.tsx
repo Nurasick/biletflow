@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Alert, Button } from "antd";
 import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
@@ -34,7 +35,10 @@ export const EventPage = () => {
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-7 px-7 py-6 lg:flex-row">
       <div className="min-w-0 flex-[1.6]"><EventDetails event={event.data} /></div>
-      <CheckoutPanel event={event.data} ticketTypes={types.data ?? []} loading={types.isPending} />
+      {types.isError && !types.data ? <aside className="w-full shrink-0 self-start lg:w-[360px]">
+        <Alert role="alert" type="error" showIcon title={t("checkout.ticketLoadError")}
+          action={<Button onClick={() => void types.refetch()} loading={types.isFetching}>{t("common.retry")}</Button>} />
+      </aside> : <CheckoutPanel key={slug} event={event.data} ticketTypes={types.data ?? []} loading={types.isPending} />}
     </main>
   );
 };
