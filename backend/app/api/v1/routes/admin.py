@@ -13,7 +13,6 @@ from sqlalchemy import or_, select
 from app.api.deps import EVENT_NOT_FOUND, CurrentAdmin, DbSession
 from app.api.v1.routes.activation import activation_body
 from app.models.activation import EventActivation
-from app.models.audit import AuditLog
 from app.models.event import Event
 from app.schemas.activation import ActivationRead
 from app.schemas.event import CancelRequest, EventRead, SuspendRequest
@@ -126,6 +125,7 @@ def event_timeline(
     db: DbSession,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
-) -> Sequence[AuditLog]:
+) -> list[dict]:
     """§4.16: "Platform Admins may view history for moderation or support"."""
-    return audit.event_timeline(db, _event(db, event_id).id, limit=limit, offset=offset)
+    entries = audit.event_timeline(db, _event(db, event_id).id, limit=limit, offset=offset)
+    return audit.with_actor_names(db, entries)

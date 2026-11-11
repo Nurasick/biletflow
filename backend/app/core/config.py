@@ -44,6 +44,24 @@ class Settings(BaseSettings):
     MAX_IMAGE_BYTES: int = 2 * 1024 * 1024
     MAX_EVENT_IMAGES: int = 5
 
+    # Email. With SMTP_HOST empty, messages go to the log only (the default for
+    # tests and bare `uvicorn`). Compose sets it to the Mailpit container.
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 1025
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_STARTTLS: bool = False
+    MAIL_FROM: str = "BiletFlow <no-reply@biletflow.local>"
+    # How often queued notification emails are sent. 0 turns the sender off.
+    NOTIFY_INTERVAL_SECONDS: int = 5
+
+    # §4.6 "calculate ticket totals and processing charges", in basis points
+    # (250 = 2.5 %). §3.3 says these are "deducted from each transaction", so
+    # the attendee pays the ticket price and the fee comes out of the
+    # organizer's payout (open question #3, decided). A Platform Admin can
+    # change it at runtime (platform_settings); this is only the default.
+    PROCESSING_FEE_BPS: int = 250
+
     CORS_ORIGINS: Annotated[list[AnyHttpUrl], NoDecode] = []
 
     @field_validator("CORS_ORIGINS", mode="before")

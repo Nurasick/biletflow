@@ -10,7 +10,7 @@ from app.models.event import Event, EventStatus, EventVisibility
 from app.models.organizer import OrganizerProfile
 from app.models.user import User
 from app.schemas.event import EventCreate, EventUpdate, check_windows
-from app.services import audit
+from app.services import audit, notify
 from app.services.slugs import slugify
 
 
@@ -91,6 +91,8 @@ def update_event(db: Session, event: Event, data: EventUpdate, actor: User | Non
                 for field, old in changed.items()
             },
         )
+        if event.status == EventStatus.PUBLISHED:
+            _tell_ticket_holders(db, event, sorted(changed))
     try:
         db.commit()
     except IntegrityError:
@@ -100,6 +102,26 @@ def update_event(db: Session, event: Event, data: EventUpdate, actor: User | Non
         raise InvalidEventWindow("the dates conflict with each other") from None
     db.refresh(event)
     return event
+
+
+def _tell_ticket_holders(db: Session, event: Event, changed: list[str]) -> None:
+    """§4.10 "Event updates": people holding tickets hear when the date, the
+    venue or the capacity of a published event changes."""
+    # Imported here: event_lifecycle imports this module.
+    from app.services.event_lifecycle import ticket_holders
+
+    for email, user_id in ticket_holders(db, event):
+        notify.notify(
+            db,
+            "event.updated",
+            {
+                "event_title": event.title,
+                "changes": ", ".join(field.replace("_", " ") for field in changed),
+                "link": notify.web_link(f"/events/{event.slug}"),
+            },
+            email=email,
+            user_id=user_id,
+        )
 
 
 def _check_merged_windows(event: Event, changes: dict) -> None:

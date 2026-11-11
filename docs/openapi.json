@@ -89,6 +89,376 @@
         "title": "ActivationRead",
         "type": "object"
       },
+      "AdminActivation": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "activation_fee_minor": {
+            "title": "Activation Fee Minor",
+            "type": "integer"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "event_title": {
+            "title": "Event Title",
+            "type": "string"
+          },
+          "fee_paid": {
+            "title": "Fee Paid",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "suspension_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspension Reason"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_title",
+          "status",
+          "activation_fee_minor",
+          "fee_paid",
+          "activated_at",
+          "suspension_reason"
+        ],
+        "title": "AdminActivation",
+        "type": "object"
+      },
+      "AdminCampaign": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "event_title": {
+            "title": "Event Title",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "net_minor": {
+            "title": "Net Minor",
+            "type": "integer"
+          },
+          "orders": {
+            "title": "Orders",
+            "type": "integer"
+          },
+          "redemptions": {
+            "title": "Redemptions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "event_id",
+          "event_title",
+          "name",
+          "code",
+          "is_active",
+          "redemptions",
+          "orders",
+          "discount_minor",
+          "net_minor"
+        ],
+        "title": "AdminCampaign",
+        "type": "object"
+      },
+      "AdminOrder": {
+        "properties": {
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "event_title": {
+            "title": "Event Title",
+            "type": "string"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_number",
+          "event_id",
+          "event_title",
+          "status",
+          "contact_name",
+          "contact_email",
+          "total_minor",
+          "discount_minor",
+          "currency",
+          "created_at"
+        ],
+        "title": "AdminOrder",
+        "type": "object"
+      },
+      "AdminPayment": {
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "order_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Ref"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "purpose",
+          "status",
+          "amount_minor",
+          "currency",
+          "provider",
+          "provider_ref",
+          "is_simulated",
+          "failure_reason",
+          "order_number",
+          "event_id",
+          "created_at"
+        ],
+        "title": "AdminPayment",
+        "type": "object"
+      },
+      "AdminRefund": {
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "order_number",
+          "event_id",
+          "amount_minor",
+          "currency",
+          "status",
+          "reason",
+          "created_at"
+        ],
+        "title": "AdminRefund",
+        "type": "object"
+      },
+      "AdminUser": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_email_verified": {
+            "title": "Is Email Verified",
+            "type": "boolean"
+          },
+          "is_platform_admin": {
+            "title": "Is Platform Admin",
+            "type": "boolean"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "first_name",
+          "last_name",
+          "status",
+          "is_email_verified",
+          "is_platform_admin",
+          "created_at"
+        ],
+        "title": "AdminUser",
+        "type": "object"
+      },
       "AttendanceRead": {
         "properties": {
           "absent": {
@@ -211,6 +581,467 @@
           "phone"
         ],
         "title": "AttendeeRow",
+        "type": "object"
+      },
+      "BasketLine": {
+        "properties": {
+          "quantity": {
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ticket_type_id",
+          "quantity"
+        ],
+        "title": "BasketLine",
+        "type": "object"
+      },
+      "CampaignAnalytics": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
+          "gross_minor": {
+            "title": "Gross Minor",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "net_minor": {
+            "title": "Net Minor",
+            "type": "integer"
+          },
+          "orders": {
+            "title": "Orders",
+            "type": "integer"
+          },
+          "redemptions": {
+            "title": "Redemptions",
+            "type": "integer"
+          },
+          "refunds_minor": {
+            "title": "Refunds Minor",
+            "type": "integer"
+          },
+          "tickets_sold": {
+            "title": "Tickets Sold",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "code",
+          "is_active",
+          "redemptions",
+          "orders",
+          "tickets_sold",
+          "gross_minor",
+          "discount_minor",
+          "refunds_minor",
+          "net_minor"
+        ],
+        "title": "CampaignAnalytics",
+        "type": "object"
+      },
+      "CampaignCreate": {
+        "examples": [
+          {
+            "code": "STUDENT20",
+            "discount_type": "percent",
+            "discount_value": 20,
+            "max_redemptions": 100,
+            "name": "Student week",
+            "ticket_type_ids": []
+          }
+        ],
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 3,
+                "pattern": "^[A-Za-z0-9_-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "discount_type": {
+            "enum": [
+              "percent",
+              "fixed"
+            ],
+            "title": "Discount Type",
+            "type": "string"
+          },
+          "discount_value": {
+            "minimum": 1.0,
+            "title": "Discount Value",
+            "type": "integer"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "max_redemptions": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Redemptions"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "ticket_type_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 50,
+            "title": "Ticket Type Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "discount_type",
+          "discount_value"
+        ],
+        "title": "CampaignCreate",
+        "type": "object"
+      },
+      "CampaignRead": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "discount_type": {
+            "enum": [
+              "percent",
+              "fixed"
+            ],
+            "title": "Discount Type",
+            "type": "string"
+          },
+          "discount_value": {
+            "title": "Discount Value",
+            "type": "integer"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          },
+          "max_redemptions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Redemptions"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "redemption_count": {
+            "title": "Redemption Count",
+            "type": "integer"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/CampaignStats"
+          },
+          "ticket_type_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Ticket Type Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "event_id",
+          "name",
+          "code",
+          "discount_type",
+          "discount_value",
+          "starts_at",
+          "ends_at",
+          "max_redemptions",
+          "redemption_count",
+          "is_active",
+          "created_at",
+          "ticket_type_ids",
+          "link",
+          "stats"
+        ],
+        "title": "CampaignRead",
+        "type": "object"
+      },
+      "CampaignStats": {
+        "description": "\u00a74.14 \"exact redemptions, orders, tickets sold, gross revenue, discount\namount, and net revenue\". Every amount is KZT minor units.",
+        "properties": {
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
+          "gross_minor": {
+            "title": "Gross Minor",
+            "type": "integer"
+          },
+          "net_minor": {
+            "title": "Net Minor",
+            "type": "integer"
+          },
+          "orders": {
+            "title": "Orders",
+            "type": "integer"
+          },
+          "redemptions": {
+            "title": "Redemptions",
+            "type": "integer"
+          },
+          "refunds_minor": {
+            "title": "Refunds Minor",
+            "type": "integer"
+          },
+          "tickets_sold": {
+            "title": "Tickets Sold",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "redemptions",
+          "orders",
+          "tickets_sold",
+          "gross_minor",
+          "discount_minor",
+          "refunds_minor",
+          "net_minor"
+        ],
+        "title": "CampaignStats",
+        "type": "object"
+      },
+      "CampaignUpdate": {
+        "description": "PATCH: only the fields sent are changed. `is_active: false` disables the\ncode (\u00a74.14) without deleting the campaign or its history.",
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 3,
+                "pattern": "^[A-Za-z0-9_-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "discount_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "percent",
+                  "fixed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Type"
+          },
+          "discount_value": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Value"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "max_redemptions": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Redemptions"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "ticket_type_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Type Ids"
+          }
+        },
+        "title": "CampaignUpdate",
         "type": "object"
       },
       "CancelRequest": {
@@ -546,6 +1377,18 @@
       },
       "CheckoutRequest": {
         "properties": {
+          "campaign_token": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign Token"
+          },
           "contact_email": {
             "format": "email",
             "title": "Contact Email",
@@ -576,6 +1419,18 @@
             "minItems": 1,
             "title": "Items",
             "type": "array"
+          },
+          "promo_code": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promo Code"
           }
         },
         "required": [
@@ -648,6 +1503,11 @@
             "title": "Fee Minor",
             "type": "integer"
           },
+          "is_simulated": {
+            "default": true,
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/OrderItemRead"
@@ -658,6 +1518,17 @@
           "order_number": {
             "title": "Order Number",
             "type": "string"
+          },
+          "promo_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promo Code"
           },
           "status": {
             "$ref": "#/components/schemas/OrderStatus"
@@ -731,6 +1602,93 @@
           "token"
         ],
         "title": "EmailVerificationConfirm",
+        "type": "object"
+      },
+      "EventAnalytics": {
+        "description": "GET /organizer/events/{id}/analytics (\u00a74.15). KZT minor units throughout.",
+        "properties": {
+          "attendance": {
+            "$ref": "#/components/schemas/AttendanceRead"
+          },
+          "by_ticket_type": {
+            "items": {
+              "$ref": "#/components/schemas/TicketTypeAnalytics"
+            },
+            "title": "By Ticket Type",
+            "type": "array"
+          },
+          "campaigns": {
+            "items": {
+              "$ref": "#/components/schemas/CampaignAnalytics"
+            },
+            "title": "Campaigns",
+            "type": "array"
+          },
+          "capacity": {
+            "title": "Capacity",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "discounts_minor": {
+            "title": "Discounts Minor",
+            "type": "integer"
+          },
+          "gross_minor": {
+            "title": "Gross Minor",
+            "type": "integer"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "net_minor": {
+            "title": "Net Minor",
+            "type": "integer"
+          },
+          "percent_sold": {
+            "title": "Percent Sold",
+            "type": "number"
+          },
+          "refunds_minor": {
+            "title": "Refunds Minor",
+            "type": "integer"
+          },
+          "sales_over_time": {
+            "items": {
+              "$ref": "#/components/schemas/SalesPoint"
+            },
+            "title": "Sales Over Time",
+            "type": "array"
+          },
+          "tickets_remaining": {
+            "title": "Tickets Remaining",
+            "type": "integer"
+          },
+          "tickets_sold": {
+            "title": "Tickets Sold",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "currency",
+          "is_simulated",
+          "capacity",
+          "tickets_sold",
+          "tickets_remaining",
+          "percent_sold",
+          "gross_minor",
+          "discounts_minor",
+          "refunds_minor",
+          "net_minor",
+          "sales_over_time",
+          "by_ticket_type",
+          "campaigns",
+          "attendance"
+        ],
+        "title": "EventAnalytics",
         "type": "object"
       },
       "EventCreate": {
@@ -1912,6 +2870,70 @@
         "title": "MessageSender",
         "type": "string"
       },
+      "NotificationFeed": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread",
+          "items"
+        ],
+        "title": "NotificationFeed",
+        "type": "object"
+      },
+      "NotificationRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "template_key": {
+            "title": "Template Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "template_key",
+          "payload",
+          "read_at",
+          "created_at"
+        ],
+        "title": "NotificationRead",
+        "type": "object"
+      },
       "OrderEvent": {
         "description": "Enough of the event to render an order without a second request.",
         "properties": {
@@ -1965,6 +2987,10 @@
       },
       "OrderItemRead": {
         "properties": {
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -1991,6 +3017,7 @@
           "ticket_type_id",
           "quantity",
           "unit_price_minor",
+          "discount_minor",
           "subtotal_minor"
         ],
         "title": "OrderItemRead",
@@ -2076,6 +3103,11 @@
             "title": "Fee Minor",
             "type": "integer"
           },
+          "is_simulated": {
+            "default": true,
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/OrderItemRead"
@@ -2086,6 +3118,17 @@
           "order_number": {
             "title": "Order Number",
             "type": "string"
+          },
+          "promo_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promo Code"
           },
           "status": {
             "$ref": "#/components/schemas/OrderStatus"
@@ -2349,6 +3392,74 @@
         "title": "OrganizerProfileWrite",
         "type": "object"
       },
+      "Overview": {
+        "properties": {
+          "events_published": {
+            "title": "Events Published",
+            "type": "integer"
+          },
+          "events_suspended": {
+            "title": "Events Suspended",
+            "type": "integer"
+          },
+          "gross_minor": {
+            "title": "Gross Minor",
+            "type": "integer"
+          },
+          "is_simulated": {
+            "default": true,
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "open_reports": {
+            "title": "Open Reports",
+            "type": "integer"
+          },
+          "open_support_cases": {
+            "title": "Open Support Cases",
+            "type": "integer"
+          },
+          "orders_confirmed": {
+            "title": "Orders Confirmed",
+            "type": "integer"
+          },
+          "organizers": {
+            "title": "Organizers",
+            "type": "integer"
+          },
+          "payments_failed": {
+            "title": "Payments Failed",
+            "type": "integer"
+          },
+          "refunds_minor": {
+            "title": "Refunds Minor",
+            "type": "integer"
+          },
+          "tickets_issued": {
+            "title": "Tickets Issued",
+            "type": "integer"
+          },
+          "users": {
+            "title": "Users",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "users",
+          "organizers",
+          "events_published",
+          "events_suspended",
+          "orders_confirmed",
+          "tickets_issued",
+          "gross_minor",
+          "refunds_minor",
+          "payments_failed",
+          "open_reports",
+          "open_support_cases"
+        ],
+        "title": "Overview",
+        "type": "object"
+      },
       "PasswordResetConfirm": {
         "properties": {
           "new_password": {
@@ -2414,6 +3525,116 @@
         "title": "PayoutAccountRead",
         "type": "object"
       },
+      "PromoQuote": {
+        "description": "What the attendee is shown before paying (\u00a74.14): the code, the\ndiscount and the new total. Computed by the server, and computed again at\ncheckout; nothing here is trusted back.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "discount_minor": {
+            "title": "Discount Minor",
+            "type": "integer"
+          },
+          "discount_type": {
+            "enum": [
+              "percent",
+              "fixed"
+            ],
+            "title": "Discount Type",
+            "type": "string"
+          },
+          "discount_value": {
+            "title": "Discount Value",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "subtotal_minor": {
+            "title": "Subtotal Minor",
+            "type": "integer"
+          },
+          "ticket_type_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Ticket Type Ids",
+            "type": "array"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "discount_type",
+          "discount_value",
+          "ticket_type_ids",
+          "subtotal_minor",
+          "discount_minor",
+          "total_minor"
+        ],
+        "title": "PromoQuote",
+        "type": "object"
+      },
+      "PromoQuoteRequest": {
+        "description": "Exactly one of `code` (typed) or `token` (from a Campaign QR link).\n`items` may be empty: the page applies a scanned code before the attendee\nhas chosen anything.",
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BasketLine"
+            },
+            "maxItems": 20,
+            "title": "Items",
+            "type": "array"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          }
+        },
+        "title": "PromoQuoteRequest",
+        "type": "object"
+      },
+      "Reason": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "Reason",
+        "type": "object"
+      },
       "RefreshRequest": {
         "description": "Body for POST /auth/refresh.\n\nOptional because browsers send the refresh token as a cookie instead and\npost no body at all; only clients in bearer mode fill this in.",
         "properties": {
@@ -2446,6 +3667,129 @@
           "reason"
         ],
         "title": "RefundRequest",
+        "type": "object"
+      },
+      "ReportIn": {
+        "properties": {
+          "details": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "reason": {
+            "enum": [
+              "fraud",
+              "misleading",
+              "illegal",
+              "duplicate",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReportIn",
+        "type": "object"
+      },
+      "ReportRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "event_slug": {
+            "title": "Event Slug",
+            "type": "string"
+          },
+          "event_status": {
+            "title": "Event Status",
+            "type": "string"
+          },
+          "event_title": {
+            "title": "Event Title",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "event_id",
+          "event_title",
+          "event_slug",
+          "event_status",
+          "reason",
+          "details",
+          "status",
+          "created_at",
+          "resolved_at"
+        ],
+        "title": "ReportRead",
+        "type": "object"
+      },
+      "ReportResolve": {
+        "properties": {
+          "status": {
+            "enum": [
+              "dismissed",
+              "actioned"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ReportResolve",
         "type": "object"
       },
       "RequesterCaseRead": {
@@ -2613,6 +3957,29 @@
         "title": "Requirement",
         "type": "object"
       },
+      "SalesPoint": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "revenue_minor": {
+            "title": "Revenue Minor",
+            "type": "integer"
+          },
+          "tickets": {
+            "title": "Tickets",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "tickets",
+          "revenue_minor"
+        ],
+        "title": "SalesPoint",
+        "type": "object"
+      },
       "ScanRequest": {
         "properties": {
           "device_info": {
@@ -2699,6 +4066,54 @@
           "ticket_type_name"
         ],
         "title": "ScannedTicket",
+        "type": "object"
+      },
+      "Settings": {
+        "properties": {
+          "activation_fee_minor": {
+            "title": "Activation Fee Minor",
+            "type": "integer"
+          },
+          "processing_fee_bps": {
+            "title": "Processing Fee Bps",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "activation_fee_minor",
+          "processing_fee_bps"
+        ],
+        "title": "Settings",
+        "type": "object"
+      },
+      "SettingsUpdate": {
+        "properties": {
+          "activation_fee_minor": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activation Fee Minor"
+          },
+          "processing_fee_bps": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Fee Bps"
+          }
+        },
+        "title": "SettingsUpdate",
         "type": "object"
       },
       "SimulatedPayment": {
@@ -3149,6 +4564,54 @@
         ],
         "title": "TicketStatus",
         "type": "string"
+      },
+      "TicketTypeAnalytics": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_minor": {
+            "title": "Price Minor",
+            "type": "integer"
+          },
+          "quantity_reserved": {
+            "title": "Quantity Reserved",
+            "type": "integer"
+          },
+          "quantity_sold": {
+            "title": "Quantity Sold",
+            "type": "integer"
+          },
+          "quantity_total": {
+            "title": "Quantity Total",
+            "type": "integer"
+          },
+          "revenue_minor": {
+            "title": "Revenue Minor",
+            "type": "integer"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          },
+          "tickets_in_range": {
+            "title": "Tickets In Range",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ticket_type_id",
+          "name",
+          "price_minor",
+          "quantity_total",
+          "quantity_sold",
+          "quantity_reserved",
+          "revenue_minor",
+          "tickets_in_range"
+        ],
+        "title": "TicketTypeAnalytics",
+        "type": "object"
       },
       "TicketTypeCreate": {
         "properties": {
@@ -3618,6 +5081,17 @@
             "title": "Action",
             "type": "string"
           },
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Name"
+          },
           "actor_user_id": {
             "anyOf": [
               {
@@ -3945,6 +5419,138 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/activations": {
+      "get": {
+        "description": "\u00a74.12 \"Inspect paid-sales activation records\", across all events.",
+        "operationId": "list_activations_api_v1_admin_activations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminActivation"
+                  },
+                  "title": "Response List Activations Api V1 Admin Activations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Activations",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/campaigns": {
+      "get": {
+        "description": "\u00a74.12 \"Review ... promotional-code activity\" across the platform.",
+        "operationId": "promo_activity_api_v1_admin_campaigns_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminCampaign"
+                  },
+                  "title": "Response Promo Activity Api V1 Admin Campaigns Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Promo Activity",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/events": {
       "get": {
         "description": "Every event in any status, by title or slug (\u00a74.12 \"search for events\").",
@@ -4420,6 +6026,735 @@
           }
         ],
         "summary": "Unsuspend Event",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/exports/orders.csv": {
+      "get": {
+        "description": "\u00a74.12 \"Export basic operational reports\". Capped at 10 000 rows.",
+        "operationId": "export_orders_api_v1_admin_exports_orders_csv_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Orders",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/exports/payments.csv": {
+      "get": {
+        "operationId": "export_payments_api_v1_admin_exports_payments_csv_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Payments",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/orders": {
+      "get": {
+        "description": "\u00a74.12 \"Search for ... orders\": by number, buyer or event.",
+        "operationId": "search_orders_api_v1_admin_orders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "confirmed",
+                    "cancelled",
+                    "refunded",
+                    "expired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminOrder"
+                  },
+                  "title": "Response Search Orders Api V1 Admin Orders Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search Orders",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/overview": {
+      "get": {
+        "description": "The numbers on the admin portal's front page (\u00a72.3 \"view platform reports\").",
+        "operationId": "overview_api_v1_admin_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Overview",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payments": {
+      "get": {
+        "description": "\u00a74.12 \"Monitor refunds, disputes, and payment failures\": filter by\n`status=failed` or `status=refunded`. Every row is a simulated payment\nand says so (\u00a74.6).",
+        "operationId": "search_payments_api_v1_admin_payments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "succeeded",
+                    "failed",
+                    "refunded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminPayment"
+                  },
+                  "title": "Response Search Payments Api V1 Admin Payments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search Payments",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/refunds": {
+      "get": {
+        "operationId": "list_refunds_api_v1_admin_refunds_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminRefund"
+                  },
+                  "title": "Response List Refunds Api V1 Admin Refunds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Refunds",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reports": {
+      "get": {
+        "description": "\u00a74.12 \"Review reported events\", open ones first by default order.",
+        "operationId": "list_reports_api_v1_admin_reports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "dismissed",
+                    "actioned"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReportRead"
+                  },
+                  "title": "Response List Reports Api V1 Admin Reports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reports",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/{report_id}/resolve": {
+      "post": {
+        "description": "Close a report as dismissed, or as actioned after suspending the event.",
+        "operationId": "resolve_report_api_v1_admin_reports__report_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "title": "Report Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportResolve"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resolve Report",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings": {
+      "get": {
+        "operationId": "read_settings_api_v1_admin_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Settings",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "\u00a74.12 \"Configure activation fees and platform settings\". A new fee\napplies to activations and orders started after the change; ones already\nquoted keep the amount they were quoted.",
+        "operationId": "update_settings_api_v1_admin_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Settings",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "description": "\u00a74.12 \"Search for users\": by email or name.",
+        "operationId": "search_users_api_v1_admin_users_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminUser"
+                  },
+                  "title": "Response Search Users Api V1 Admin Users Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search Users",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/suspend": {
+      "post": {
+        "description": "\u00a74.12 \"Suspend users\". A suspended account cannot sign in or act: every\nauthenticated route goes through get_current_active_user.",
+        "operationId": "suspend_user_api_v1_admin_users__user_id__suspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Suspend User",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/unsuspend": {
+      "post": {
+        "operationId": "unsuspend_user_api_v1_admin_users__user_id__unsuspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unsuspend User",
         "tags": [
           "admin"
         ]
@@ -4951,6 +7286,45 @@
         ]
       }
     },
+    "/api/v1/events/{slug}/calendar.ics": {
+      "get": {
+        "description": "The event as an iCalendar file (\u00a74.11). Public, like the event page;\nfor a cancelled event it is the cancellation that replaces the entry.",
+        "operationId": "event_calendar_api_v1_events__slug__calendar_ics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/calendar": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Event Calendar",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
     "/api/v1/events/{slug}/orders": {
       "post": {
         "description": "Reserve and order in one request. Free orders come back `confirmed`\nwith tickets; paid ones come back `pending`, to be paid within\n`expires_at` through POST /orders/{order_number}/pay.",
@@ -5006,6 +7380,119 @@
         "summary": "Checkout",
         "tags": [
           "orders"
+        ]
+      }
+    },
+    "/api/v1/events/{slug}/promo": {
+      "post": {
+        "description": "Check a promo code (typed) or campaign token (from a QR link) against a\nbasket and return the discount, so the attendee sees the new total before\npaying (\u00a74.14). 409 with the specific reason if the code cannot be used.\n\nNothing is reserved or redeemed here; checkout validates again.",
+        "operationId": "quote_promo_api_v1_events__slug__promo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromoQuoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromoQuote"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quote Promo",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/api/v1/events/{slug}/report": {
+      "post": {
+        "description": "Flag an event for a Platform Admin to review (\u00a74.12). Open to guests:\nthe person who spots a scam listing often has no account.",
+        "operationId": "report_event_api_v1_events__slug__report_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Report Event Api V1 Events  Slug  Report Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Report Event",
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -5297,6 +7784,139 @@
         "summary": "Pay Order",
         "tags": [
           "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{order_number}/tickets.pdf": {
+      "get": {
+        "description": "Every valid ticket of the order, one A4 page each.",
+        "operationId": "order_tickets_pdf_api_v1_orders__order_number__tickets_pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_number",
+            "required": true,
+            "schema": {
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Order Tickets Pdf",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/v1/orders/{order_number}/tickets/{public_code}.pdf": {
+      "get": {
+        "description": "One ticket as a print-optimized PDF (\u00a74.7).",
+        "operationId": "ticket_pdf_download_api_v1_orders__order_number__tickets__public_code__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_number",
+            "required": true,
+            "schema": {
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "public_code",
+            "required": true,
+            "schema": {
+              "title": "Public Code",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ticket Pdf Download",
+        "tags": [
+          "documents"
         ]
       }
     },
@@ -5634,6 +8254,104 @@
         ]
       }
     },
+    "/api/v1/organizer/events/{event_id}/analytics": {
+      "get": {
+        "description": "\u00a74.15, UC11: sales over time, sales by ticket type, campaign results\nand attendance, filterable by date range and ticket type. OwnedEvent is\nthe \"only analytics for events they manage\" rule.",
+        "operationId": "event_analytics_api_v1_organizer_events__event_id__analytics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticket_type_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticket Type Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventAnalytics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Event Analytics",
+        "tags": [
+          "organizer reports"
+        ]
+      }
+    },
     "/api/v1/organizer/events/{event_id}/attendees": {
       "get": {
         "operationId": "list_attendees_api_v1_organizer_events__event_id__attendees_get",
@@ -5705,6 +8423,274 @@
         "summary": "List Attendees",
         "tags": [
           "organizer reports"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/attendees.csv": {
+      "get": {
+        "description": "The attendee list as a spreadsheet, for a door list on paper.",
+        "operationId": "export_attendees_api_v1_organizer_events__event_id__attendees_csv_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Attendees",
+        "tags": [
+          "organizer reports"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/campaigns": {
+      "get": {
+        "operationId": "list_campaigns_api_v1_organizer_events__event_id__campaigns_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CampaignRead"
+                  },
+                  "title": "Response List Campaigns Api V1 Organizer Events  Event Id  Campaigns Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Campaigns",
+        "tags": [
+          "campaigns"
+        ]
+      },
+      "post": {
+        "description": "Creates the campaign, its promo code and its QR token in one step.",
+        "operationId": "create_campaign_api_v1_organizer_events__event_id__campaigns_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Campaign",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/campaigns/{campaign_id}": {
+      "patch": {
+        "description": "Edit or disable a campaign. Past redemptions keep the discount they got.",
+        "operationId": "update_campaign_api_v1_organizer_events__event_id__campaigns__campaign_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "title": "Campaign Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Campaign",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/campaigns/{campaign_id}/qr.svg": {
+      "get": {
+        "description": "The Campaign QR as a print-ready SVG. It encodes a link, not a ticket:\nthe door scanner answers `invalid` if someone shows it (\u00a711).",
+        "operationId": "campaign_qr_image_api_v1_organizer_events__event_id__campaigns__campaign_id__qr_svg_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "title": "Campaign Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/svg+xml": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Campaign Qr Image",
+        "tags": [
+          "campaigns"
         ]
       }
     },
@@ -7831,6 +10817,52 @@
         "summary": "Update Current User",
         "tags": [
           "users"
+        ]
+      }
+    },
+    "/api/v1/users/me/notifications": {
+      "get": {
+        "operationId": "my_notifications_api_v1_users_me_notifications_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationFeed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Notifications",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/users/me/notifications/read": {
+      "post": {
+        "description": "Mark everything read: the user opened the feed and saw it.",
+        "operationId": "mark_read_api_v1_users_me_notifications_read_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark Read",
+        "tags": [
+          "notifications"
         ]
       }
     },

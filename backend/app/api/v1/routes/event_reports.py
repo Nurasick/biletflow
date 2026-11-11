@@ -1,26 +1,26 @@
 """What an organizer sees and does with one event's buyers: orders,
 attendees, money, the activity timeline, and cancelling or refunding orders."""
 
-from collections.abc import Sequence
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DbSession, OwnedEvent
-from app.models.audit import AuditLog
 from app.models.event import Event
 from app.models.order import Order
 from app.models.ticket import Ticket
 from app.schemas.reporting import (
     AttendeeRow,
+    EventAnalytics,
     EventSummary,
     OrganizerOrderRow,
     RefundRequest,
     TimelineEntry,
 )
-from app.services import audit, order_lifecycle, reporting
+from app.services import analytics, audit, order_lifecycle, reporting
+from app.services.csv_export import csv_response
 
 router = APIRouter(tags=["organizer reports"])
 
@@ -60,6 +60,44 @@ def event_summary(event: OwnedEvent, db: DbSession) -> dict:
     return reporting.summary(db, event)
 
 
+@router.get("/organizer/events/{event_id}/analytics", response_model=EventAnalytics)
+def event_analytics(
+    event: OwnedEvent,
+    db: DbSession,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    ticket_type_id: int | None = None,
+) -> dict:
+    """§4.15, UC11: sales over time, sales by ticket type, campaign results
+    and attendance, filterable by date range and ticket type. OwnedEvent is
+    the "only analytics for events they manage" rule."""
+    return analytics.event_analytics(
+        db, event, since=since, until=until, ticket_type_id=ticket_type_id
+    )
+
+
+@router.get("/organizer/events/{event_id}/attendees.csv", response_class=Response)
+def export_attendees(event: OwnedEvent, db: DbSession) -> Response:
+    """The attendee list as a spreadsheet, for a door list on paper."""
+    rows = reporting.attendees(db, event, limit=10_000, offset=0)
+    return csv_response(
+        f"attendees-{event.slug}",
+        ["ticket", "status", "ticket_type", "order", "name", "email", "phone"],
+        (
+            [
+                ticket.public_code,
+                ticket.status.value,
+                type_name,
+                order_number,
+                attendee.full_name,
+                attendee.email or "",
+                attendee.phone or "",
+            ]
+            for ticket, attendee, type_name, order_number in rows
+        ),
+    )
+
+
 @router.get("/organizer/events/{event_id}/timeline", response_model=list[TimelineEntry])
 def event_timeline(
     event: OwnedEvent,
@@ -69,12 +107,13 @@ def event_timeline(
     action: Annotated[list[str] | None, Query(description="Repeat to filter by several")] = None,
     limit: Limit = 100,
     offset: Offset = 0,
-) -> Sequence[AuditLog]:
+) -> list[dict]:
     """§4.16: the event's history, newest first, filterable by date range and
     activity type. Read-only: no route edits or deletes an entry."""
-    return audit.event_timeline(
+    entries = audit.event_timeline(
         db, event.id, since=since, until=until, actions=action or (), limit=limit, offset=offset
     )
+    return audit.with_actor_names(db, entries)
 
 
 def _event_order(db: DbSession, event: Event, order_number: str) -> Order:

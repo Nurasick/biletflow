@@ -24,6 +24,9 @@ def _bigint_as_integer(type_, compiler, **kw):
 # Before any app import reads settings: the hold sweeper would otherwise start
 # with every TestClient and write to the real database in the background.
 os.environ["HOLD_SWEEP_INTERVAL_SECONDS"] = "0"
+# Same for the notification sender, and never a real SMTP server.
+os.environ["NOTIFY_INTERVAL_SECONDS"] = "0"
+os.environ["SMTP_HOST"] = ""
 
 from app.db.base import Base  # noqa: E402 - must import after the compiles() override
 from app.db.session import get_db  # noqa: E402

@@ -2,15 +2,18 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException, Query, status
+from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession, OptionalUser
 from app.core import qr
 from app.core.security import create_order_token
+from app.models.campaign import Campaign
 from app.models.event import Event
 from app.models.order import Order
 from app.models.ticket import TicketStatus
 from app.schemas.activation import SimulatedPayment
 from app.schemas.order import CheckoutRequest, CheckoutResponse, OrderRead
+from app.services import campaign as campaign_service
 from app.services import event as event_service
 from app.services import hold as hold_service
 from app.services import order as order_service
@@ -52,9 +55,12 @@ def _read(db: DbSession, order: Order) -> dict:
             **{
                 field: getattr(order, field)
                 for field in OrderRead.model_fields
-                if field not in ("items", "tickets", "event")
+                if field not in ("items", "tickets", "event", "promo_code", "is_simulated")
             },
             "event": db.get(Event, order.event_id),
+            "promo_code": db.scalar(select(Campaign.code).where(Campaign.id == order.campaign_id))
+            if order.campaign_id
+            else None,
             "items": order_service.order_items(db, order),
             "tickets": tickets,
         }
@@ -95,6 +101,9 @@ def checkout(slug: str, data: CheckoutRequest, user: OptionalUser, db: DbSession
         ) from None
     except hold_service.NotOnSale as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, f"Not on sale: {exc.reason}") from None
+    except campaign_service.PromoRejected as exc:
+        # §4.14 "rejected with a clear message": the reason, not "invalid code".
+        raise HTTPException(status.HTTP_409_CONFLICT, exc.reason) from None
     except hold_service.SoldOut:
         # Expected even when the page said tickets were available: someone
         # else's checkout landed first. The frontend shows "sold out".
@@ -138,6 +147,16 @@ def pay_order(
         # A concurrent request confirmed or cancelled it first.
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "The order is no longer pending") from None
+    except campaign_service.PromoRejected as exc:
+        # The code ran out or was disabled while the buyer was paying. The
+        # charge rolled back with everything else; the order is cancelled so
+        # its tickets go back on sale rather than waiting out the hold.
+        db.rollback()
+        order_lifecycle.cancel_pending(db, order, user)
+        db.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"{exc.reason}. Nothing was charged; please order again."
+        ) from None
     except (payment_service.ReservationExpired, order_service.HoldLapsed):
         db.rollback()
         raise HTTPException(

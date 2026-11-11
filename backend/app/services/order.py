@@ -1,8 +1,8 @@
 """Checkout and confirmation: steps 1, 2, 3a and 4 of the flow in
 docs/data-model/03-ordering.md#how-they-connect-the-checkout-flow.
 
-Paid orders stop at `pending` for now; the payments slice adds step 3b and
-then calls confirm_order() exactly as the free path does.
+Paid orders stop at `pending`; services/payment.py is step 3b and then calls
+confirm_order() exactly as the free path does.
 """
 
 from collections import Counter
@@ -12,7 +12,7 @@ from jwt import InvalidTokenError
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.core.security import decode_token
+from app.core.security import create_order_token, decode_token
 from app.models.attendee import Attendee
 from app.models.event import Event
 from app.models.hold import Hold
@@ -22,7 +22,8 @@ from app.models.ticket_type import TicketType
 from app.models.user import User
 from app.schemas.order import CheckoutRequest
 from app.services import activation as activation_service
-from app.services import audit, codes
+from app.services import audit, codes, notify, platform
+from app.services import campaign as campaign_service
 from app.services import hold as hold_service
 from app.services.hold import SoldOut
 
@@ -98,6 +99,20 @@ def _checkout(
     subtotal = sum(
         ticket_types[line.ticket_type_id].price_minor * len(line.attendees) for line in lines
     )
+    # §4.14: the client sends a code or a QR token and the server works out
+    # the discount. Raises PromoRejected with the specific reason; the route
+    # turns that into a 409 the buyer can read.
+    promo = None
+    if data.promo_code or data.campaign_token:
+        campaign = campaign_service.find(db, event, code=data.promo_code, token=data.campaign_token)
+        promo = campaign_service.quote(
+            db,
+            campaign,
+            [(ticket_types[line.ticket_type_id], len(line.attendees)) for line in lines],
+            now,
+        )
+    discount = promo.total if promo else 0
+    total = subtotal - discount
     order = Order(
         order_number=codes.new_order_number(db, now),
         event_id=event.id,
@@ -106,10 +121,13 @@ def _checkout(
         contact_email=data.contact_email,
         contact_phone=data.contact_phone,
         subtotal_minor=subtotal,
-        discount_minor=0,
-        fee_minor=0,
-        # Fee policy is open question #3, so total = subtotal until it is decided.
-        total_minor=subtotal,
+        discount_minor=discount,
+        # §3.3: processing charges are "deducted from each transaction". The
+        # buyer pays `total`; the fee is recorded here and comes out of the
+        # organizer's payout (services/reporting.py).
+        fee_minor=platform.processing_fee(db, total),
+        total_minor=total,
+        campaign_id=promo.campaign.id if promo else None,
         currency="KZT",
         # The order lives exactly as long as its holds; the sweeper expires both.
         expires_at=holds[0].expires_at,
@@ -128,7 +146,7 @@ def _checkout(
             ticket_type_id=ticket_type.id,
             quantity=quantity,
             unit_price_minor=ticket_type.price_minor,
-            discount_minor=0,
+            discount_minor=promo.per_type.get(ticket_type.id, 0) if promo else 0,
             subtotal_minor=ticket_type.price_minor * quantity,
         )
         db.add(item)
@@ -171,6 +189,11 @@ def confirm_order(db: Session, order: Order, now: datetime | None = None) -> Non
     )
     if flipped.rowcount == 0:
         raise OrderNotPending
+
+    # The promo redemption is counted here, in the confirming transaction
+    # (§7). If the code ran out while the buyer was paying, this raises and
+    # everything above and below rolls back with it.
+    campaign_service.redeem(db, order, now)
 
     # Releasing the holds and reading what they held is one statement, so
     # the sweeper cannot release the same holds between a read and a write.
@@ -227,6 +250,26 @@ def confirm_order(db: Session, order: Order, now: datetime | None = None) -> Non
         summary=f"Order {order.order_number} confirmed, {sum(held.values())} ticket(s) issued",
         payload={"total_minor": order.total_minor, "tickets": sum(held.values())},
     )
+    # §4.4, §4.10: confirmation and ticket delivery. Queued, not sent: the
+    # outbox row commits with the order and a worker emails it (§7).
+    event_title = db.scalar(select(Event.title).where(Event.id == order.event_id))
+    notify.notify(
+        db,
+        "order.confirmed",
+        {
+            "order_number": order.order_number,
+            "event_title": event_title,
+            "link": order_link(order),
+        },
+        email=order.contact_email,
+        user_id=order.user_id,
+    )
+
+
+def order_link(order: Order) -> str:
+    """The web page for an order, carrying the signed token so it opens for a
+    guest too. This is the "ticket delivery" link in every order email."""
+    return notify.web_link(f"/orders/{order.order_number}?token={create_order_token(order.id)}")
 
 
 def get_order_by_number(db: Session, order_number: str) -> Order | None:
