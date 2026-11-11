@@ -32,10 +32,6 @@ const validationUrl = await moduleUrl('../src/i18n/validation.ts', jsonImports);
 const { validationMessage } = await import(validationUrl);
 const priceUrl = await moduleUrl('../src/shared/lib/formatPrice.ts');
 const { formatPrice } = await import(priceUrl);
-const demoUrl = await moduleUrl('../src/features/Event/model/demoBooking.ts', {
-  '"../../../shared/lib/formatPrice"': JSON.stringify(priceUrl),
-});
-const { getDemoBooking } = await import(demoUrl);
 
 test('the app compiler accepts known translation keys and rejects unknown keys', () => {
   const configPath = fileURLToPath(new URL('../tsconfig.app.json', import.meta.url));
@@ -51,7 +47,7 @@ test('the app compiler accepts known translation keys and rejects unknown keys',
     export const useTypedTranslations = () => {
       const { t } = useTranslation();
       const home: string = t('common.home');
-      const tickets: string = t('booking.continue', { count: 2 });
+      const tickets: string = t('sales.orderLine', { count: 2 });
       // @ts-expect-error unknown translation keys must remain invalid
       t('missing.translation.key');
       return [home, tickets];
@@ -117,9 +113,7 @@ test('missing and empty translations fall back to English for progressive copy',
 test('Russian ticket counts use singular, few, and many forms', async () => {
   const i18n = await instance('ru');
   for (const [count, ending] of [[1, 'билет'], [2, 'билета'], [5, 'билетов'], [21, 'билет']]) {
-    const result = i18n.t('booking.held', { count, time: '19:00' });
-    assert.ok(result.startsWith(`${count} ${ending} `));
-    assert.ok(result.endsWith('19:00'));
+    assert.equal(i18n.t('sales.orderLine', { count }), `${count} ${ending}`);
   }
 });
 
@@ -133,16 +127,9 @@ test('client validation reacts to locale changes and service messages stay verba
   assert.equal(validationMessage(i18n.t, { type: 'server', message: 'Email already registered' }), 'Email already registered');
 });
 
-test('localized booking labels preserve ticket identifiers, sessions, and prices', async () => {
-  const i18n = await instance('en');
-  const before = getDemoBooking(i18n.t, intlLocales.en);
-  await i18n.changeLanguage('ru');
-  const after = getDemoBooking(i18n.t, intlLocales.ru);
-  assert.deepEqual(after.ticketTypes.map(({ id, price }) => ({ id, price })), before.ticketTypes.map(({ id, price }) => ({ id, price })));
-  assert.notEqual(after.ticketTypes[1].name, before.ticketTypes[1].name);
-  assert.deepEqual(after.halls.flatMap(hall => hall.sessions.map(({ id, time }) => ({ id, time }))), before.halls.flatMap(hall => hall.sessions.map(({ id, time }) => ({ id, time }))));
-  assert.notEqual(after.halls[1].sessions[2].price, before.halls[1].sessions[2].price);
+test('prices are formatted using the selected locale', () => {
   assert.equal(formatPrice(8500, intlLocales.en), '8,500 ₸');
+  assert.equal(formatPrice(8500, intlLocales.ru), '8\u00a0500 ₸');
 });
 
 test('language controls expose the current selection and native language labels', async () => {
@@ -179,11 +166,12 @@ test('startup restores the preference, updates document language, and persists s
   assert.equal(document.documentElement.lang, 'en');
 });
 
-test('locale copy keeps interpolation parameters consistent with English', () => {
+test('all locales have the same keys and interpolation parameters', () => {
   const parameters = value => [...value.matchAll(/\{\{(\w+)\}\}/g)].map(match => match[1]).sort();
   for (const locale of ['kk', 'ru']) {
+    assert.deepEqual(Object.keys(messages[locale]).sort(), Object.keys(messages.en).sort(), locale);
     for (const [key, value] of Object.entries(messages[locale])) {
-      assert.ok(key in messages.en, `Unknown ${locale} translation: ${key}`);
+      assert.ok(value.trim(), `Empty ${locale} translation: ${key}`);
       assert.deepEqual(parameters(value), parameters(messages.en[key]), `${locale}: ${key}`);
     }
   }

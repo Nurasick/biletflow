@@ -6,15 +6,8 @@ export const UtilityBar = () => {
   return (
     <div className="bg-[#101828] px-7 py-2.5 text-xs text-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between">
-        <div className="flex items-center gap-5">
-          <span className="font-semibold">{t("nav.city")} ▾</span>
-          <Link to="/support" className="text-[#D0D5DD] hover:text-white">{t("common.help")}</Link>
-          <span className="text-[#98A2B3]">{t("nav.forOrganizers")}</span>
-        </div>
-        <div className="flex items-center gap-5 text-[#98A2B3]">
-          <LanguageSwitcher />
-          <span>+7 727 000 00 00</span>
-        </div>
+        <Link to="/support" className="text-[#D0D5DD] hover:text-white">{t("common.help")}</Link>
+        <LanguageSwitcher />
       </div>
     </div>
   );

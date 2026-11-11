@@ -15,7 +15,6 @@ const signupSchema = z
     email: z.email("validation.email"),
     password: passwordSchema,
     confirmPassword: z.string(),
-    terms: z.boolean().refine(Boolean, "validation.terms"),
   })
   .refine((values) => values.password === values.confirmPassword, {
     path: ["confirmPassword"],
@@ -29,7 +28,6 @@ export const useSignupForm = (onSuccess: (email: string) => void) => {
   const { i18n } = useTranslation();
   const locale = resolveLocale(i18n.language);
   const {
-    control,
     register,
     handleSubmit,
     setError,
@@ -42,7 +40,6 @@ export const useSignupForm = (onSuccess: (email: string) => void) => {
       email: "",
       password: "",
       confirmPassword: "",
-      terms: false,
     },
   });
 
@@ -75,5 +72,5 @@ export const useSignupForm = (onSuccess: (email: string) => void) => {
     }
   });
 
-  return { control, register, errors, onSubmit, registration };
+  return { register, errors, onSubmit, registration };
 };

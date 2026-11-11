@@ -24,7 +24,7 @@ export const OrganizerEventsPage = () => {
     <h1 className="text-3xl font-bold tracking-tight">{t("eventWorkflow.myEvents")}</h1>
     <p className="mt-3 text-sm leading-6 text-[#667085]">{t("eventWorkflow.listDescription")}</p>
     {events.isPending ? <div role="status" className="flex items-center gap-2 py-16 text-sm text-[#667085]">
-      <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("eventWorkflow.loading")}
+      <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("common.loading")}
     </div> : events.isError ? <Alert role="alert" type="error" showIcon className="mt-6"
       title={t("eventWorkflow.loadError")}
       action={<Button onClick={() => void events.refetch()} loading={events.isFetching}>{t("common.retry")}</Button>} />

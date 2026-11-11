@@ -28,8 +28,7 @@ export const ForgotPasswordForm = () => {
   return (
     <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
       <AuthField
-        id="forgot-email" label={t("common.email")} type="email"
-        autoComplete="email" placeholder={t("common.emailPlaceholder")}
+        id="forgot-email" label={t("common.email")} type="email" autoComplete="email"
         registration={register("email")} error={errors.email}
       />
       {forgotPassword.isError && (

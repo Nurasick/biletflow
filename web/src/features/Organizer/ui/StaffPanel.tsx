@@ -37,7 +37,7 @@ export const StaffPanel = ({ eventId }: { eventId: number }) => {
         </li>)}
       </ul>
       <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); if (email.trim()) assign.mutate(); }}>
-        <Input type="email" aria-label={t("common.email")} placeholder={t("common.emailPlaceholder")}
+        <Input type="email" aria-label={t("common.email")} placeholder={t("common.email")}
           value={email} onChange={(event) => setEmail(event.target.value)} />
         <Button htmlType="submit" loading={assign.isPending}>{t("staff.assign")}</Button>
       </form>

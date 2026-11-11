@@ -32,9 +32,6 @@ export const Header = () => {
             placeholder={t("nav.searchPlaceholder")}
             className="min-w-0 flex-1 bg-transparent px-4 text-sm outline-none placeholder:text-[#667085]"
           />
-          <button type="button" className="border-l border-[#D0D5DD] px-4 text-sm text-[#667085]">
-            {t("nav.anyDate")} ▾
-          </button>
           <button type="submit" className="bg-[#FF5C35] px-6 text-sm font-semibold text-[#101828]">
             {t("nav.search")}
           </button>
@@ -64,35 +61,13 @@ export const Header = () => {
         </div>
       </div>
 
-      <nav className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-7 py-3 text-sm">
-        {user && <Link to="/staff/events" className="font-semibold text-[#A93216]">{t("nav.checkIn")}</Link>}
-        {(user?.is_organizer || user?.is_platform_admin) && <Link to="/staff/support" className="font-semibold text-[#A93216]">{t("support.queue")}</Link>}
-        {user?.is_platform_admin && <Link to="/admin/events" className="font-semibold text-[#A93216]">{t("nav.admin")}</Link>}
-        <a className="font-semibold" href="#">
-          {t("nav.afisha")}
-        </a>
-        <a className="text-[#667085]" href="#">
-          {t("nav.concerts")}
-        </a>
-        <a className="text-[#667085]" href="#">
-          {t("nav.theatre")}
-        </a>
-        <a className="text-[#667085]" href="#">
-          {t("nav.cinema")}
-        </a>
-        <a className="text-[#667085]" href="#">
-          {t("nav.sport")}
-        </a>
-        <a className="text-[#667085]" href="#">
-          {t("nav.student")}
-        </a>
-        <a className="text-[#667085]" href="#">
-          {t("nav.freeEvents")}
-        </a>
-        <a className="ml-auto font-semibold text-[#FF5C35]" href="#">
-          {t("nav.myTickets")}
-        </a>
-      </nav>
+      {user && (
+        <nav className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-7 py-3 text-sm">
+          <Link to="/staff/events" className="font-semibold text-[#A93216]">{t("nav.checkIn")}</Link>
+          {(user.is_organizer || user.is_platform_admin) && <Link to="/staff/support" className="font-semibold text-[#A93216]">{t("support.queue")}</Link>}
+          {user.is_platform_admin && <Link to="/admin/events" className="font-semibold text-[#A93216]">{t("nav.admin")}</Link>}
+        </nav>
+      )}
     </header>
   );
 };

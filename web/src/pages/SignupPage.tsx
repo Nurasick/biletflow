@@ -19,11 +19,7 @@ export const SignupPage = () => {
         <SignupSuccess email={registeredEmail} />
       ) : (
         <>
-          <AuthHeading
-            eyebrow={t("auth.join")}
-            title={t("auth.signupTitle")}
-            description={t("auth.signupDescription")}
-          />
+          <AuthHeading title={t("auth.signupTitle")} />
           <SignupForm onSuccess={setRegisteredEmail} />
         </>
       )}

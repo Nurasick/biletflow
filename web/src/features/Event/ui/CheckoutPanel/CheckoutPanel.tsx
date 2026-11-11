@@ -115,7 +115,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
   return (
     <aside aria-labelledby="buy" className="w-full shrink-0 self-start rounded-2xl border border-[#D0D5DD] bg-white p-5 lg:sticky lg:top-6 lg:w-[360px]">
       <h2 id="buy" className="text-[15px] font-semibold">{t("booking.selectTickets")}</h2>
-      {loading && <p className="mt-4 text-sm text-[#667085]">{t("eventWorkflow.loading")}</p>}
+      {loading && <p className="mt-4 text-sm text-[#667085]">{t("common.loading")}</p>}
       {!loading && ticketTypes.length === 0 && <p className="mt-4 text-sm text-[#667085]">{t("eventWorkflow.noTickets")}</p>}
       <ul className="mt-4 space-y-3">
         {tickets.map((type) => {
@@ -159,7 +159,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
       {total > 0 && <div className="mt-4 space-y-2">
         <Input aria-label={t("checkout.contactName")} placeholder={t("checkout.contactName")} maxLength={200} disabled={buy.isPending}
           value={contactName} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
-        <Input type="email" aria-label={t("common.email")} placeholder={t("common.emailPlaceholder")} disabled={buy.isPending}
+        <Input type="email" aria-label={t("common.email")} placeholder={t("common.email")} disabled={buy.isPending}
           value={contactEmail} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
       </div>}
       {onSale && (promo || ticketTypes.some((type) => type.price_minor > 0)) && <div className="mt-4 space-y-2">

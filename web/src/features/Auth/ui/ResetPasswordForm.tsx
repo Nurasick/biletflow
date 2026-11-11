@@ -25,8 +25,7 @@ export const ResetPasswordForm = ({ token }: { token: string }) => {
   return (
     <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
       <AuthField
-        id="reset-password" label={t("auth.newPassword")} type="password"
-        autoComplete="new-password" placeholder={t("common.passwordPlaceholder")}
+        id="reset-password" label={t("auth.newPassword")} type="password" autoComplete="new-password"
         registration={register("password")} error={errors.password}
       />
       <p className="text-xs text-[#667085]">{t("auth.passwordHint")}</p>
