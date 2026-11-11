@@ -81,6 +81,10 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
     </Link>}
     <p className="mt-3 text-sm leading-6 text-[#667085]">{t("eventWorkflow.previewDescription")}</p>
     {!preview.isError && <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-[#A93216]">
+      <a href="#event-ticket-types" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("ticketTypes.title")}</a>
+      <Link to={`/organizer/events/${eventId}/analytics`} className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">
+        {t("analytics.title")}
+      </Link>
       <a href="#event-campaigns" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("campaigns.title")}</a>
       <a href="#event-attendees" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("reports.attendeesTitle")}</a>
       <a href="#event-timeline" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("reports.timelineTitle")}</a>
@@ -101,12 +105,12 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
     <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]" aria-busy={transition.isPending}>
       <div className="min-w-0 space-y-6">
         <EventPreviewContent snapshot={snapshot} />
-        <TicketTypesPanel eventId={eventId} userId={userId} editable={event.status === "draft" || event.status === "published"} />
+        <TicketTypesPanel event={event} userId={userId} editable={event.status === "draft" || event.status === "published"} />
         <ActivationPanel eventId={eventId} />
         <CampaignsPanel eventId={eventId} userId={userId} timeZone={event.timezone} />
         <EventSalesPanel eventId={eventId} />
         {!preview.isError && <>
-          <AttendeesPanel key={`attendees:${userId}:${eventId}`} eventId={eventId} userId={userId} />
+          <AttendeesPanel key={`attendees:${userId}:${eventId}`} eventId={eventId} userId={userId} slug={event.slug} />
           <EventTimelinePanel key={`timeline:${userId}:${eventId}`} eventId={eventId} userId={userId} />
         </>}
         <StaffPanel eventId={eventId} />

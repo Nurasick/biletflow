@@ -33,7 +33,7 @@ export const FileDownloadButton = ({ label, accessibleLabel, filename, getFile }
   });
 
   return <div className="min-w-0">
-    <Button size="small" aria-label={accessibleLabel} loading={download.isPending}
+    <Button size="small" aria-label={accessibleLabel ?? label} aria-busy={download.isPending} loading={download.isPending}
       style={{ maxWidth: "100%", height: "auto", minHeight: 24, whiteSpace: "normal" }}
       icon={<Download size={14} aria-hidden="true" />} onClick={() => download.mutate()}>
       {label}

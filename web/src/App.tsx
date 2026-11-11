@@ -13,6 +13,7 @@ import { OrganizerRoute } from "./shared/auth/OrganizerRoute";
 import { OrganizerEventPage } from "./pages/OrganizerEventPage";
 import { OrganizerEventsPage } from "./pages/OrganizerEventsPage";
 import { OrganizerEventPreviewPage } from "./pages/OrganizerEventPreviewPage";
+import { OrganizerAnalyticsPage } from "./pages/OrganizerAnalyticsPage";
 import { OrderPage } from "./pages/OrderPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { StaffEventsPage } from "./pages/StaffEventsPage";
@@ -33,6 +34,7 @@ function App() {
       children: [
         { path: "/organizer/events", element: <OrganizerEventsPage /> },
         { path: "/organizer/events/:eventId/preview", element: <OrganizerEventPreviewPage /> },
+        { path: "/organizer/events/:eventId/analytics", element: <OrganizerAnalyticsPage /> },
         { path: "/organizer/events/new", element: <OrganizerEventPage /> },
         { path: "/organizer/events/:eventId/edit", element: <OrganizerEventPage /> },
       ],

@@ -166,6 +166,21 @@ test('download errors preserve the API status and reject an unexpected file type
   await assert.rejects(publicFile('/events/jazz/calendar.ics', 'text/calendar'), { status: 502 });
 });
 
+test('attendee CSV downloads use the organizer session and preserve the original UTF-8 bytes', async () => {
+  const bytes = new TextEncoder().encode('\uFEFFticket,name\r\nBF-TEST,Әлия\r\n');
+  const { authApi, authUrl, calls } = await setup([
+    [200, tokens], [200, user], new Response(bytes, { headers: { 'Content-Type': 'text/csv; charset=utf-8' } }),
+  ]);
+  const { eventReportsApi } = await import(await moduleUrl('../src/shared/api/eventReports.ts', {
+    '"./auth"': JSON.stringify(authUrl),
+  }));
+  await authApi.login(credentials);
+  const csv = await eventReportsApi.attendeesCsv(7);
+  assert.deepEqual(new Uint8Array(await csv.arrayBuffer()), bytes);
+  assert.equal(calls.at(-1).headers.get('Authorization'), 'Bearer access-1');
+  assert.equal(new URL(calls.at(-1).url).pathname, '/api/v1/organizer/events/7/attendees.csv');
+});
+
 test('promo quote and checkout submit the campaign token with the current basket', async () => {
   const quote = { code: 'JAZZ20', subtotal_minor: 100_000, discount_minor: 20_000, total_minor: 80_000 };
   const { authUrl, calls } = await setup([[200, quote], [201, { status: 'pending' }]]);

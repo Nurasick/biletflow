@@ -1,7 +1,7 @@
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { Alert, Button, Input } from "antd";
 import { Minus, Plus } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -14,12 +14,15 @@ import { ordersApi } from "../../../../shared/api/events";
 import type { EventDetail, PublicTicketType } from "../../../../shared/api/events";
 import { formatMinor } from "../../../../shared/lib/formatPrice";
 import { useAuthErrorMessage } from "../../../../shared/lib/useAuthErrorMessage";
+import { ticketSaleStatus, ticketSaleWindow } from "../../model/ticketSales";
 
 // The backend's per-request bound (schemas/order.py MAX_TICKETS_PER_ORDER).
 // Each type's own max_per_order applies on top (audit #19: one policy).
 export const MAX_TICKETS_PER_ORDER = 20;
+const MAX_TIMEOUT_MS = 2_147_483_647;
 
 type Props = { event: EventDetail; ticketTypes: PublicTicketType[]; loading: boolean };
+type CheckoutTicket = PublicTicketType & { saleWindow: ReturnType<typeof ticketSaleWindow> };
 
 const limitFor = (type: PublicTicketType) => Math.max(0, Math.min(type.available, type.max_per_order ?? MAX_TICKETS_PER_ORDER));
 
@@ -35,16 +38,30 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
   const [names, setNames] = useState<Record<string, string>>({});
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now);
   const submitting = useRef(false);
   const contactName = contact.name ?? (me.data ? `${me.data.first_name} ${me.data.last_name}` : "");
   const contactEmail = contact.email ?? me.data?.email ?? "";
 
+  const tickets = useMemo(() => ticketTypes.map((type) => ({ ...type, saleWindow: ticketSaleWindow(event, type) })), [event, ticketTypes]);
+  useEffect(() => {
+    let next = Infinity;
+    for (const { saleWindow: { opens, closes } } of tickets) {
+      if (opens > now) next = Math.min(opens, next);
+      if (closes > now) next = Math.min(closes, next);
+    }
+    if (!Number.isFinite(next)) return;
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.min(Math.max(1, next - Date.now()), MAX_TIMEOUT_MS));
+    return () => window.clearTimeout(timer);
+  }, [now, tickets]);
+
   const onSale = event.status === "published" && event.phase !== "completed";
-  const selected = ticketTypes.filter((type) => quantities[type.id] > 0);
+  const selected = tickets.filter((type) => quantities[type.id] > 0);
   const basket = selected.map((type) => ({ ticket_type_id: type.id, quantity: quantities[type.id] }));
   const total = basket.reduce((sum, line) => sum + line.quantity, 0);
   const subtotal = selected.reduce((sum, type) => sum + type.price_minor * quantities[type.id], 0);
-  const purchasable = (type: PublicTicketType) => onSale && limitFor(type) > 0 && (type.price_minor === 0 || event.paid_sales_active);
+  const purchasable = (type: CheckoutTicket, at = now) => onSale && ticketSaleStatus(type.saleWindow, at) === "open"
+    && limitFor(type) > 0 && (type.price_minor === 0 || event.paid_sales_active);
   const selectionUnavailable = selected.some((type) => !purchasable(type) || quantities[type.id] > limitFor(type));
 
   const change = (type: PublicTicketType, delta: number) => setQuantities((current) => {
@@ -93,6 +110,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
 
   const canSubmit = onSale && !selectionUnavailable && total > 0 && Boolean(contactName.trim())
     && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim()) && (!promo || Boolean(quoted)) && !buy.isPending;
+  const saleTime = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: event.timezone });
 
   return (
     <aside aria-labelledby="buy" className="w-full shrink-0 self-start rounded-2xl border border-[#D0D5DD] bg-white p-5 lg:sticky lg:top-6 lg:w-[360px]">
@@ -100,17 +118,25 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
       {loading && <p className="mt-4 text-sm text-[#667085]">{t("eventWorkflow.loading")}</p>}
       {!loading && ticketTypes.length === 0 && <p className="mt-4 text-sm text-[#667085]">{t("eventWorkflow.noTickets")}</p>}
       <ul className="mt-4 space-y-3">
-        {ticketTypes.map((type) => {
+        {tickets.map((type) => {
           const count = quantities[type.id] ?? 0;
           const open = purchasable(type);
+          const windowStatus = ticketSaleStatus(type.saleWindow, now);
+          const saleMessage = windowStatus === "upcoming" ? t("ticketTypes.opensAt", { date: saleTime.format(type.saleWindow.opens) })
+            : windowStatus === "closed" ? t("checkout.salesClosed")
+              : windowStatus === "unavailable" ? t("checkout.salesUnavailable") : null;
           return <li key={type.id} className="rounded-xl border border-[#EAECF0] p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold">{type.name}</p>
+                <p className="break-words text-sm font-semibold">{type.name}</p>
+                {type.description && <p className="my-1 whitespace-pre-wrap break-words text-xs text-[#475467]">{type.description}</p>}
                 <p className="text-xs text-[#667085]">
                   {type.price_minor === 0 ? t("eventWorkflow.free") : formatMinor(type.price_minor, locale)}
-                  {" · "}{type.available > 0 ? t("eventWorkflow.available", { count: type.available }) : t("booking.soldOut")}
+                  {onSale && windowStatus === "open" && <>
+                    {" · "}{type.available > 0 ? t("eventWorkflow.available", { count: type.available }) : t("booking.soldOut")}
+                  </>}
                 </p>
+                {onSale && saleMessage && <p className="mt-1 text-xs text-[#A93216]">{saleMessage}</p>}
                 {type.price_minor > 0 && !event.paid_sales_active && <p className="mt-1 text-xs text-[#A93216]">{t("checkout.paidInactive")}</p>}
               </div>
               <div className="flex items-center gap-2">
@@ -188,6 +214,8 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
       {selectionUnavailable && <p role="alert" className="mt-2 text-xs text-[#A93216]">{t("checkout.selectionUnavailable")}</p>}
       <Button type="primary" block className="mt-4" disabled={!canSubmit} loading={buy.isPending} onClick={() => {
         if (!canSubmit || submitting.current) return;
+        const currentTime = Date.now();
+        if (selected.some((type) => !purchasable(type, currentTime))) { setNow(currentTime); return; }
         submitting.current = true;
         buy.mutate();
       }}>

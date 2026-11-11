@@ -5,6 +5,13 @@ import { fakeAuthUrl, moduleUrl, scriptApi } from './harness.mjs';
 
 const apiUrl = await moduleUrl('../src/shared/api/eventReports.ts', { '"./auth"': JSON.stringify(fakeAuthUrl) });
 const modelUrl = await moduleUrl('../src/features/Organizer/model/eventReportModel.ts');
+const apiTimeUrl = await moduleUrl('../src/shared/lib/parseApiInstant.ts');
+const eventTimeUrl = await moduleUrl('../src/features/Organizer/model/eventDateTime.ts', {
+  '"../../../shared/lib/parseApiInstant"': JSON.stringify(apiTimeUrl),
+});
+const { analyticsFilters } = await import(await moduleUrl('../src/features/Organizer/model/eventAnalyticsModel.ts', {
+  '"./eventDateTime"': JSON.stringify(eventTimeUrl),
+}));
 const { eventReportsApi } = await import(apiUrl);
 const { eventReportKeys, reportPage, timelineFilters, REPORT_PAGE_SIZE } = await import(modelUrl);
 
@@ -105,4 +112,18 @@ test('report cache keys isolate accounts, events, pages and applied filters', ()
   assert.notDeepEqual(eventReportKeys.timeline(1, 7, filters, 0), eventReportKeys.timeline(1, 7, filters, 1));
   assert.notDeepEqual(eventReportKeys.timeline(1, 7, filters, 0), eventReportKeys.timeline(1, 7, { actions: ['event.published'] }, 0));
   assert.notDeepEqual(eventReportKeys.timeline(1, 7, filters, 0), eventReportKeys.timeline(1, 7, { since: '2026-10-29T00:00:00Z', actions: [] }, 0));
+});
+
+test('analytics requests convert the event-local range to UTC and select one ticket type', async () => {
+  const result = analyticsFilters('2026-11-11T09:00', '2026-11-12T09:00', '12', 'Asia/Almaty');
+  const report = { capacity: 75, sales_over_time: [{ date: '2026-11-11', tickets: 2, revenue_minor: 125000 }] };
+  const fake = scriptApi([[200, report]]);
+  assert.deepEqual(await eventReportsApi.analytics(7, result.filters), report);
+  const url = new URL(fake.calls[0].path, 'https://app.example');
+  assert.equal(url.pathname, '/organizer/events/7/analytics');
+  assert.deepEqual(Object.fromEntries(url.searchParams), {
+    since: '2026-11-11T04:00:00.000Z', until: '2026-11-12T04:00:00.000Z', ticket_type_id: '12',
+  });
+  assert.equal(analyticsFilters('2026-11-12T09:00', '2026-11-11T09:00', '', 'Asia/Almaty').error, 'reports.invalidRange');
+  assert.equal(analyticsFilters('2026-11-01T01:30', '', '', 'America/New_York').error, 'validation.eventDateAmbiguous');
 });

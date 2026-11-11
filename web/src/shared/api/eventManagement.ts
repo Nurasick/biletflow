@@ -6,8 +6,11 @@ export type TicketTypeInput = {
   description: string | null;
   price_minor: number;
   quantity_total: number;
+  sales_start_at: string | null;
+  sales_end_at: string | null;
   max_per_order: number | null;
   is_hidden: boolean;
+  position: number;
 };
 
 export type Checklist = {
@@ -62,7 +65,7 @@ export type StaffMember = { user_id: number; email: string; first_name: string; 
 const base = (eventId: number) => `/organizer/events/${eventId}`;
 
 export const ticketTypesApi = {
-  list: (eventId: number) => api.get<OrganizerTicketType[]>(`${base(eventId)}/ticket-types`),
+  list: (eventId: number, signal?: AbortSignal) => api.get<OrganizerTicketType[]>(`${base(eventId)}/ticket-types`, { signal }),
   create: (eventId: number, input: TicketTypeInput) =>
     api.post<OrganizerTicketType>(`${base(eventId)}/ticket-types`, input),
   update: (eventId: number, id: number, input: Partial<TicketTypeInput>) =>
