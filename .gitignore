@@ -72,3 +72,6 @@ desktop.ini
 
 # Uploaded event images (local storage backend, app/services/storage.py)
 backend/media/
+
+# Demo-seed uploads (backend/scripts/seed_demo.py with MEDIA_ROOT=media_demo)
+backend/media_demo/

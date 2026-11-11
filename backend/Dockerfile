@@ -13,6 +13,12 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.17 /uv /uvx /bin/
 
+# Printable tickets embed a Unicode font for Kazakh and Russian names
+# (app/services/ticket_pdf.py); the slim image ships none.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 RUN --mount=type=cache,target=/root/.cache/uv \

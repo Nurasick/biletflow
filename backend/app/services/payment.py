@@ -10,10 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.clock import as_utc, utcnow
+from app.models.event import Event
 from app.models.order import Order, OrderStatus
 from app.models.payment import Payment, PaymentPurpose, PaymentStatus
 from app.models.user import User
-from app.services import audit, order_lifecycle
+from app.services import audit, notify, order_lifecycle
 from app.services import order as order_service
 from app.services import payment_provider as provider
 from app.services.order_lifecycle import IllegalOrderTransition
@@ -74,6 +75,21 @@ def pay_order(
         # is cancelled so the buyer starts a fresh checkout rather than
         # retrying against inventory that is no longer theirs.
         order_lifecycle.cancel_pending(db, order, actor, now)
+        # §4.10 "Payment failure". The link goes back to the event, because
+        # this order is over and a retry is a fresh checkout.
+        event = db.get(Event, order.event_id)
+        notify.notify(
+            db,
+            "payment.failed",
+            {
+                "order_number": order.order_number,
+                "event_title": event.title,
+                "reason": result.failure_reason,
+                "link": notify.web_link(f"/events/{event.slug}"),
+            },
+            email=order.contact_email,
+            user_id=order.user_id,
+        )
         return payment
 
     order_service.confirm_order(db, order, now)

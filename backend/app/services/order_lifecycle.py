@@ -16,13 +16,14 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
+from app.models.event import Event
 from app.models.hold import Hold
 from app.models.order import Order, OrderStatus
 from app.models.payment import Payment, PaymentPurpose, PaymentStatus, Refund, RefundStatus
 from app.models.ticket import Ticket, TicketStatus
 from app.models.ticket_type import TicketType
 from app.models.user import User
-from app.services import audit
+from app.services import audit, notify
 from app.services import payment_provider as provider
 
 # Tickets that still admit someone. Cancelling or refunding voids exactly these.
@@ -82,6 +83,7 @@ def cancel_registration(db: Session, order: Order, actor: User, now: datetime | 
         summary=f"Registration {order.order_number} cancelled by the organizer",
         payload={"tickets_voided": voided},
     )
+    _tell_buyer(db, order, "order.cancelled")
 
 
 def refund(db: Session, order: Order, actor: User, reason: str, now: datetime | None = None):
@@ -150,6 +152,27 @@ def refund(db: Session, order: Order, actor: User, reason: str, now: datetime | 
         actor=actor,
         summary=f"Order {order.order_number} refunded in full",
         payload={"amount_minor": entry.amount_minor, "tickets_voided": voided},
+    )
+    # §4.10 "Refund completion", UC5 "the attendee is notified".
+    _tell_buyer(db, order, "refund.completed", amount=f"{entry.amount_minor / 100:,.0f} KZT")
+
+
+def _tell_buyer(db: Session, order: Order, template_key: str, **extra) -> None:
+    # Imported here: services.order imports this module's siblings, and the
+    # link helper lives there next to the token it signs.
+    from app.services.order import order_link
+
+    notify.notify(
+        db,
+        template_key,
+        {
+            "order_number": order.order_number,
+            "event_title": db.scalar(select(Event.title).where(Event.id == order.event_id)),
+            "link": order_link(order),
+            **extra,
+        },
+        email=order.contact_email,
+        user_id=order.user_id,
     )
 
 

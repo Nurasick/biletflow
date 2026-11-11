@@ -3,14 +3,19 @@ from fastapi import APIRouter
 from app.api.v1.routes import (
     activation,
     admin,
+    admin_ops,
     auth,
+    campaigns,
     check_in,
+    documents,
     event_images,
     event_reports,
     events,
     health,
+    notifications,
     orders,
     organizer,
+    support,
     ticket_types,
     users,
 )
@@ -28,3 +33,8 @@ api_router.include_router(activation.router)
 api_router.include_router(event_reports.router)
 api_router.include_router(check_in.router)
 api_router.include_router(admin.router)
+api_router.include_router(admin_ops.router)
+api_router.include_router(campaigns.router)
+api_router.include_router(documents.router)
+api_router.include_router(support.router)
+api_router.include_router(notifications.router)

@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.services import storage
 from app.services.hold import release_expired_holds
+from app.services.notify import deliver_pending
 
 logger = logging.getLogger(__name__)
 
@@ -36,15 +37,39 @@ async def _sweep_holds_forever(interval: int) -> None:
         await asyncio.sleep(interval)
 
 
+def _deliver_once() -> int:
+    with SessionLocal() as db:
+        return deliver_pending(db)
+
+
+async def _send_notifications_forever(interval: int) -> None:
+    # The outbox worker (docs/data-model/07-platform.md): requests only write
+    # a row, and this loop does the slow part, so no checkout waits on SMTP.
+    # Safe with several workers: deliver_pending claims each row before sending.
+    while True:
+        try:
+            await run_in_threadpool(_deliver_once)
+        except Exception:
+            logger.exception("notification delivery failed")
+        await asyncio.sleep(interval)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    interval = settings.HOLD_SWEEP_INTERVAL_SECONDS
-    sweeper = asyncio.create_task(_sweep_holds_forever(interval)) if interval > 0 else None
+    tasks = []
+    if settings.HOLD_SWEEP_INTERVAL_SECONDS > 0:
+        tasks.append(
+            asyncio.create_task(_sweep_holds_forever(settings.HOLD_SWEEP_INTERVAL_SECONDS))
+        )
+    if settings.NOTIFY_INTERVAL_SECONDS > 0:
+        tasks.append(
+            asyncio.create_task(_send_notifications_forever(settings.NOTIFY_INTERVAL_SECONDS))
+        )
     yield
-    if sweeper is not None:
-        sweeper.cancel()
+    for task in tasks:
+        task.cancel()
         with suppress(asyncio.CancelledError):
-            await sweeper
+            await task
 
 
 def create_app() -> FastAPI:

@@ -56,7 +56,12 @@ class Order(Base):
     total_minor: Mapped[int] = mapped_column(BigInteger)
     currency: Mapped[str] = mapped_column(CHAR(3), server_default="KZT")
 
-    # `campaign_id` (§4.14) is added with the campaigns slice (05).
+    # §4.14 attribution: where the order came from. Set whenever a campaign
+    # code or QR link was applied, even if the discount turned out to be zero;
+    # promo_redemptions records whether a discount was actually granted.
+    campaign_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("campaigns.id"), index=True
+    )
 
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -12,14 +12,13 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
-from app.core.config import settings
 from app.models.activation import ActivationStatus, EventActivation
 from app.models.event import Event
 from app.models.organizer import AccountStatus, OrganizerProfile, PayoutAccount, VerificationStatus
 from app.models.payment import Payment, PaymentPurpose, PaymentStatus
 from app.models.ticket_type import TicketType
 from app.models.user import User
-from app.services import audit
+from app.services import audit, notify, platform
 from app.services import payment_provider as provider
 
 
@@ -67,7 +66,7 @@ def get_or_start(db: Session, event: Event) -> EventActivation:
         activation = EventActivation(
             event_id=event.id,
             status=ActivationStatus.PENDING,
-            activation_fee_minor=settings.ACTIVATION_FEE_MINOR,
+            activation_fee_minor=platform.get_int(db, "activation_fee_minor"),
             currency="KZT",
         )
         db.add(activation)
@@ -165,6 +164,7 @@ def activate(db: Session, event: Event, activation: EventActivation, actor: User
         actor=actor,
         summary="Paid sales activated",
     )
+    _tell_organizer(db, activation, "active")
 
 
 def suspend(db: Session, activation: EventActivation, admin: User, reason: str, now=None):
@@ -190,6 +190,7 @@ def suspend(db: Session, activation: EventActivation, admin: User, reason: str, 
         summary="Paid sales suspended by a platform admin",
         payload={"reason": reason},
     )
+    _tell_organizer(db, activation, "suspended")
 
 
 def reinstate(db: Session, activation: EventActivation, admin: User):
@@ -202,6 +203,24 @@ def reinstate(db: Session, activation: EventActivation, admin: User):
         event_id=activation.event_id,
         actor=admin,
         summary="Paid sales reinstated by a platform admin",
+    )
+    _tell_organizer(db, activation, "active")
+
+
+def _tell_organizer(db: Session, activation: EventActivation, status: str) -> None:
+    """§4.10 "Organizer payout status": whether this event can take money."""
+    event = db.get(Event, activation.event_id)
+    profile = db.get(OrganizerProfile, event.organizer_profile_id)
+    owner = db.get(User, profile.user_id)
+    notify.notify_user(
+        db,
+        owner,
+        "payout.status",
+        {
+            "event_title": event.title,
+            "status": status,
+            "link": notify.web_link(f"/organizer/events/{event.id}/preview"),
+        },
     )
 
 

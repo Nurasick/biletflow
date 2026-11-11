@@ -1,4 +1,4 @@
-"""Human-facing identifiers: order numbers and ticket codes.
+"""Human-facing identifiers: order numbers, ticket codes and support case numbers.
 
 Both are random, not sequential: a sequence would tell anyone holding one
 order number how many orders exist and let them guess their neighbours'.
@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.order import Order
+from app.models.support import SupportCase
 from app.models.ticket import Ticket
 
 # Crockford base32: no I, L, O or U, so a code read aloud over the phone or
@@ -48,6 +49,16 @@ def new_order_number(db: Session, now: datetime) -> str:
     return _unique(
         lambda: f"BF-{now:%y%m%d}-{_random(6)}",
         lambda code: db.scalar(select(Order.id).where(Order.order_number == code)) is not None,
+    )
+
+
+def new_case_number(db: Session, now: datetime) -> str:
+    """SC-261029-7KQ2MX, quoted by the requester in emails and calls (§4.13)."""
+    return _unique(
+        lambda: f"SC-{now:%y%m%d}-{_random(6)}",
+        lambda code: (
+            db.scalar(select(SupportCase.id).where(SupportCase.case_number == code)) is not None
+        ),
     )
 
 

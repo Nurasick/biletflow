@@ -28,6 +28,10 @@ class CheckoutRequest(BaseModel):
     contact_email: EmailStr
     contact_phone: str | None = Field(default=None, max_length=32)
     items: list[OrderLineIn] = Field(min_length=1)
+    # §4.14: a typed promo code, or the opaque token from a Campaign QR link.
+    # Never a discount amount; the server computes that.
+    promo_code: str | None = Field(default=None, max_length=64)
+    campaign_token: str | None = Field(default=None, max_length=64)
 
     @model_validator(mode="after")
     def check_items(self) -> Self:
@@ -46,6 +50,7 @@ class OrderItemRead(BaseModel):
     ticket_type_id: int
     quantity: int
     unit_price_minor: int
+    discount_minor: int
     subtotal_minor: int
 
 
@@ -95,6 +100,10 @@ class OrderRead(BaseModel):
     expires_at: datetime | None
     confirmed_at: datetime | None
     created_at: datetime
+    # The promo code that was applied, for "code STUDENT20: −20 %" (§4.14).
+    promo_code: str | None = None
+    # §4.6: demonstration payments are never presented as real.
+    is_simulated: bool = True
     items: list[OrderItemRead]
     # Empty until the order is confirmed: tickets do not exist before that.
     tickets: list[TicketRead]

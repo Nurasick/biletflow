@@ -21,12 +21,13 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.clock import as_utc, utcnow
+from app.core.config import settings
 from app.models.event import Event, EventStatus
 from app.models.order import Order, OrderStatus
 from app.models.organizer import OrganizerProfile
 from app.models.ticket_type import TicketType
 from app.models.user import User
-from app.services import audit, order_lifecycle
+from app.services import audit, notify, order_lifecycle
 from app.services.event import unique_slug
 
 RequirementCode = Literal["title", "venue", "schedule", "future_start", "visible_ticket_type"]
@@ -143,9 +144,25 @@ def cancel(
         raise IllegalEventTransition("the event is already cancelled")
     previous = event.status
     try:
+        # Read before the orders are settled: afterwards none is "confirmed".
+        buyers = ticket_holders(db, event)
         counts = _settle_orders(db, event, actor, now)
         _flip(db, event, previous, EventStatus.CANCELLED, cancelled_at=now)
         _audit(db, event, actor, "event.cancelled", "Event cancelled", {"reason": reason, **counts})
+        # §4.10 "Event cancellation", §4.11: the link is the calendar file,
+        # which now says STATUS:CANCELLED and replaces the earlier entry.
+        for email, user_id in buyers:
+            notify.notify(
+                db,
+                "event.cancelled",
+                {
+                    "event_title": event.title,
+                    "link": f"{settings.PUBLIC_API_URL.rstrip('/')}{settings.API_V1_PREFIX}"
+                    f"/events/{event.slug}/calendar.ics",
+                },
+                email=email,
+                user_id=user_id,
+            )
     except Exception:
         db.rollback()
         raise
@@ -220,6 +237,17 @@ _DUPLICATED_TICKET_FIELDS = (
     "name", "description", "price_minor", "currency", "quantity_total", "sales_start_at",
     "sales_end_at", "max_per_order", "is_hidden", "position",
 )  # fmt: skip
+
+
+def ticket_holders(db: Session, event: Event) -> list[tuple[str, int | None]]:
+    """(email, user id) of everyone holding a confirmed order, one row per
+    address, for §4.10's "Event updates" and "Event cancellation"."""
+    rows = db.execute(
+        select(Order.contact_email, func.max(Order.user_id))
+        .where(Order.event_id == event.id, Order.status == OrderStatus.CONFIRMED)
+        .group_by(Order.contact_email)
+    ).all()
+    return [(email, user_id) for email, user_id in rows]
 
 
 def _settle_orders(db: Session, event: Event, actor: User, now: datetime) -> dict[str, int]:
