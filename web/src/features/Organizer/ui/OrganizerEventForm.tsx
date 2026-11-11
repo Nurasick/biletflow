@@ -43,11 +43,11 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = fa
         <EventFormSection id="event-basics-heading" number="01" title={t("organizerEvent.basics")}
           description={t("organizerEvent.basicsDescription")}>
           <EventInput id="event-title" label={t("organizerEvent.title")} required maxLength={300}
-            placeholder={t("organizerEvent.titlePlaceholder")} registration={register("title")} error={errors.title} />
+            registration={register("title")} error={errors.title} />
           <EventFormField id="event-description" label={t("organizerEvent.description")} required error={errors.description}
             hint={t("organizerEvent.descriptionHint", { count: description.length })}>
             <textarea {...register("description")} id="event-description" required rows={5} maxLength={10_000}
-              className={`${eventInputClass} resize-y`} placeholder={t("organizerEvent.descriptionPlaceholder")}
+              className={`${eventInputClass} resize-y`}
               aria-invalid={Boolean(errors.description)}
               aria-describedby={`event-description-hint${errors.description ? " event-description-error" : ""}`} />
           </EventFormField>
@@ -74,9 +74,8 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = fa
         <EventFormSection id="event-venue-heading" number="03" title={t("organizerEvent.venue")}
           description={t("organizerEvent.venueDescription")}>
           <EventInput id="event-venue-name" label={t("organizerEvent.venueName")} required maxLength={300}
-            placeholder={t("organizerEvent.venueNamePlaceholder")} registration={register("venueName")} error={errors.venueName} />
-          <EventInput id="event-venue-address" label={t("organizerEvent.venueAddress")} required maxLength={2000}
-            autoComplete="street-address" placeholder={t("organizerEvent.venueAddressPlaceholder")}
+            registration={register("venueName")} error={errors.venueName} />
+          <EventInput id="event-venue-address" label={t("organizerEvent.venueAddress")} required maxLength={2000} autoComplete="street-address"
             registration={register("venueAddress")} error={errors.venueAddress} />
         </EventFormSection>
 

@@ -19,8 +19,8 @@ export const VerifyEmailPage = () => {
 
   return (
     <AuthShell top={null}>
-      <AuthHeading eyebrow={t("auth.recovery")} title={t("verify.title")} description="" />
-      {verify.isPending && <p role="status" className="mt-6 text-sm text-[#667085]">{t("eventWorkflow.loading")}</p>}
+      <AuthHeading title={t("verify.title")} />
+      {verify.isPending && <p role="status" className="mt-6 text-sm text-[#667085]">{t("verify.loading")}</p>}
       {verify.isSuccess && <Alert className="mt-6" type="success" showIcon title={t("verify.done")} />}
       {(verify.isError || !token) && <Alert className="mt-6" type="error" showIcon title={t("verify.failed")} />}
       <Link to="/account" className="mt-6 inline-block font-semibold text-[#D9431F]">{t("auth.continueSignIn")}</Link>
