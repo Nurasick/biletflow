@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ticketLimit } from '@/api/public';
+import { openEventCalendar } from '@/shared/api/documents';
 import { eventsApi, formatEventDate, formatEventPrice, resolveEventImage, type EventDetail, type PublicTicketType } from '@/shared/api/events';
 
 const palette = {
@@ -25,6 +26,8 @@ export default function EventDetailsScreen() {
   const [ticketTypes, setTicketTypes] = useState<PublicTicketType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [calendarBusy, setCalendarBusy] = useState(false);
 
   useEffect(() => {
     if (!slug) {
@@ -54,6 +57,18 @@ export default function EventDetailsScreen() {
   const canBook = event?.status === 'published' && ticketTypes.some((ticket) => ticketLimit(ticket) > 0 && (ticket.price_minor === 0 || event.paid_sales_active));
   const goBack = () => router.canGoBack() ? router.back() : router.replace('/');
   const category = event?.category ? event.category.replace('_', ' ').toUpperCase() : 'EVENT';
+  const addToCalendar = async () => {
+    if (!event || calendarBusy) return;
+    setCalendarBusy(true);
+    setCalendarError(null);
+    try {
+      await openEventCalendar(event.slug);
+    } catch (calendarFailure) {
+      setCalendarError(calendarFailure instanceof Error ? calendarFailure.message : 'Could not open the calendar file.');
+    } finally {
+      setCalendarBusy(false);
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right', 'bottom']}>
@@ -89,6 +104,10 @@ export default function EventDetailsScreen() {
             <View style={{ marginTop: -10, marginHorizontal: 14, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
               <InfoRow icon="◷" title={formatEventDate(event.starts_at)} detail={`Ends ${formatEventDate(event.ends_at)}`} colors={colors} />
               <InfoRow icon="⌖" title={event.venue_name} detail={event.venue_address} colors={colors} />
+              <Pressable accessibilityRole="button" disabled={calendarBusy} onPress={() => void addToCalendar()} style={{ alignSelf: 'flex-start', marginTop: 2, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised, opacity: calendarBusy ? 0.6 : 1 }}>
+                <ThemedText style={{ color: colors.accent, fontSize: 12, fontWeight: '700' }}>{calendarBusy ? 'Preparing calendar file…' : 'Add to calendar (.ics)'}</ThemedText>
+              </Pressable>
+              {!!calendarError && <ThemedText style={{ marginTop: 7, color: colors.paleAccent, fontSize: 11 }}>{calendarError}</ThemedText>}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 10 }}>
                 <Chip label={event.seating_mode === 'assigned' ? 'Assigned seating' : 'General admission'} colors={colors} />
                 {event.capacity !== null && <Chip label={`${event.capacity.toLocaleString()} capacity`} colors={colors} />}
@@ -123,7 +142,7 @@ export default function EventDetailsScreen() {
           </ScrollView>
 
           <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface }}>
-            <Pressable accessibilityRole="button" disabled={!canBook} onPress={() => router.push({ pathname: '/seat-selection', params: { slug: event.slug } })} style={{ alignItems: 'center', paddingVertical: 13, borderRadius: 12, backgroundColor: colors.accent, opacity: canBook ? 1 : 0.5 }}>
+            <Pressable accessibilityRole="button" disabled={!canBook} onPress={() => router.push({ pathname: event.seating_mode === 'assigned' ? '/seat-selection' : '/ticket-selection', params: { slug: event.slug } })} style={{ alignItems: 'center', paddingVertical: 13, borderRadius: 12, backgroundColor: colors.accent, opacity: canBook ? 1 : 0.5 }}>
               <ThemedText style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>{canBook ? 'Choose tickets' : 'Booking unavailable'}</ThemedText>
             </Pressable>
           </View>

@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/hooks/use-auth';
+import { requestPasswordReset } from '@/shared/api/auth';
 
 export default function LoginScreen() {
   const [registering, setRegistering] = useState(false);
@@ -15,6 +16,10 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
   const { login, loading, error } = useAuth();
   const router = useRouter();
 
@@ -32,6 +37,25 @@ export default function LoginScreen() {
   };
 
   const displayedError = formError ?? error;
+
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setResetError('Enter your email address first.');
+      setResetMessage(null);
+      return;
+    }
+    setResetBusy(true);
+    setResetError(null);
+    setResetMessage(null);
+    try {
+      await requestPasswordReset(email);
+      setResetMessage('If an account uses this email, a password reset link is on its way.');
+    } catch (failure) {
+      setResetError(failure instanceof Error ? failure.message : 'Could not request a password reset.');
+    } finally {
+      setResetBusy(false);
+    }
+  };
 
   if (registering) return <RegisterForm onBack={() => setRegistering(false)} />;
 
@@ -60,6 +84,34 @@ export default function LoginScreen() {
             </ThemedText>
           </View>
 
+          {resetMode ? (
+            <View className="mb-6 gap-4">
+              <ThemedText className="text-sm text-[#98A2B3]">Enter your account email and we’ll send a password reset link if the account exists.</ThemedText>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="email"
+                editable={!resetBusy}
+                keyboardType="email-address"
+                placeholder="you@example.com"
+                placeholderTextColor="#98A2B3"
+                className="rounded-lg border border-[#344054] bg-[#101828] px-4 py-3 text-base text-[#F5F5F0]"
+                value={email}
+                onChangeText={(value) => { setEmail(value); setResetError(null); setResetMessage(null); }}
+              />
+              {!!resetError && <ThemedText className="text-sm text-red-500">{resetError}</ThemedText>}
+              {!!resetMessage && <ThemedText className="text-sm text-green-500">{resetMessage}</ThemedText>}
+              <TouchableOpacity
+                accessibilityRole="button"
+                className={`items-center rounded-lg bg-[#FF5C35] py-4 ${resetBusy ? 'opacity-70' : ''}`}
+                disabled={resetBusy}
+                onPress={() => void handlePasswordReset()}>
+                <ThemedText className="text-base font-bold text-white">{resetBusy ? 'Sending...' : 'Send reset link'}</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity disabled={resetBusy} onPress={() => { setResetMode(false); setResetError(null); setResetMessage(null); }}>
+                <ThemedText className="text-center text-sm font-semibold text-[#FF5C35]">Back to sign in</ThemedText>
+              </TouchableOpacity>
+            </View>
+          ) : <>
           {displayedError && (
             <ThemedText className="mb-4 rounded bg-red-900/20 px-3 py-2 text-sm text-red-500">
               {displayedError}
@@ -87,7 +139,7 @@ export default function LoginScreen() {
           <View className="mb-6">
             <View className="mb-2 flex-row items-center justify-between">
               <ThemedText className="text-sm font-semibold">Password</ThemedText>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => { setResetMode(true); setResetError(null); setResetMessage(null); }}>
                 <ThemedText className="text-xs font-semibold text-[#FF5C35]">Forgot password?</ThemedText>
               </TouchableOpacity>
             </View>
@@ -144,6 +196,7 @@ export default function LoginScreen() {
               <ThemedText className="text-sm font-bold text-[#FF5C35]">Sign up</ThemedText>
             </TouchableOpacity>
           </View>
+          </>}
         </ThemedView>
       </ScrollView>
     </SafeAreaView>

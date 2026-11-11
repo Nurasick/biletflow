@@ -46,6 +46,17 @@ export type EventFilters = {
   limit?: number;
 };
 
+export type PromoQuote = {
+  code: string;
+  name: string;
+  discount_type: 'percent' | 'fixed';
+  discount_value: number;
+  ticket_type_ids: number[];
+  subtotal_minor: number;
+  discount_minor: number;
+  total_minor: number;
+};
+
 async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   let response: Response;
   try {
@@ -80,6 +91,29 @@ export const eventsApi = {
     getJson<EventDetail>(`/events/${encodeURIComponent(slug)}`, signal),
   ticketTypes: (slug: string, signal?: AbortSignal) =>
     getJson<PublicTicketType[]>(`/events/${encodeURIComponent(slug)}/ticket-types`, signal),
+};
+
+export const promotionsApi = {
+  quote: async (slug: string, code: string, items: { ticket_type_id: number; quantity: number }[]): Promise<PromoQuote> => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_V1_URL}/events/${encodeURIComponent(slug)}/promo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, items }),
+      });
+    } catch {
+      throw new Error('Could not reach the BiletFlow API. Check your connection and try again.');
+    }
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      const detail = typeof body === 'object' && body !== null && 'detail' in body
+        ? (body as { detail?: unknown }).detail
+        : null;
+      throw new Error(typeof detail === 'string' ? detail : 'Could not apply this promo code.');
+    }
+    return body as PromoQuote;
+  },
 };
 
 /** Local backend media URLs often say localhost; on a phone that means the phone itself. */
