@@ -18,6 +18,7 @@ export const EVENT_AUDIT_ACTIONS = [
   "activation.suspended", "activation.reinstated", "order.confirmed", "order.cancelled", "order.refunded",
   "refund.initiated", "payment.succeeded", "payment.failed", "staff.assigned", "staff.removed",
   "ticket.checked_in", "ticket.check_in_reversed",
+  "campaign.created", "campaign.updated", "campaign.enabled", "campaign.disabled",
 ] as const;
 
 // datetime-local has no offset. Round-trip the browser's local fields before

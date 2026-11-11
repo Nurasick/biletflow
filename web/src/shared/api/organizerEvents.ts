@@ -134,9 +134,10 @@ const wrap = async <T>(code: "organizerEvent.loadError" | "organizerEvent.saveEr
 
 export const organizerEventApi = {
   empty: emptyOrganizerEvent,
+  read: (eventId: number, signal?: AbortSignal) => api.get<OrganizerEventRecord>(path(eventId), { signal }),
   get: (eventId: number) => wrap("organizerEvent.loadError", async () => {
     const [event, images] = await Promise.all([
-      api.get<OrganizerEventRecord>(path(eventId)),
+      organizerEventApi.read(eventId),
       api.get<ServerImage[]>(`${path(eventId)}/images`),
     ]);
     return { event, values: toValues(event, images) };

@@ -3,7 +3,10 @@ import test from 'node:test';
 
 import { fakeAuthUrl, moduleUrl, scriptApi } from './harness.mjs';
 
-const dateTimeUrl = await moduleUrl('../src/features/Organizer/model/eventDateTime.ts');
+const apiTimeUrl = await moduleUrl('../src/shared/lib/parseApiInstant.ts');
+const dateTimeUrl = await moduleUrl('../src/features/Organizer/model/eventDateTime.ts', {
+  '"../../../shared/lib/parseApiInstant"': JSON.stringify(apiTimeUrl),
+});
 const schemaUrl = await moduleUrl('../src/features/Organizer/model/eventSchema.ts', {
   '"zod"': JSON.stringify(import.meta.resolve('zod')),
   '"./eventDateTime"': JSON.stringify(dateTimeUrl),

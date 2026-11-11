@@ -13,6 +13,7 @@ import { OrganizerRoute } from "./shared/auth/OrganizerRoute";
 import { OrganizerEventPage } from "./pages/OrganizerEventPage";
 import { OrganizerEventsPage } from "./pages/OrganizerEventsPage";
 import { OrganizerEventPreviewPage } from "./pages/OrganizerEventPreviewPage";
+import { OrganizerAnalyticsPage } from "./pages/OrganizerAnalyticsPage";
 import { OrderPage } from "./pages/OrderPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { StaffEventsPage } from "./pages/StaffEventsPage";
@@ -20,6 +21,11 @@ import { StaffEventPage } from "./pages/StaffEventPage";
 import { AdminEventsPage } from "./pages/AdminEventsPage";
 import { AdminEventPage } from "./pages/AdminEventPage";
 import { AdminRoute } from "./shared/auth/AdminRoute";
+import { NotificationsPage } from "./pages/NotificationsPage";
+import { SupportPage } from "./pages/SupportPage";
+import { SupportCasePage } from "./pages/SupportCasePage";
+import { StaffSupportPage } from "./pages/StaffSupportPage";
+import { StaffSupportCasePage } from "./pages/StaffSupportCasePage";
 
 function App() {
   const router = createBrowserRouter([
@@ -28,6 +34,7 @@ function App() {
       children: [
         { path: "/organizer/events", element: <OrganizerEventsPage /> },
         { path: "/organizer/events/:eventId/preview", element: <OrganizerEventPreviewPage /> },
+        { path: "/organizer/events/:eventId/analytics", element: <OrganizerAnalyticsPage /> },
         { path: "/organizer/events/new", element: <OrganizerEventPage /> },
         { path: "/organizer/events/:eventId/edit", element: <OrganizerEventPage /> },
       ],
@@ -60,8 +67,11 @@ function App() {
           element: <ProtectedRoute />,
           children: [
             { path: "/account", element: <AccountPage /> },
+            { path: "/notifications", element: <NotificationsPage /> },
             { path: "/staff/events", element: <StaffEventsPage /> },
             { path: "/staff/events/:eventId", element: <StaffEventPage /> },
+            { path: "/staff/support", element: <StaffSupportPage /> },
+            { path: "/staff/support/:caseNumber", element: <StaffSupportCasePage /> },
           ],
         },
         {
@@ -77,6 +87,8 @@ function App() {
         },
         { path: "/events/:slug", element: <EventPage /> },
         { path: "/orders/:orderNumber", element: <OrderPage /> },
+        { path: "/support", element: <SupportPage /> },
+        { path: "/support/:caseNumber", element: <SupportCasePage /> },
       ],
     },
   ]);

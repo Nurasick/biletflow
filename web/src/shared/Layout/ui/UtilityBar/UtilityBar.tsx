@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { LanguageSwitcher } from "../../../../i18n/LanguageSwitcher";
 export const UtilityBar = () => {
   const { t } = useTranslation();
@@ -7,7 +8,7 @@ export const UtilityBar = () => {
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <div className="flex items-center gap-5">
           <span className="font-semibold">{t("nav.city")} ▾</span>
-          <span className="text-[#98A2B3]">{t("common.help")}</span>
+          <Link to="/support" className="text-[#D0D5DD] hover:text-white">{t("common.help")}</Link>
           <span className="text-[#98A2B3]">{t("nav.forOrganizers")}</span>
         </div>
         <div className="flex items-center gap-5 text-[#98A2B3]">

@@ -1,18 +1,23 @@
 import { ConfigProvider } from "antd";
-import { ArrowLeft, BadgeCheck, CalendarDays, CalendarPlus, ScanLine, UserRound } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarDays, CalendarPlus, LifeBuoy, MessageCircle, ScanLine, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useOutletContext } from "react-router-dom";
 
 import { LanguageSwitcher } from "../../../i18n/LanguageSwitcher";
+import type { OrganizerContext } from "../../../shared/auth/OrganizerRoute";
+import { NotificationLink } from "../../Notifications/ui/NotificationLink";
 
 export const OrganizerWorkspace = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
+  const { userId, isOrganizer } = useOutletContext<OrganizerContext>();
   const links = [
     { to: "/organizer/events", label: t("eventWorkflow.myEvents"), Icon: CalendarDays, end: true },
     { to: "/organizer/events/new", label: t("nav.createEvent"), Icon: CalendarPlus },
     { to: "/organizer/profile", label: t("organizer.profile"), Icon: UserRound },
     { to: "/staff/events", label: t("nav.checkIn"), Icon: ScanLine },
+    ...(isOrganizer ? [{ to: "/staff/support", label: t("support.queue"), Icon: MessageCircle }] : []),
+    { to: "/support", label: t("common.help"), Icon: LifeBuoy },
   ];
 
   return (
@@ -29,8 +34,11 @@ export const OrganizerWorkspace = ({ children }: { children: ReactNode }) => {
             <Link to="/" aria-label={t("common.home")} className="text-2xl font-bold tracking-tight">
               Bilet<span className="text-[#FF5C35]">Flow</span>
             </Link>
-            <LanguageSwitcher />
-            <span className="rounded-full border border-[#D0D5DD] px-3 py-1.5 text-xs text-[#667085]">{t("organizer.workspace")}</span>
+            <div className="flex flex-wrap items-center gap-4">
+              <LanguageSwitcher />
+              <NotificationLink userId={userId} />
+              <span className="rounded-full border border-[#D0D5DD] px-3 py-1.5 text-xs text-[#667085]">{t("organizer.workspace")}</span>
+            </div>
           </div>
         </header>
         <div className="mx-auto grid max-w-7xl gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[200px_minmax(0,1fr)] lg:py-10">

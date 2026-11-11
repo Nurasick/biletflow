@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { eventReportsApi } from "../../../shared/api/eventReports";
+import { FileDownloadButton } from "../../../shared/ui/FileDownloadButton";
 import { eventReportKeys, REPORT_PAGE_SIZE, reportPage } from "../model/eventReportModel";
 import { ReportError, ReportLoading, ReportPagination, ReportRefresh } from "./ReportControls";
 
@@ -13,7 +14,7 @@ const statusKeys = {
   cancelled: "reports.ticketCancelled", refunded: "reports.ticketRefunded",
 } as const;
 
-export const AttendeesPanel = ({ eventId, userId }: { eventId: number; userId: number }) => {
+export const AttendeesPanel = ({ eventId, userId, slug }: { eventId: number; userId: number; slug: string }) => {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const attendees = useQuery({
@@ -27,7 +28,11 @@ export const AttendeesPanel = ({ eventId, userId }: { eventId: number; userId: n
       <h2 id="event-attendees-title" className="flex items-center gap-2 font-semibold">
         <Users size={18} aria-hidden="true" />{t("reports.attendeesTitle")}
       </h2>
-      <ReportRefresh refresh={() => void attendees.refetch()} fetching={attendees.isFetching} />
+      <div className="flex flex-wrap items-center gap-2">
+        <ReportRefresh refresh={() => void attendees.refetch()} fetching={attendees.isFetching} />
+        <FileDownloadButton label={t("reports.attendeesCsv")} filename={`attendees-${slug}.csv`}
+          getFile={() => eventReportsApi.attendeesCsv(eventId)} />
+      </div>
     </div>
     <p className="mt-2 text-sm leading-6 text-[#667085]">{t("reports.attendeesDescription")}</p>
     <div className="mt-4" aria-busy={attendees.isFetching}>

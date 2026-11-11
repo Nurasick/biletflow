@@ -1,3 +1,5 @@
+import { parseApiInstant } from "../../../shared/lib/parseApiInstant";
+
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 
@@ -44,11 +46,23 @@ export const resolveEventDateTime = (value: string, timeZone: string): number[] 
 // wall-clock "YYYY-MM-DDTHH:mm" it was in the event's own zone, which is what
 // the form edits. Independent of the browser's zone.
 export const toLocalDateTime = (iso: string, timeZone: string): string => {
-  const instant = Date.parse(iso);
+  const instant = parseApiInstant(iso);
   if (!Number.isFinite(instant)) return "";
   const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
     timeZone, year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", hourCycle: "h23",
   }).formatToParts(instant).map(({ type, value }) => [type, value]));
   return `${parts.year.padStart(4, "0")}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+};
+
+export const readEventLocalTime = (value: string, timeZone: string, previous: string | null = null):
+  { instant: string | null; error?: never } |
+  { instant?: never; error: "validation.eventDateTime" | "validation.eventDateNonexistent" | "validation.eventDateAmbiguous" } => {
+  if (!value) return { instant: null };
+  if (previous && toLocalDateTime(previous, timeZone) === value) return { instant: previous };
+  if (parseLocalDateTime(value) === null) return { error: "validation.eventDateTime" };
+  const matches = resolveEventDateTime(value, timeZone);
+  if (!matches.length) return { error: "validation.eventDateNonexistent" };
+  if (matches.length > 1) return { error: "validation.eventDateAmbiguous" };
+  return { instant: new Date(matches[0]).toISOString() };
 };

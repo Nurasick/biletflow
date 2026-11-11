@@ -26,7 +26,10 @@ export const AccountPage = () => {
       <h1 className="text-3xl font-bold">{t("account.title")}</h1>
       <Link to={user.is_organizer ? "/organizer/events" : "/organizer/profile"} className="mt-4 inline-block text-sm font-semibold text-[#D9431F]">{t(user.is_organizer ? "account.organizerWorkspace" : "account.becomeOrganizer")}</Link>
       <nav aria-label={t("account.title")} className="mt-4 flex flex-wrap gap-4 text-sm font-semibold text-[#D9431F]">
+        <Link to="/notifications">{t("notifications.title")}</Link>
+        <Link to="/support">{t("common.help")}</Link>
         <Link to="/staff/events">{t("nav.checkIn")}</Link>
+        {(user.is_organizer || user.is_platform_admin) && <Link to="/staff/support">{t("support.queue")}</Link>}
         {user.is_platform_admin && <Link to="/admin/events">{t("nav.admin")}</Link>}
       </nav>
       <AccountForm key={user.id} user={user} onEditingChange={setAccountEditing} />

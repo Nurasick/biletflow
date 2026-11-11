@@ -1,4 +1,4 @@
-import { api, optionalAuthRequest, rawRequest } from "./auth";
+import { api, optionalAuthFile, optionalAuthRequest, publicFile, rawRequest } from "./auth";
 import type { EventPhase, OrganizerEventRecord } from "./organizerEvents";
 
 export type PublicEvent = OrganizerEventRecord & { phase: EventPhase };
@@ -46,7 +46,8 @@ export type Order = {
   expires_at: string | null;
   confirmed_at: string | null;
   created_at: string;
-  items: { id: number; ticket_type_id: number; quantity: number; unit_price_minor: number; subtotal_minor: number }[];
+  promo_code: string | null;
+  items: { id: number; ticket_type_id: number; quantity: number; unit_price_minor: number; discount_minor: number; subtotal_minor: number }[];
   tickets: OrderTicket[];
 };
 
@@ -55,6 +56,8 @@ export type CheckoutInput = {
   contact_email: string;
   contact_phone?: string | null;
   items: { ticket_type_id: number; attendees: { full_name: string }[] }[];
+  promo_code?: string;
+  campaign_token?: string;
 };
 
 export type EventFilters = { q?: string; category?: string; limit?: number };
@@ -74,6 +77,7 @@ export const eventsApi = {
   get: (slug: string) => rawRequest<EventDetail>(`/events/${encodeURIComponent(slug)}`),
   ticketTypes: (slug: string) =>
     rawRequest<PublicTicketType[]>(`/events/${encodeURIComponent(slug)}/ticket-types`),
+  calendar: (slug: string) => publicFile(`/events/${encodeURIComponent(slug)}/calendar.ics`, "text/calendar"),
 };
 
 export const ordersApi = {
@@ -91,4 +95,9 @@ export const ordersApi = {
   cancel: (orderNumber: string, token: string | null) => optionalAuthRequest<Order>(
     orderPath(orderNumber, token, "cancel"), { method: "POST" }),
   mine: () => api.get<Order[]>("/users/me/orders"),
+  ticketsPdf: (orderNumber: string, token: string | null, publicCode?: string) =>
+    optionalAuthFile(
+      orderPath(orderNumber, token, publicCode ? `tickets/${encodeURIComponent(publicCode)}.pdf` : "tickets.pdf"),
+      "application/pdf",
+    ),
 };

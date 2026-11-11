@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
+import { NotificationLink } from "../../../../features/Notifications/ui/NotificationLink";
 import { useAuth } from "../../../../hooks/useAuth";
 
 export const Header = () => {
@@ -40,12 +41,7 @@ export const Header = () => {
         </form>
 
         <div className="ml-auto flex flex-wrap items-center gap-3">
-          <button aria-label={t("nav.menu")} className="relative grid h-10 w-10 place-items-center rounded-xl border border-[#D0D5DD] text-[#667085]">
-            ☰
-            <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#FF5C35] px-1 text-[10px] font-semibold text-[#101828]">
-              2
-            </span>
-          </button>
+          {user && <NotificationLink userId={user.id} />}
 
           {me.isPending ? (
             <span className="text-xs text-[#667085]">{t("nav.checkingSession")}</span>
@@ -70,6 +66,7 @@ export const Header = () => {
 
       <nav className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-7 py-3 text-sm">
         {user && <Link to="/staff/events" className="font-semibold text-[#A93216]">{t("nav.checkIn")}</Link>}
+        {(user?.is_organizer || user?.is_platform_admin) && <Link to="/staff/support" className="font-semibold text-[#A93216]">{t("support.queue")}</Link>}
         {user?.is_platform_admin && <Link to="/admin/events" className="font-semibold text-[#A93216]">{t("nav.admin")}</Link>}
         <a className="font-semibold" href="#">
           {t("nav.afisha")}
