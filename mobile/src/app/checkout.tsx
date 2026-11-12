@@ -2,14 +2,17 @@ import { useCallback, useRef, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
-import { checkoutItems, decode, get, price, type Order, type TicketType } from '@/api/public';
+import { checkoutItems, decode, get, type Order, type TicketType } from '@/api/public';
 import { Screen, Label, Button } from '@/components/api-screen';
 import { useAuth } from '@/hooks/use-auth';
+import { useI18n } from '@/i18n';
 import { promotionsApi, type PromoQuote } from '@/shared/api/events';
 
 export default function Checkout() {
   const { slug, selection, seats } = useLocalSearchParams<{ slug: string; selection: string; seats?: string }>();
   const router = useRouter();
+  const { t, locale, formatDate, formatNumber } = useI18n();
+  const price = (minor: number, currency: string) => new Intl.NumberFormat(locale, { style: 'currency', currency }).format(minor / 100);
   const { authenticatedFetch, user } = useAuth();
   const [types, setTypes] = useState<TicketType[]>([]);
   const [error, setError] = useState('');
@@ -49,7 +52,7 @@ export default function Checkout() {
       for (let index = 0; index < quantity; index += 1) {
         const key = `${id}-${index}`;
         placeholders[key] = 'Attendee';
-        attendees.push({ key, label: `${type?.name ?? 'Ticket'} attendee ${index + 1}` });
+        attendees.push({ key, label: t('{ticket} attendee {number}', { ticket: type?.name ?? t('Ticket'), number: formatNumber(index + 1) }) });
       }
     }
     if (!loading) {
@@ -100,7 +103,7 @@ export default function Checkout() {
     }
   };
 
-  const field = (label: string, value: string, change: (next: string) => void) => (
+  const field = (label: string, value: string, change: (next: string) => void, isEmail = false) => (
     <TextInput
       accessibilityLabel={label}
       placeholder={label}
@@ -108,9 +111,9 @@ export default function Checkout() {
       value={value}
       onChangeText={change}
       editable={!busy}
-      maxLength={label === 'Contact email' ? 254 : 200}
-      keyboardType={label === 'Contact email' ? 'email-address' : 'default'}
-      autoCapitalize={label === 'Contact email' ? 'none' : 'words'}
+      maxLength={isEmail ? 254 : 200}
+      keyboardType={isEmail ? 'email-address' : 'default'}
+      autoCapitalize={isEmail ? 'none' : 'words'}
       className="rounded border border-gray-500 p-3 text-white"
     />
   );
@@ -118,29 +121,29 @@ export default function Checkout() {
 
   if (order) {
     return (
-      <Screen title="Order created">
-        <Label>Order {order.order_number}: {order.status}</Label>
-        <Label>Total: {price(order.total_minor, order.currency)}</Label>
-        <Label>{order.expires_at ? `Reserved until ${new Date(order.expires_at).toLocaleString()}` : 'Order confirmed.'}</Label>
-        <Label>{order.status === 'pending' ? 'Payment is still required. Open My tickets to complete the demo payment.' : 'Your free order is confirmed.'}</Label>
-        <Button title="Open my tickets" onPress={() => router.replace('/tickets')} />
-        <Button title="Back to events" onPress={() => router.replace('/')} />
+      <Screen title={t('Order created')}>
+        <Label>{t('Order {number}: {status}', { number: order.order_number, status: t(order.status) })}</Label>
+        <Label>{t('Total: {amount}', { amount: price(order.total_minor, order.currency) })}</Label>
+        <Label>{order.expires_at ? t('Reserved until {date}', { date: formatDate(order.expires_at) }) : t('Order confirmed.')}</Label>
+        <Label>{t(order.status === 'pending' ? 'Payment is still required. Open My tickets to complete the demo payment.' : 'Your free order is confirmed.')}</Label>
+        <Button title={t('Open my tickets')} onPress={() => router.replace('/tickets')} />
+        <Button title={t('Back to events')} onPress={() => router.replace('/')} />
       </Screen>
     );
   }
 
   return (
-    <Screen title="Review reservation">
-      {loading && <Label>Checking availability...</Label>}
-      {(error || selectionError) && <Label>{error || selectionError}</Label>}
+    <Screen title={t('Review reservation')}>
+      {loading && <Label>{t('Checking availability...')}</Label>}
+      {(error || selectionError) && <Label>{t(error || selectionError)}</Label>}
       {!loading && !selectionError && <>
-        <Label>Ticket subtotal: {price(estimated, types[0]?.currency ?? 'KZT')}</Label>
-        {promoQuote && <Label>Promo {promoQuote.code} applied: −{price(promoQuote.discount_minor, types[0]?.currency ?? 'KZT')}. Total {price(promoQuote.total_minor, types[0]?.currency ?? 'KZT')}.</Label>}
-        {!!seatPreview.length && <Label>Seat preview: {seatPreview.map((seat) => `Row ${seat.split('-')[0]}, seat ${seat.split('-')[1]}`).join(' · ')}. The backend will reserve the ticket types, but does not hold or save seat numbers yet.</Label>}
+        <Label>{t('Ticket subtotal: {amount}', { amount: price(estimated, types[0]?.currency ?? 'KZT') })}</Label>
+        {promoQuote && <Label>{t('Promo {code} applied: -{discount}. Total {total}.', { code: promoQuote.code, discount: price(promoQuote.discount_minor, types[0]?.currency ?? 'KZT'), total: price(promoQuote.total_minor, types[0]?.currency ?? 'KZT') })}</Label>}
+        {!!seatPreview.length && <Label>{t('Seat preview: {seats}. The backend will reserve the ticket types, but does not hold or save seat numbers yet.', { seats: seatPreview.map((seat) => t('Row {row}, seat {seat}', { row: seat.split('-')[0], seat: seat.split('-')[1] })).join(' / ') })}</Label>}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <TextInput
-            accessibilityLabel="Promo code"
-            placeholder="Promo code"
+            accessibilityLabel={t('Promo code')}
+            placeholder={t('Promo code')}
             placeholderTextColor="#98A2B3"
             value={promoCode}
             onChangeText={(value) => { setPromoCode(value); setPromoQuote(null); setPromoError(''); }}
@@ -150,18 +153,18 @@ export default function Checkout() {
             className="flex-1 rounded border border-gray-500 p-3 text-white"
           />
           <Pressable accessibilityRole="button" disabled={!promoCode.trim() || promoBusy || busy} onPress={() => void applyPromo()} className="rounded bg-orange-600 px-4 py-3">
-            <Label>{promoBusy ? 'Checking…' : promoQuote ? 'Applied' : 'Apply'}</Label>
+            <Label>{t(promoBusy ? 'Checking...' : promoQuote ? 'Applied' : 'Apply')}</Label>
           </Pressable>
         </View>
-        {!!promoError && <Label>{promoError}</Label>}
-        {field('Contact name', name, setName)}
-        {field('Contact email', email, setEmail)}
+        {!!promoError && <Label>{t(promoError)}</Label>}
+        {field(t('Contact name'), name, setName)}
+        {field(t('Contact email'), email, setEmail, true)}
         {attendees.map((attendee) => (
           <View key={attendee.key}>{field(attendee.label, names[attendee.key] ?? '', (value) => setNames((current) => ({ ...current, [attendee.key]: value })))}</View>
         ))}
       </>}
-      <Button title={busy ? 'Reserving...' : 'Reserve tickets'} disabled={busy || loading || !!selectionError || !types.length} onPress={() => void reserve()} />
-      <Button title={seatPreview.length ? 'Choose seats again' : 'Choose tickets again'} disabled={busy} onPress={() => router.replace({ pathname: seatPreview.length ? '/seat-selection' : '/ticket-selection', params: { slug } })} />
+      <Button title={t(busy ? 'Reserving...' : 'Reserve tickets')} disabled={busy || loading || !!selectionError || !types.length} onPress={() => void reserve()} />
+      <Button title={t(seatPreview.length ? 'Choose seats again' : 'Choose tickets again')} disabled={busy} onPress={() => router.replace({ pathname: seatPreview.length ? '/seat-selection' : '/ticket-selection', params: { slug } })} />
     </Screen>
   );
 }

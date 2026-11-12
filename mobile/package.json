@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo/ui": "~57.0.20",
     "expo": "~57.0.25",
+    "expo-camera": "~57.0.5",
     "expo-constants": "~57.0.17",
     "expo-device": "~57.0.2",
     "expo-file-system": "~57.0.7",
@@ -34,6 +35,7 @@
     "toqr": "^0.1.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
   },
@@ -45,7 +47,11 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.cjs"
+    "test": "node --test tests/*.test.cjs",
+    "test:e2e": "playwright test",
+    "test:integration": "node scripts/checkin-integration.cjs --isolated",
+    "export:check": "expo export --platform all --output-dir .expo/qa-export --max-workers 2",
+    "serve:export": "node scripts/serve-export.cjs"
   },
   "private": true
 }

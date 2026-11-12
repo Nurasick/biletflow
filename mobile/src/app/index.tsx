@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useI18n } from '@/i18n';
 import { eventsApi, formatEventDate, resolveEventImage, type EventCategory, type PublicEvent } from '@/shared/api/events';
 
 const CATEGORIES: { label: string; value?: EventCategory; icon: string }[] = [
@@ -32,6 +33,7 @@ const palette = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t, formatDate } = useI18n();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = isDark ? palette.dark : palette.light;
@@ -83,24 +85,27 @@ export default function HomeScreen() {
               <View style={{ width: 22, height: 27, backgroundColor: colors.accent, borderRadius: 5 }} />
               <ThemedText style={{ fontSize: 21, fontWeight: '800', color: colors.text }}>Bilet<ThemedText style={{ color: colors.accent }}>Flow</ThemedText></ThemedText>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Open my tickets" onPress={() => router.push('/tickets')} style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("Open my tickets")} onPress={() => router.push('/tickets')} style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
               <ThemedText style={{ color: colors.accent, fontSize: 15 }}>▣</ThemedText>
-              <ThemedText style={{ color: colors.text, fontSize: 11, fontWeight: '700' }}>My tickets</ThemedText>
+              <ThemedText style={{ color: colors.text, fontSize: 11, fontWeight: '700' }}>{t("My tickets")}</ThemedText>
             </Pressable>
           </View>
-          <ThemedText style={{ marginTop: 18, marginBottom: 11, color: colors.muted, fontSize: 12, fontWeight: '600' }}>Find your next event</ThemedText>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/workspace')} style={{ marginTop: 14, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
+            <ThemedText style={{ color: colors.accent, fontSize: 14, fontWeight: '700' }}>{t('Event staff')} · {t('Support')} · {t('Language')}</ThemedText>
+          </Pressable>
+          <ThemedText style={{ marginTop: 18, marginBottom: 11, color: colors.muted, fontSize: 12, fontWeight: '600' }}>{t("Find your next event")}</ThemedText>
           <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 12, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.border }}>
             <ThemedText style={{ marginRight: 8, color: colors.muted, fontSize: 18 }}>⌕</ThemedText>
             <TextInput
-              accessibilityLabel="Search events and venues"
-              placeholder="Search events or venues…"
+              accessibilityLabel={t("Search events and venues")}
+              placeholder={t("Search events or venues…")}
               placeholderTextColor={colors.muted}
               returnKeyType="search"
               style={{ flex: 1, paddingVertical: 12, color: colors.text, fontSize: 13 }}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-            {searchQuery.length > 0 && <Pressable accessibilityLabel="Clear search" hitSlop={8} onPress={() => setSearchQuery('')}><ThemedText style={{ padding: 4, color: colors.muted }}>×</ThemedText></Pressable>}
+            {searchQuery.length > 0 && <Pressable accessibilityLabel={t("Clear search")} hitSlop={8} onPress={() => setSearchQuery('')}><ThemedText style={{ padding: 4, color: colors.muted }}>×</ThemedText></Pressable>}
           </View>
         </View>
 
@@ -109,13 +114,13 @@ export default function HomeScreen() {
             const selected = category.value === activeCategory;
             return (
               <Pressable
-                key={category.label}
+                key={t(category.label)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 onPress={() => setActiveCategory(category.value)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, paddingVertical: 9, borderRadius: 22, borderWidth: 1, borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.accent : colors.surface }}>
                 <ThemedText style={{ color: selected ? '#FFFFFF' : colors.accent, fontSize: 14 }}>{category.icon}</ThemedText>
-                <ThemedText style={{ color: selected ? '#FFFFFF' : colors.text, fontSize: 12, fontWeight: selected ? '700' : '500' }}>{category.label}</ThemedText>
+                <ThemedText style={{ color: selected ? '#FFFFFF' : colors.text, fontSize: 12, fontWeight: selected ? '700' : '500' }}>{t(category.label)}</ThemedText>
               </Pressable>
             );
           })}
@@ -123,25 +128,25 @@ export default function HomeScreen() {
 
         <View style={{ paddingHorizontal: 16, paddingTop: 7 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <ThemedText style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{searchQuery || activeCategory ? 'Search results' : 'Upcoming events'}</ThemedText>
-            <ThemedText style={{ color: colors.muted, fontSize: 11 }}>{events.length} found</ThemedText>
+            <ThemedText style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{searchQuery || activeCategory ? t("Search results") : t("Upcoming events")}</ThemedText>
+            <ThemedText style={{ color: colors.muted, fontSize: 11 }}>{events.length} {t("found")}</ThemedText>
           </View>
 
           {isLoading && events.length === 0 && (
-            <View style={{ alignItems: 'center', paddingVertical: 48 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted, fontSize: 13 }}>Loading events…</ThemedText></View>
+            <View style={{ alignItems: 'center', paddingVertical: 48 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted, fontSize: 13 }}>{t("Loading events…")}</ThemedText></View>
           )}
 
           {error && (
             <View style={{ alignItems: 'center', borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 18 }}>
-              <ThemedText style={{ color: colors.text, textAlign: 'center', fontSize: 13 }}>{error}</ThemedText>
-              <Pressable onPress={() => setRefreshKey((key) => key + 1)} style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '700' }}>Try again</ThemedText></Pressable>
+              <ThemedText style={{ color: colors.text, textAlign: 'center', fontSize: 13 }}>{t(error)}</ThemedText>
+              <Pressable onPress={() => setRefreshKey((key) => key + 1)} style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '700' }}>{t("Try again")}</ThemedText></Pressable>
             </View>
           )}
 
           {!isLoading && !error && events.length === 0 && (
             <View style={{ alignItems: 'center', borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 24 }}>
-              <ThemedText style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>No events found</ThemedText>
-              <ThemedText style={{ marginTop: 6, color: colors.muted, textAlign: 'center', fontSize: 12 }}>Try another search or category. Published events will appear here.</ThemedText>
+              <ThemedText style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{t("No events found")}</ThemedText>
+              <ThemedText style={{ marginTop: 6, color: colors.muted, textAlign: 'center', fontSize: 12 }}>{t("Try another search or category. Published events will appear here.")}</ThemedText>
             </View>
           )}
 
@@ -150,7 +155,7 @@ export default function HomeScreen() {
               {featured.cover_image_url && <Image source={{ uri: resolveEventImage(featured.cover_image_url) }} contentFit="cover" transition={180} style={{ position: 'absolute', width: '100%', height: '100%' }} />}
               <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: '#0C111D', opacity: featured.cover_image_url ? 0.5 : 0.12 }} />
               <View style={{ padding: 16 }}>
-                <ThemedText style={{ marginBottom: 7, color: colors.paleAccent, fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>FEATURED</ThemedText>
+                <ThemedText style={{ marginBottom: 7, color: colors.paleAccent, fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>{t("FEATURED")}</ThemedText>
                 <ThemedText numberOfLines={2} style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '800' }}>{featured.title}</ThemedText>
                 <ThemedText numberOfLines={1} style={{ marginTop: 7, color: '#EAECF0', fontSize: 12 }}>{formatEventDate(featured.starts_at)} · {featured.venue_name}</ThemedText>
               </View>
@@ -159,7 +164,7 @@ export default function HomeScreen() {
 
           {remainingEvents.length > 0 && (
             <View style={{ marginTop: 21 }}>
-              <ThemedText style={{ marginBottom: 11, color: colors.text, fontSize: 17, fontWeight: '800' }}>More events</ThemedText>
+              <ThemedText style={{ marginBottom: 11, color: colors.text, fontSize: 17, fontWeight: '800' }}>{t("More events")}</ThemedText>
               {remainingEvents.map((event) => (
                 <EventRow key={event.id} event={event} colors={colors} onPress={() => openEvent(event)} />
               ))}
@@ -172,6 +177,7 @@ export default function HomeScreen() {
 }
 
 function EventRow({ event, colors, onPress }: { event: PublicEvent; colors: typeof palette.dark; onPress: () => void }) {
+  const { t, formatDate } = useI18n();
   const image = resolveEventImage(event.cover_image_url);
   return (
     <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 9, padding: 10, borderRadius: 13, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
@@ -180,7 +186,7 @@ function EventRow({ event, colors, onPress }: { event: PublicEvent; colors: type
       </View>
       <View style={{ flex: 1 }}>
         <ThemedText numberOfLines={1} style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{event.title}</ThemedText>
-        <ThemedText numberOfLines={1} style={{ marginTop: 5, color: colors.muted, fontSize: 11 }}>{formatEventDate(event.starts_at)}</ThemedText>
+        <ThemedText numberOfLines={1} style={{ marginTop: 5, color: colors.muted, fontSize: 11 }}>{formatDate(event.starts_at, event.timezone)}</ThemedText>
         <ThemedText numberOfLines={1} style={{ marginTop: 3, color: colors.muted, fontSize: 11 }}>{event.venue_name}</ThemedText>
       </View>
       <ThemedText style={{ marginLeft: 8, color: colors.accent, fontSize: 17, fontWeight: '700' }}>›</ThemedText>
