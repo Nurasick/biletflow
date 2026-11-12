@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_order_token, create_support_case_token
 from app.models.event import Event, EventStatus
+from app.models.notification import Channel, Notification
 from app.models.support import CaseStatus, MessageSender, SupportCase, SupportMessage
 from app.models.user import User
-from app.services import mailer
+from app.services import notify
 from tests.test_events import add_event, add_organizer, add_user, auth
 from tests.test_ticket_types import add_ticket_type
 
@@ -81,6 +82,27 @@ def open_case(api, user: User | None = None, **fields) -> dict:
     return response.json()
 
 
+def queued(db: Session, template_key: str) -> list[Notification]:
+    """Queued emails for one template, oldest first."""
+    return list(
+        db.scalars(
+            select(Notification)
+            .where(
+                Notification.template_key == template_key,
+                Notification.channel == Channel.EMAIL,
+            )
+            .order_by(Notification.id)
+        )
+    )
+
+
+def channels(db: Session, template_key: str) -> set[Channel]:
+    """Every channel a template was queued on, email and in-app alike."""
+    return set(
+        db.scalars(select(Notification.channel).where(Notification.template_key == template_key))
+    )
+
+
 # --- opening a case -----------------------------------------------------------
 
 
@@ -125,6 +147,25 @@ def test_category_must_be_one_of_the_eight_from_the_spec(api, event, attendee, c
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "template_key",
+    ["support.opened", "support.received", "support.message", "support.assigned", "support.status"],
+)
+def test_every_support_template_exists(template_key):
+    payload = {
+        "case_number": "SC-TEST-1",
+        "subject": "payment",
+        "link": "https://example.com/support/SC-TEST-1",
+        "author": "Support team",
+        "excerpt": "Hello",
+        "status": "In progress",
+    }
+
+    subject, _body = notify.render(template_key, payload)
+
+    assert not subject.startswith("BiletFlow:")
 
 
 def test_a_case_cannot_cite_someone_elses_order(api, db, event, attendee):
@@ -174,7 +215,7 @@ def test_event_and_order_must_belong_together(api, db, organizer, event, attende
 # --- guests -------------------------------------------------------------------
 
 
-def test_a_guest_can_open_and_read_a_case_with_no_account(api, event):
+def test_a_guest_can_open_and_read_a_case_with_no_account(api, db, event):
     order = buy(api, event)
 
     created = open_case(
@@ -189,8 +230,9 @@ def test_a_guest_can_open_and_read_a_case_with_no_account(api, event):
     response = api.get(CASE.format(number=number), params={"token": token})
     assert response.status_code == 200
     assert response.json()["context"]["order_number"] == order["order_number"]
-    assert mailer.outbox[-2].to == "guest@example.com"
-    assert f"token={token}" in mailer.outbox[-2].body
+    [received] = queued(db, "support.received")
+    assert received.email == "guest@example.com"
+    assert f"token={token}" in received.payload["link"]
 
 
 def test_a_guest_can_reply_with_the_link(api, event):
@@ -360,10 +402,9 @@ def test_an_attendee_never_receives_internal_notes(api, event, attendee, organiz
 
 
 def test_an_internal_note_does_not_claim_the_case_or_email_the_requester(
-    api, event, attendee, organizer
+    api, db, event, attendee, organizer
 ):
     case = open_case(api, attendee, event_id=event.id)
-    sent = len(mailer.outbox)
 
     response = api.post(
         STAFF_REPLY.format(number=case["case_number"]),
@@ -372,7 +413,7 @@ def test_an_internal_note_does_not_claim_the_case_or_email_the_requester(
     )
 
     assert response.json()["status"] == "open"
-    assert len(mailer.outbox) == sent
+    assert channels(db, "support.message") == set()
 
 
 def test_the_database_refuses_an_internal_note_from_the_requester(db, event, attendee):
@@ -406,7 +447,7 @@ def staff_patch(api, user, number, **fields):
     return api.patch(STAFF_CASE.format(number=number), json=fields, headers=auth(user))
 
 
-def test_first_staff_reply_moves_open_to_in_progress(api, event, attendee, organizer):
+def test_first_staff_reply_moves_open_to_in_progress(api, db, event, attendee, organizer):
     case = open_case(api, attendee, event_id=event.id)
 
     response = api.post(
@@ -416,8 +457,9 @@ def test_first_staff_reply_moves_open_to_in_progress(api, event, attendee, organ
     )
 
     assert response.json()["status"] == "in_progress"
-    assert mailer.outbox[-1].to == "aru@example.com"
-    assert "Looking" in mailer.outbox[-1].body
+    [reply] = queued(db, "support.message")
+    assert reply.email == "aru@example.com"
+    assert reply.payload["excerpt"] == "Looking"
 
 
 def test_resolved_then_reply_goes_back_to_in_progress(api, event, attendee, organizer):
@@ -481,7 +523,7 @@ def test_staff_cannot_set_open(api, event, attendee, organizer):
 
 
 def test_status_changes_leave_system_messages_and_email_the_requester(
-    api, event, attendee, organizer
+    api, db, event, attendee, organizer
 ):
     number = open_case(api, attendee, event_id=event.id)["case_number"]
 
@@ -490,8 +532,27 @@ def test_status_changes_leave_system_messages_and_email_the_requester(
 
     system = [m for m in view["messages"] if m["sender"] == "system"]
     assert [m["author_user_id"] for m in system] == [None, None]
-    assert mailer.outbox[-1].to == "aru@example.com"
-    assert "Waiting for customer" in mailer.outbox[-1].subject
+    sent = queued(db, "support.status")
+    assert [n.email for n in sent] == ["aru@example.com", "aru@example.com"]
+    assert [n.payload["status"] for n in sent] == ["In progress", "Waiting for customer"]
+
+
+def test_a_staff_reply_reaches_a_members_inbox_as_well_as_their_email(
+    api, db, event, attendee, organizer
+):
+    number = open_case(api, attendee, event_id=event.id)["case_number"]
+
+    api.post(STAFF_REPLY.format(number=number), json={"body": "Hi"}, headers=auth(organizer))
+
+    assert channels(db, "support.message") == {Channel.EMAIL, Channel.IN_APP}
+
+
+def test_a_guest_gets_a_staff_reply_by_email_only(api, db, event, organizer):
+    number = open_case(api, contact_email="guest@example.com", event_id=event.id)["case_number"]
+
+    api.post(STAFF_REPLY.format(number=number), json={"body": "Hi"}, headers=auth(organizer))
+
+    assert channels(db, "support.message") == {Channel.EMAIL}
 
 
 # --- assignment ---------------------------------------------------------------
@@ -508,10 +569,12 @@ def test_assigning_claims_the_case_and_emails_the_assignee(api, db, organizer, e
     assert response.status_code == 200
     assert response.json()["assigned_to_user_id"] == colleague.id
     assert response.json()["status"] == "in_progress"
-    assert mailer.outbox[-2].to == "colleague@example.com"
+    [assigned] = queued(db, "support.assigned")
+    assert assigned.email == "colleague@example.com"
     # Assignment moved it out of `open`, and the requester hears about that.
-    assert mailer.outbox[-1].to == "organizer@example.com"
-    assert "In progress" in mailer.outbox[-1].subject
+    [status] = queued(db, "support.status")
+    assert status.email == "organizer@example.com"
+    assert status.payload["status"] == "In progress"
 
 
 def test_cannot_assign_someone_who_could_not_see_the_case(api, db, event, attendee, organizer):

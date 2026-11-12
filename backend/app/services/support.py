@@ -36,7 +36,7 @@ from app.models.support import (
 from app.models.ticket import Ticket
 from app.models.user import User
 from app.schemas.support import CaseContext, CaseCreate, CaseUpdate
-from app.services import codes, mailer
+from app.services import codes, notify
 from app.services import order as order_service
 
 
@@ -120,17 +120,22 @@ def open_case(db: Session, user: User | None, data: CaseCreate) -> tuple[Support
             body=data.body,
         )
     )
+    _notify_staff(
+        db,
+        support_case,
+        "support.opened",
+        {"author": support_case.contact_email, "excerpt": data.body[:200]},
+    )
+    _notify_requester(
+        db,
+        support_case,
+        "support.received",
+        {},
+    )
     db.commit()
     db.refresh(support_case)
 
     token = create_support_case_token(support_case.id) if user is None else None
-    _notify_requester(
-        support_case,
-        f"We received your support request {support_case.case_number}",
-        "We will reply here and by email.",
-        token,
-    )
-    _notify_staff(db, support_case, f"New support case {support_case.case_number}")
     return support_case, token
 
 
@@ -245,9 +250,14 @@ def add_requester_message(
     if support_case.status in (CaseStatus.WAITING_FOR_CUSTOMER, CaseStatus.RESOLVED):
         _set_status(db, support_case, CaseStatus.IN_PROGRESS)
     _touch(support_case)
+    _notify_staff(
+        db,
+        support_case,
+        "support.message",
+        {"author": support_case.contact_email, "excerpt": body[:200]},
+    )
     db.commit()
     db.refresh(support_case)
-    _notify_staff(db, support_case, f"New reply on support case {support_case.case_number}")
     return support_case
 
 
@@ -335,15 +345,15 @@ def add_staff_message(
     if not internal and support_case.status == CaseStatus.OPEN:
         _set_status(db, support_case, CaseStatus.IN_PROGRESS)
     _touch(support_case)
-    db.commit()
-    db.refresh(support_case)
     if not internal:
         _notify_requester(
+            db,
             support_case,
-            f"New reply on your support case {support_case.case_number}",
-            body,
-            _guest_token(support_case),
+            "support.message",
+            {"author": "Support team", "excerpt": body[:200]},
         )
+    db.commit()
+    db.refresh(support_case)
     return support_case
 
 
@@ -376,22 +386,20 @@ def update_case(
         _set_status(db, support_case, target)
 
     _touch(support_case)
-    db.commit()
-    db.refresh(support_case)
 
     if assignee is not None and assignee.id != user.id:
-        mailer.send(
-            assignee.email,
-            f"Support case {support_case.case_number} was assigned to you",
-            _staff_link(support_case),
-        )
+        # assigned_to_user_id is already the new assignee, so _notify_staff
+        # picks exactly them.
+        _notify_staff(db, support_case, "support.assigned", {})
     if support_case.status != old_status:
         _notify_requester(
+            db,
             support_case,
-            f"Support case {support_case.case_number}: {STATUS_LABELS[support_case.status]}",
-            f"The status of your case is now: {STATUS_LABELS[support_case.status]}.",
-            _guest_token(support_case),
+            "support.status",
+            {"status": STATUS_LABELS[support_case.status]},
         )
+    db.commit()
+    db.refresh(support_case)
     return support_case
 
 
@@ -466,14 +474,24 @@ def _staff_link(support_case: SupportCase) -> str:
 
 
 def _notify_requester(
-    support_case: SupportCase, subject: str, text: str, token: str | None
+    db: Session, support_case: SupportCase, template_key: str, payload: dict
 ) -> None:
-    mailer.send(
-        support_case.contact_email, subject, f"{text}\n\n{_requester_link(support_case, token)}"
+    """A guest (no opened_by_user_id) gets only the email, no in-app notification."""
+    notify.notify(
+        db,
+        template_key=template_key,
+        payload={
+            "case_number": support_case.case_number,
+            "subject": support_case.category,
+            "link": _requester_link(support_case, _guest_token(support_case)),
+        }
+        | payload,
+        email=support_case.contact_email,
+        user_id=support_case.opened_by_user_id,
     )
 
 
-def _notify_staff(db: Session, support_case: SupportCase, subject: str) -> None:
+def _notify_staff(db: Session, support_case: SupportCase, template_key: str, payload: dict) -> None:
     """The assignee if there is one, else the event's owner. An unassigned
     organizer case has no single recipient: it waits in the admins' queue."""
     recipient_id = support_case.assigned_to_user_id
@@ -487,4 +505,15 @@ def _notify_staff(db: Session, support_case: SupportCase, subject: str) -> None:
         return
     recipient = db.get(User, recipient_id)
     if recipient is not None:
-        mailer.send(recipient.email, subject, _staff_link(support_case))
+        notify.notify(
+            db,
+            template_key=template_key,
+            payload={
+                "case_number": support_case.case_number,
+                "subject": support_case.category,
+                "link": _staff_link(support_case),
+            }
+            | payload,
+            email=recipient.email,
+            user_id=recipient.id,
+        )

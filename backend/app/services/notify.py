@@ -191,6 +191,35 @@ _T: dict[str, dict[str, tuple[str, str]]] = {
             "«{subject}» өтінішінің мәртебесі өзгерді: {status}.\n{link}",
         ),
     },
+    "support.opened": {
+        "en": (
+            "New support case {case_number}: {subject}",
+            "{author} opened a new support case:\n\n{excerpt}\n\n{link}",
+        ),
+        "ru": (
+            "Новое обращение {case_number}: {subject}",
+            "{author} открыл(а) новое обращение:\n\n{excerpt}\n\n{link}",
+        ),
+        "kk": (
+            "Жаңа өтініш {case_number}: {subject}",
+            "{author} жаңа өтініш ашты:\n\n{excerpt}\n\n{link}",
+        ),
+    },
+    "support.received": {
+        "en": (
+            "Support case {case_number} received",
+            "Your support case “{subject}” was received. We will reply as soon as "
+            "possible.\n{link}",
+        ),
+        "ru": (
+            "Обращение {case_number} принято",
+            "Ваше обращение «{subject}» принято. Мы ответим как можно скорее.\n{link}",
+        ),
+        "kk": (
+            "{case_number} өтініші қабылданды",
+            "Сіздің «{subject}» өтінішіңіз қабылданды. Біз мүмкіндігінше тезірек жауап береміз.\n{link}",
+        ),
+    },
 }
 
 
