@@ -23,6 +23,9 @@ import { AdminEventPage } from "./pages/AdminEventPage";
 import { AdminOverviewPage } from "./pages/AdminOverviewPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AdminEventReportsPage } from "./pages/AdminEventReportsPage";
+import { AdminTransactionsPage } from "./pages/AdminTransactionsPage";
+import { AdminSalesPage } from "./pages/AdminSalesPage";
+import { AdminSettingsPage } from "./pages/AdminSettingsPage";
 import { AdminRoute } from "./shared/auth/AdminRoute";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { SupportPage } from "./pages/SupportPage";
@@ -85,6 +88,9 @@ function App() {
             { path: "/admin/events/:eventId", element: <AdminEventPage /> },
             { path: "/admin/users", element: <AdminUsersPage /> },
             { path: "/admin/reports", element: <AdminEventReportsPage /> },
+            { path: "/admin/transactions", element: <AdminTransactionsPage /> },
+            { path: "/admin/sales", element: <AdminSalesPage /> },
+            { path: "/admin/settings", element: <AdminSettingsPage /> },
           ],
         },
         {

@@ -1,5 +1,5 @@
 import { ApiError, api } from "./auth";
-import type { EventReportReason } from "./events";
+import type { EventReportReason, Order } from "./events";
 import type { OrganizerEventRecord } from "./organizerEvents";
 
 export type AdminEvent = OrganizerEventRecord & {
@@ -77,10 +77,81 @@ export type AdminEventReport = {
   resolved_at: string | null;
 };
 
+export const adminOrderStatuses = ["pending", "confirmed", "cancelled", "refunded", "expired"] as const;
+export const adminPaymentStatuses = ["pending", "succeeded", "failed", "refunded"] as const;
+export type AdminOrderStatus = (typeof adminOrderStatuses)[number];
+export type AdminPaymentStatus = (typeof adminPaymentStatuses)[number];
+
+export type AdminOrder = {
+  order_number: string;
+  event_id: number;
+  event_title: string;
+  status: Order["status"];
+  contact_name: string;
+  contact_email: string;
+  total_minor: number;
+  discount_minor: number;
+  currency: string;
+  created_at: string;
+};
+
+export type AdminPayment = {
+  id: number;
+  purpose: "ticket_order" | "activation_fee";
+  status: AdminPaymentStatus;
+  amount_minor: number;
+  currency: string;
+  provider: string;
+  provider_ref: string | null;
+  is_simulated: boolean;
+  failure_reason: string | null;
+  order_number: string | null;
+  event_id: number | null;
+  created_at: string;
+};
+
+export type AdminRefund = {
+  id: number;
+  order_number: string;
+  event_id: number;
+  amount_minor: number;
+  currency: string;
+  status: Exclude<AdminPaymentStatus, "refunded">;
+  reason: string;
+  created_at: string;
+};
+
+export type AdminActivationRecord = Pick<AdminActivation, "status" | "activation_fee_minor" | "activated_at" | "suspension_reason"> & {
+  event_id: number;
+  event_title: string;
+  fee_paid: boolean;
+};
+
+export type AdminCampaign = {
+  id: number;
+  event_id: number;
+  event_title: string;
+  name: string;
+  code: string;
+  is_active: boolean;
+  redemptions: number;
+  orders: number;
+  discount_minor: number;
+  net_minor: number;
+};
+
+export type AdminSettings = {
+  activation_fee_minor: number;
+  processing_fee_bps: number;
+};
+
+export type AdminPageRequest = { limit: number; offset: number; signal?: AbortSignal };
+
 const base = (eventId: number) => `/admin/events/${eventId}`;
-const params = (limit: number, offset: number, query?: string) => {
+const params = (limit: number, offset: number, query?: string, status?: string) => {
   const search = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   if (query?.trim()) search.set("q", query.trim());
+  if (status) search.set("status", status);
   return search;
 };
 
@@ -91,13 +162,24 @@ export const adminApi = {
   suspendUser: (userId: number, reason: string) =>
     api.post<AdminUser>(`/admin/users/${userId}/suspend`, { reason: reason.trim() }),
   reinstateUser: (userId: number) => api.post<AdminUser>(`/admin/users/${userId}/unsuspend`),
-  reports: (status: EventReportStatus | undefined, limit: number, offset: number, signal?: AbortSignal) => {
-    const search = params(limit, offset);
-    if (status) search.set("status", status);
-    return api.get<AdminEventReport[]>(`/admin/reports?${search}`, { signal });
-  },
+  reports: (status: EventReportStatus | undefined, limit: number, offset: number, signal?: AbortSignal) =>
+    api.get<AdminEventReport[]>(`/admin/reports?${params(limit, offset, undefined, status)}`, { signal }),
   resolveReport: (reportId: number, status: EventReportResolution) =>
     api.post<AdminEventReport>(`/admin/reports/${reportId}/resolve`, { status }),
+  orders: ({ limit, offset, signal }: AdminPageRequest, query: string, status?: AdminOrderStatus) =>
+    api.get<AdminOrder[]>(`/admin/orders?${params(limit, offset, query, status)}`, { signal }),
+  payments: ({ limit, offset, signal }: AdminPageRequest, status?: AdminPaymentStatus) =>
+    api.get<AdminPayment[]>(`/admin/payments?${params(limit, offset, undefined, status)}`, { signal }),
+  refunds: ({ limit, offset, signal }: AdminPageRequest) =>
+    api.get<AdminRefund[]>(`/admin/refunds?${params(limit, offset)}`, { signal }),
+  activations: ({ limit, offset, signal }: AdminPageRequest) =>
+    api.get<AdminActivationRecord[]>(`/admin/activations?${params(limit, offset)}`, { signal }),
+  campaigns: ({ limit, offset, signal }: AdminPageRequest) =>
+    api.get<AdminCampaign[]>(`/admin/campaigns?${params(limit, offset)}`, { signal }),
+  settings: (signal?: AbortSignal) => api.get<AdminSettings>("/admin/settings", { signal }),
+  updateSettings: (changes: Partial<AdminSettings>) => api.put<AdminSettings>("/admin/settings", changes),
+  ordersCsv: () => api.file("/admin/exports/orders.csv", "text/csv"),
+  paymentsCsv: () => api.file("/admin/exports/payments.csv", "text/csv"),
   events: (query = "", limit = 20, offset = 0, signal?: AbortSignal) =>
     api.get<AdminEvent[]>(`/admin/events?${params(limit, offset, query)}`, { signal }),
   // The current backend exposes event reads only through its paginated admin

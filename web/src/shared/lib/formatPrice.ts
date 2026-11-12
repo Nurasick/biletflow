@@ -4,3 +4,7 @@ export const formatPrice = (price: number, locale = "kk-KZ") => {
 
 // The API speaks integer minor units (tiyn): 150000 means 1 500 ₸.
 export const formatMinor = (minor: number, locale = "kk-KZ") => formatPrice(minor / 100, locale);
+
+export const formatMinorCurrency = (minor: number, currency: string, locale: string) => currency === "KZT"
+  ? formatMinor(minor, locale)
+  : new Intl.NumberFormat(locale, { style: "currency", currency }).format(minor / 100);

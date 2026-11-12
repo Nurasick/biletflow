@@ -11,6 +11,9 @@ const adminLinks = [
   { to: "/admin/events", label: "ops.adminEvents", end: false },
   { to: "/admin/users", label: "adminUsers.title", end: true },
   { to: "/admin/reports", label: "eventReport.queue", end: true },
+  { to: "/admin/transactions", label: "adminFinance.title", end: true },
+  { to: "/admin/sales", label: "adminSales.title", end: true },
+  { to: "/admin/settings", label: "adminSettings.title", end: true },
 ] as const;
 
 export const OperationsWorkspace = ({ children, admin = false, detail = false }: { children: ReactNode; admin?: boolean; detail?: boolean }) => {
@@ -62,9 +65,11 @@ export const OperationsError = ({ error, retry, saving = false }: { error: unkno
       : retry ? <Button onClick={retry}>{t("ops.retry")}</Button> : undefined} />;
 };
 
-export const RefreshButton = ({ refresh, fetching }: { refresh: () => void; fetching: boolean }) => {
+export const RefreshButton = ({ refresh, fetching, disabled = false }: {
+  refresh: () => void; fetching: boolean; disabled?: boolean;
+}) => {
   const { t } = useTranslation();
-  return <Button onClick={refresh} loading={fetching} icon={<RefreshCw size={15} aria-hidden="true" />}>
+  return <Button onClick={refresh} loading={fetching} disabled={disabled} icon={<RefreshCw size={15} aria-hidden="true" />}>
     {t(fetching ? "ops.refreshing" : "ops.refresh")}
   </Button>;
 };

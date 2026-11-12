@@ -22,9 +22,9 @@ const groups = [
   {
     title: "adminOverview.sales",
     metrics: [
-      { field: "orders_confirmed", label: "adminOverview.orders" },
+      { field: "orders_confirmed", label: "adminOverview.orders", to: "/admin/transactions?status=confirmed" },
       { field: "tickets_issued", label: "adminOverview.tickets" },
-      { field: "gross_minor", label: "adminOverview.gross" },
+      { field: "gross_minor", label: "adminOverview.gross", to: "/admin/transactions?view=payments" },
       { field: "refunds_minor", label: "adminOverview.refunds" },
     ],
   },
@@ -33,7 +33,7 @@ const groups = [
     metrics: [
       { field: "open_reports", label: "adminOverview.openReports", to: "/admin/reports" },
       { field: "open_support_cases", label: "adminOverview.openSupport" },
-      { field: "payments_failed", label: "adminOverview.failedPayments" },
+      { field: "payments_failed", label: "adminOverview.failedPayments", to: "/admin/transactions?view=payments&status=failed" },
     ],
   },
 ] as const;

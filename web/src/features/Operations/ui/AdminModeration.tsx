@@ -32,6 +32,7 @@ export const AdminModeration = ({ eventId, userId, status, activationStatus, rea
       client.invalidateQueries({ queryKey: operationsKeys.adminLists(userId) }),
       client.invalidateQueries({ queryKey: operationsKeys.adminOverview(userId) }),
       client.invalidateQueries({ queryKey: operationsKeys.adminReports(userId) }),
+      client.invalidateQueries({ queryKey: operationsKeys.adminRecords(userId, "activations") }),
       client.invalidateQueries({ queryKey: operationsKeys.staffEvents(userId) }),
     ]);
   };

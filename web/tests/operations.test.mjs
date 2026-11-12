@@ -6,9 +6,14 @@ import { fakeAuthUrl, moduleUrl, scriptApi } from './harness.mjs';
 const staffUrl = await moduleUrl('../src/shared/api/staff.ts', { '"./auth"': JSON.stringify(fakeAuthUrl) });
 const adminUrl = await moduleUrl('../src/shared/api/admin.ts', { '"./auth"': JSON.stringify(fakeAuthUrl) });
 const modelUrl = await moduleUrl('../src/features/Operations/model/operationsModel.ts');
+const hundredthsUrl = await moduleUrl('../src/shared/lib/parseHundredths.ts');
+const feeModelUrl = await moduleUrl('../src/features/Operations/model/adminSettingsModel.ts', {
+  '"../../../shared/lib/parseHundredths"': JSON.stringify(hundredthsUrl),
+});
 const { checkInApi } = await import(staffUrl);
 const { adminApi } = await import(adminUrl);
 const { ticketAction, eventModerationActions, activationModerationAction, validEventId, operationsKeys } = await import(modelUrl);
+const { readFeeDraft } = await import(feeModelUrl);
 const event = { id: 7, slug: 'private-night', status: 'suspended', title: 'Private Night' };
 const ticket = { public_code: 'T-A/B', status: 'valid', attendee_name: 'Alex', ticket_type_name: 'General' };
 
@@ -103,6 +108,64 @@ test('admin report review filters and pages server results and preserves the cho
     { method: 'GET', path: '/admin/reports?limit=21&offset=0', body: undefined },
     { method: 'POST', path: '/admin/reports/39/resolve', body: { status: 'actioned' } },
   ]);
+});
+
+test('admin transaction queries send supported filters and page bounds to the matching endpoints', async () => {
+  const page = { limit: 21, offset: 40 };
+  const orders = [{ order_number: 'BF-A', status: 'partially_refunded' }];
+  const payments = [{ id: 4, status: 'failed', is_simulated: true }];
+  const refunds = [{ id: 7, status: 'succeeded' }];
+  const fake = scriptApi([[200, orders], [200, payments], [200, refunds]]);
+  assert.deepEqual(await adminApi.orders(page, '  Билет & Co  '), orders);
+  assert.deepEqual(await adminApi.payments(page, 'failed'), payments);
+  assert.deepEqual(await adminApi.refunds(page), refunds);
+  assert.deepEqual(fake.calls.map(({ method, path }) => {
+    const url = new URL(path, 'https://example.test');
+    return [method, url.pathname, Object.fromEntries(url.searchParams)];
+  }), [
+    ['GET', '/admin/orders', { limit: '21', offset: '40', q: 'Билет & Co' }],
+    ['GET', '/admin/payments', { limit: '21', offset: '40', status: 'failed' }],
+    ['GET', '/admin/refunds', { limit: '21', offset: '40' }],
+  ]);
+});
+
+test('activation and campaign monitoring use their own paginated data sources', async () => {
+  const activation = { event_id: 12, status: 'suspended', fee_paid: true };
+  const campaign = { id: 6, event_id: 12, redemptions: 7, discount_minor: 17_500 };
+  const fake = scriptApi([[200, [activation]], [200, [campaign]]]);
+  const page = { limit: 21, offset: 20 };
+  assert.deepEqual(await adminApi.activations(page), [activation]);
+  assert.deepEqual(await adminApi.campaigns(page), [campaign]);
+  assert.deepEqual(fake.calls.map(({ path }) => path), [
+    '/admin/activations?limit=21&offset=20', '/admin/campaigns?limit=21&offset=20',
+  ]);
+  assert.notDeepEqual(operationsKeys.adminRecords(1, 'campaigns'), operationsKeys.adminRecords(2, 'campaigns'));
+});
+
+test('fee updates send only edited values as tiyn and basis points, including zero', async () => {
+  const initial = { activation_fee_minor: 500_000, processing_fee_bps: 250 };
+  const saved = { ...initial, processing_fee_bps: 0 };
+  const fake = scriptApi([[200, initial], [200, saved]]);
+  assert.deepEqual(await adminApi.settings(), initial);
+  const draft = readFeeDraft({ activation_fee_minor: '5000,00', processing_fee_bps: '0' }, initial);
+  assert.deepEqual(draft, { changes: { processing_fee_bps: 0 }, invalid: [], dirty: true });
+  assert.deepEqual(await adminApi.updateSettings(draft.changes), saved);
+  assert.deepEqual(fake.calls, [
+    { method: 'GET', path: '/admin/settings', body: undefined },
+    { method: 'PUT', path: '/admin/settings', body: { processing_fee_bps: 0 } },
+  ]);
+  assert.deepEqual(readFeeDraft({ activation_fee_minor: '7200,01', processing_fee_bps: '2.75' }, initial).changes,
+    { activation_fee_minor: 720_001, processing_fee_bps: 275 });
+});
+
+test('fee entry respects the API ceilings and rejects rounded or exponential values', () => {
+  const current = { activation_fee_minor: 500_000, processing_fee_bps: 250 };
+  assert.deepEqual(readFeeDraft({ activation_fee_minor: '1000000', processing_fee_bps: '20,00' }, current).changes,
+    { activation_fee_minor: 100_000_000, processing_fee_bps: 2_000 });
+  for (const input of ['', '-1', '1e1', '1.005', '20.01']) {
+    assert.deepEqual(readFeeDraft({ processing_fee_bps: input }, current).invalid, ['processing_fee_bps']);
+  }
+  assert.deepEqual(readFeeDraft({ activation_fee_minor: '1000000.01' }, current).invalid, ['activation_fee_minor']);
 });
 
 test('admin detail resolves non-public events via the slug-hinted authorized list', async () => {
