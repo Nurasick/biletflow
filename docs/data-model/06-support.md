@@ -333,8 +333,13 @@ ones nobody has picked up — surface them first.
   Assigning an `open` case moves it to `in_progress` (§8).
 - **Every status change leaves a system message**, so the thread is the
   history (§4.13).
-- **Notifications are sent inline** through `services/mailer.py`, as the
-  account emails are, until 07 puts its queue in front.
+- **Notifications go through the 07 outbox** (`services/notify.py`), queued
+  in the same transaction as the change, so a rolled-back reply sends nothing.
+  Templates: `support.opened` and `support.message` to staff (the assignee,
+  else the event's owner), `support.received`, `support.message` and
+  `support.status` to the requester, `support.assigned` to a new assignee
+  unless they assigned themselves. Members also get the in-app notice; guests
+  get email only, with their signed link. Internal notes notify no one.
 
 ## Build checklist
 
@@ -345,8 +350,7 @@ ones nobody has picked up — surface them first.
 - [x] **Scoped queries** — authorization in the `WHERE` clause, not in Python
 - [x] Two serializers: staff (with internal notes) and requester (without)
 - [x] Signed-link access for guests
-- [ ] Notifications on new message, assignment, and status change (§4.10)
-      — sent inline by the mailer; move onto the 07 queue when it lands
+- [x] Notifications on new message, assignment, and status change (§4.10)
 - [x] Tests:
   - [x] Attendee A cannot read attendee B's case
   - [x] An unrelated organizer cannot read a case for someone else's event

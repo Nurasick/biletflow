@@ -191,7 +191,111 @@ _T: dict[str, dict[str, tuple[str, str]]] = {
             "«{subject}» өтінішінің мәртебесі өзгерді: {status}.\n{link}",
         ),
     },
+    "support.opened": {
+        "en": (
+            "New support case {case_number}: {subject}",
+            "{author} opened a new support case:\n\n{excerpt}\n\n{link}",
+        ),
+        "ru": (
+            "Новое обращение {case_number}: {subject}",
+            "{author} открыл(а) новое обращение:\n\n{excerpt}\n\n{link}",
+        ),
+        "kk": (
+            "Жаңа өтініш {case_number}: {subject}",
+            "{author} жаңа өтініш ашты:\n\n{excerpt}\n\n{link}",
+        ),
+    },
+    "support.received": {
+        "en": (
+            "Support case {case_number} received",
+            "Your support case “{subject}” was received. We will reply as soon as "
+            "possible.\n{link}",
+        ),
+        "ru": (
+            "Обращение {case_number} принято",
+            "Ваше обращение «{subject}» принято. Мы ответим как можно скорее.\n{link}",
+        ),
+        "kk": (
+            "{case_number} өтініші қабылданды",
+            "Сіздің «{subject}» өтінішіңіз қабылданды. Біз мүмкіндігінше тезірек жауап береміз.\n{link}",
+        ),
+    },
 }
+
+
+# Category and status labels for support emails, the same texts the web shows
+# (web/src/i18n/locales/*.json, keys support.category.* and support.status.*).
+# Only render() uses them: the payload in the database keeps raw keys, because
+# the in-app feed reads it too.
+_SUPPORT_CATEGORIES: dict[str, dict[str, str]] = {
+    "ru": {
+        "ticket_delivery": "Получение билетов",
+        "payment": "Оплата",
+        "refund": "Возврат",
+        "seating": "Посадочные места",
+        "event_info": "Информация о событии",
+        "check_in": "Проверка на входе",
+        "account": "Аккаунт",
+        "technical": "Техническая проблема",
+    },
+    "kk": {
+        "ticket_delivery": "Билетті жеткізу",
+        "payment": "Төлем",
+        "refund": "Қаражатты қайтару",
+        "seating": "Орындар",
+        "event_info": "Іс-шара туралы ақпарат",
+        "check_in": "Кіреберісте тексеру",
+        "account": "Аккаунт",
+        "technical": "Техникалық мәселе",
+    },
+    "en": {
+        "ticket_delivery": "Ticket delivery",
+        "payment": "Payment",
+        "refund": "Refund",
+        "seating": "Seating",
+        "event_info": "Event information",
+        "check_in": "Check-in",
+        "account": "Account",
+        "technical": "Technical problem",
+    },
+}
+
+_SUPPORT_STATUSES: dict[str, dict[str, str]] = {
+    "ru": {
+        "open": "Открыто",
+        "in_progress": "В работе",
+        "waiting_for_customer": "Ожидает ответа заявителя",
+        "resolved": "Решено",
+    },
+    "kk": {
+        "open": "Ашық",
+        "in_progress": "Қаралуда",
+        "waiting_for_customer": "Өтініш берушінің жауабы күтілуде",
+        "resolved": "Шешілді",
+    },
+    "en": {
+        "open": "Open",
+        "in_progress": "In progress",
+        "waiting_for_customer": "Waiting for requester",
+        "resolved": "Resolved",
+    },
+}
+
+
+def _localize_support(template_key: str, payload: dict, locale: str) -> dict:
+    """Swap raw category and status keys for labels in the recipient's language.
+    Works on a copy: `payload` is the row's own dict. Unknown keys, and rows
+    queued before `status_key` existed, keep the value they came with."""
+    if not template_key.startswith("support."):
+        return payload
+    categories = _SUPPORT_CATEGORIES.get(locale) or _SUPPORT_CATEGORIES["ru"]
+    statuses = _SUPPORT_STATUSES.get(locale) or _SUPPORT_STATUSES["ru"]
+    localized = dict(payload)
+    if "subject" in localized:
+        localized["subject"] = categories.get(localized["subject"], localized["subject"])
+    if "status_key" in localized:
+        localized["status"] = statuses.get(localized["status_key"], localized.get("status"))
+    return localized
 
 
 class _Blank(dict):
@@ -206,7 +310,7 @@ def render(template_key: str, payload: dict, locale: str = "ru") -> tuple[str, s
     if variants is None:
         return f"{settings.PROJECT_NAME}: {template_key}", str(payload.get("link", ""))
     subject, body = variants.get(locale) or variants["ru"]
-    values = _Blank(payload)
+    values = _Blank(_localize_support(template_key, payload, locale))
     return subject.format_map(values), body.format_map(values)
 
 
