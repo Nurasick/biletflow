@@ -1,6 +1,7 @@
 import type { OrganizerTicketType } from "../../../shared/api/eventLifecycle";
 import type { TicketTypeInput } from "../../../shared/api/eventManagement";
 import { parseApiInstant } from "../../../shared/lib/parseApiInstant";
+import { parseHundredths } from "../../../shared/lib/parseHundredths";
 import { readEventLocalTime, toLocalDateTime } from "./eventDateTime";
 
 const MAX_INT = 2_147_483_647;
@@ -28,20 +29,12 @@ const integer = (input: string, min: number, max = MAX_INT) => {
   return Number.isSafeInteger(value) && value >= min && value <= max ? value : null;
 };
 
-const priceInMinorUnits = (input: string) => {
-  const amount = input.trim();
-  if (!/^\d+(?:[.,]\d{1,2})?$/.test(amount)) return null;
-  const [whole, fraction = ""] = amount.replace(",", ".").split(".");
-  const value = Number(`${whole}${fraction.padEnd(2, "0")}`);
-  return Number.isSafeInteger(value) ? value : null;
-};
-
 export const ticketTypeInput = (draft: TicketTypeDraft, timeZone: string, committed: number, ticket?: OrganizerTicketType):
   { input: TicketTypeInput; error?: never } | { input?: never; error: ValidationError; field: keyof TicketTypeDraft } => {
   const name = draft.name.trim();
   if (!name || name.length > 200) return { field: "name", error: "ticketTypes.invalidName" };
   const price = ticket && draft.price === String(ticket.price_minor / 100)
-    ? ticket.price_minor : priceInMinorUnits(draft.price);
+    ? ticket.price_minor : parseHundredths(draft.price);
   if (price === null) return { field: "price", error: "ticketTypes.invalidPrice" };
   const quantity = integer(draft.quantity, 1);
   if (quantity === null) return { field: "quantity", error: "ticketTypes.invalidQuantity" };

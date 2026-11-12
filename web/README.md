@@ -22,6 +22,12 @@ review those submissions under **Event reports**, open the event's moderation
 page, then dismiss the report or mark action taken. **Event moderation** also
 provides event history and paid-sales activation controls.
 
+**Transactions** shows order search, payment status filters and failure details,
+and refund records. Orders and payments can be downloaded as CSV. **Sales
+oversight** shows platform-wide activation records and promo campaign activity,
+with links to each event's moderation page. **Platform settings** lets admins
+edit the activation fee and processing rate for new quotes and orders.
+
 ## Attendees and event activity
 
 Open an event from **My events**, then use its preview page to view the attendee

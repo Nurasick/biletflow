@@ -15,6 +15,9 @@ export const operationsKeys = {
   adminReports: (userId?: number) => ["operations", userId, "admin-reports"] as const,
   adminReportList: (userId: number, status: EventReportStatus | "all", page: number) =>
     ["operations", userId, "admin-reports", status, page] as const,
+  adminRecords: (userId: number | undefined, kind: "orders" | "payments" | "refunds" | "activations" | "campaigns") =>
+    ["operations", userId, "admin-records", kind] as const,
+  adminSettings: (userId: number) => ["operations", userId, "admin-settings"] as const,
   activation: (userId: number | undefined, eventId: number) => ["operations", userId, "activation", eventId] as const,
   timelines: (userId: number | undefined, eventId: number) => ["operations", userId, "timeline", eventId] as const,
   timeline: (userId: number | undefined, eventId: number, page: number) => ["operations", userId, "timeline", eventId, page] as const,

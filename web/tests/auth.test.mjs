@@ -199,6 +199,23 @@ test('attendee CSV downloads use the organizer session and preserve the original
   assert.equal(new URL(calls.at(-1).url).pathname, '/api/v1/organizer/events/7/attendees.csv');
 });
 
+test('admin CSV downloads preserve the file bytes and use authenticated export endpoints', async () => {
+  const orders = new TextEncoder().encode('\uFEFForder,buyer\r\nBF-1,Әлия\r\n');
+  const payments = new TextEncoder().encode('\uFEFFid,status\r\n4,failed\r\n');
+  const csv = (bytes) => new Response(bytes, { headers: { 'Content-Type': 'text/csv; charset=utf-8' } });
+  const { authApi, authUrl, calls } = await setup([[200, tokens], [200, user], csv(orders), csv(payments)]);
+  const { adminApi } = await import(await moduleUrl('../src/shared/api/admin.ts', { '"./auth"': JSON.stringify(authUrl) }));
+  await authApi.login(credentials);
+  for (const [download, expected] of [[adminApi.ordersCsv, orders], [adminApi.paymentsCsv, payments]]) {
+    assert.deepEqual(new Uint8Array(await (await download()).arrayBuffer()), expected);
+  }
+  const exports = calls.slice(2);
+  assert.deepEqual(exports.map(({ url }) => new URL(url).pathname), [
+    '/api/v1/admin/exports/orders.csv', '/api/v1/admin/exports/payments.csv',
+  ]);
+  assert.ok(exports.every(({ headers }) => headers.get('Authorization') === 'Bearer access-1' && headers.get('Accept') === 'text/csv'));
+});
+
 test('promo quote and checkout submit the campaign token with the current basket', async () => {
   const quote = { code: 'JAZZ20', subtotal_minor: 100_000, discount_minor: 20_000, total_minor: 80_000 };
   const { authUrl, calls } = await setup([[200, quote], [201, { status: 'pending' }]]);

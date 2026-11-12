@@ -6,8 +6,13 @@ import { moduleUrl } from './harness.mjs';
 const apiTimeUrl = await moduleUrl('../src/shared/lib/parseApiInstant.ts');
 const apiTimeImport = { '"../../../shared/lib/parseApiInstant"': JSON.stringify(apiTimeUrl) };
 const timeUrl = await moduleUrl('../src/features/Organizer/model/eventDateTime.ts', apiTimeImport);
+const hundredthsUrl = await moduleUrl('../src/shared/lib/parseHundredths.ts');
 const { ticketTypeDraft, ticketTypeInput, ticketTypeChanges } = await import(await moduleUrl(
-  '../src/features/Organizer/model/ticketTypeForm.ts', { ...apiTimeImport, '"./eventDateTime"': JSON.stringify(timeUrl) },
+  '../src/features/Organizer/model/ticketTypeForm.ts', {
+    ...apiTimeImport,
+    '"./eventDateTime"': JSON.stringify(timeUrl),
+    '"../../../shared/lib/parseHundredths"': JSON.stringify(hundredthsUrl),
+  },
 ));
 const { ticketSaleWindow, ticketSaleStatus } = await import(await moduleUrl('../src/features/Event/model/ticketSales.ts', apiTimeImport));
 const zone = 'Asia/Almaty';
