@@ -396,8 +396,12 @@ def update_case(
             db,
             support_case,
             "support.status",
-            {"status": STATUS_LABELS[support_case.status]},
+            {
+                "status": STATUS_LABELS[support_case.status],
+                "status_key": support_case.status.value,
+            },
         )
+
     db.commit()
     db.refresh(support_case)
     return support_case

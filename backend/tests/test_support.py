@@ -168,6 +168,64 @@ def test_every_support_template_exists(template_key):
     assert not subject.startswith("BiletFlow:")
 
 
+def support_payload(**fields) -> dict:
+    return {
+        "case_number": "SC-TEST-1",
+        "subject": "ticket_delivery",
+        "link": "https://example.com/support/SC-TEST-1",
+        "author": "Support team",
+        "excerpt": "Hello",
+    } | fields
+
+
+def rendered(template_key: str, payload: dict, locale: str) -> str:
+    """Subject and body of one email as a single string."""
+    return "\n".join(notify.render(template_key, payload, locale))
+
+
+@pytest.mark.parametrize(
+    ("locale", "label"),
+    [("ru", "Получение билетов"), ("kk", "Билетті жеткізу"), ("en", "Ticket delivery")],
+)
+def test_the_category_is_in_the_recipients_language(locale, label):
+    assert label in rendered("support.opened", support_payload(), locale)
+
+
+def test_the_status_is_in_the_recipients_language():
+    payload = support_payload(status="In progress", status_key="in_progress")
+
+    assert "В работе" in rendered("support.status", payload, "ru")
+
+
+def test_a_row_queued_before_status_key_keeps_its_label():
+    assert "In progress" in rendered("support.status", support_payload(status="In progress"), "ru")
+
+
+def test_an_unknown_category_is_left_as_it_is():
+    assert "mystery" in rendered("support.opened", support_payload(subject="mystery"), "ru")
+
+
+def test_an_unknown_locale_falls_back_to_russian():
+    assert "Получение билетов" in rendered("support.opened", support_payload(), "de")
+
+
+def test_render_does_not_change_the_stored_payload():
+    payload = support_payload(status="In progress", status_key="in_progress")
+    before = dict(payload)
+
+    notify.render("support.status", payload, "ru")
+
+    assert payload == before
+
+
+def test_other_templates_are_not_localized():
+    payload = {"event_title": "Concert", "status": "in_progress", "status_key": "in_progress"}
+
+    subject, _body = notify.render("payout.status", payload, "ru")
+
+    assert subject == "Платные продажи Concert: in_progress"
+
+
 def test_a_case_cannot_cite_someone_elses_order(api, db, event, attendee):
     victim = add_user(db, "victim@example.com")
     order = buy(api, event, victim)
@@ -553,6 +611,16 @@ def test_a_guest_gets_a_staff_reply_by_email_only(api, db, event, organizer):
     api.post(STAFF_REPLY.format(number=number), json={"body": "Hi"}, headers=auth(organizer))
 
     assert channels(db, "support.message") == {Channel.EMAIL}
+
+
+def test_a_status_email_carries_the_raw_status_key(api, db, event, attendee, organizer):
+    number = open_case(api, attendee, event_id=event.id)["case_number"]
+
+    staff_patch(api, organizer, number, status="in_progress")
+
+    [sent] = queued(db, "support.status")
+    assert sent.payload["status_key"] == "in_progress"
+    assert sent.payload["status"] == "In progress"  # the web feed still gets the label
 
 
 # --- assignment ---------------------------------------------------------------
