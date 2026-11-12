@@ -46,6 +46,28 @@ async function saveOrSharePdf(bytes: Uint8Array, filename: string) {
   await Sharing.shareAsync(file.uri, { mimeType: 'application/pdf', dialogTitle: 'Save or share your ticket PDF' });
 }
 
+export async function downloadAuthenticatedFile(fetcher: AuthenticatedFetch, path: string, filename: string, mimeType: string) {
+  const response = await fetcher(path, { headers: { Accept: mimeType } });
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    const detail = typeof body === 'object' && body !== null && 'detail' in body ? (body as { detail?: unknown }).detail : null;
+    throw new Error(typeof detail === 'string' ? detail : 'Could not download this file.');
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (Platform.OS === 'web') {
+    const blob = new Blob([new Uint8Array(bytes).buffer], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    downloadInBrowser(url, filename);
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    return;
+  }
+  const file = new File(Paths.cache, filename);
+  file.create({ overwrite: true });
+  file.write(bytes);
+  if (!(await Sharing.isAvailableAsync())) throw new Error('File sharing is unavailable on this device.');
+  await Sharing.shareAsync(file.uri, { mimeType, dialogTitle: 'Save or share BiletFlow export' });
+}
+
 export async function downloadOrderTicketsPdf(fetcher: AuthenticatedFetch, orderNumber: string) {
   const bytes = await requestPdf(fetcher, `/orders/${encodeURIComponent(orderNumber)}/tickets.pdf`);
   await saveOrSharePdf(bytes, `biletflow-${orderNumber}.pdf`);

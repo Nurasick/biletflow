@@ -47,8 +47,9 @@ function seatTier(seatId: string): SeatType {
 export default function SeatSelectionScreen() {
   const router = useRouter();
   const { t, locale, formatDate, formatNumber } = useI18n();
-  const { slug: rawSlug } = useLocalSearchParams<{ slug?: string | string[] }>();
+  const { slug: rawSlug, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug?: string | string[]; campaignToken?: string|string[] }>();
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
+  const campaignToken = Array.isArray(rawCampaignToken) ? rawCampaignToken[0] : rawCampaignToken;
   const { colorScheme } = useColorScheme();
   const { width } = useWindowDimensions();
   const isDark = colorScheme === 'dark';
@@ -113,7 +114,7 @@ export default function SeatSelectionScreen() {
     const items = Object.fromEntries(Object.entries(selectedCounts).map(([id, quantity]) => [id, quantity]));
     router.push({
       pathname: '/checkout',
-      params: { slug, selection: JSON.stringify(items), seats: selectedSeats.join(',') },
+      params: { slug, selection: JSON.stringify(items), seats: selectedSeats.join(','), ...(campaignToken ? { campaignToken } : {}) },
     });
   };
 
