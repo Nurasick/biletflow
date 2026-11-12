@@ -1,12 +1,15 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
-import { get, price, ticketLimit, type TicketType } from '@/api/public';
+import { get, ticketLimit, type TicketType } from '@/api/public';
 import { Screen, Label, Button } from '@/components/api-screen';
+import { useI18n } from '@/i18n';
 
 export default function TicketSelectionScreen() {
   const { slug } = useLocalSearchParams<{ slug?: string }>();
   const router = useRouter();
+  const { t, locale, formatNumber } = useI18n();
+  const price = (minor: number, currency: string) => new Intl.NumberFormat(locale, { style: 'currency', currency }).format(minor / 100);
   const [types, setTypes] = useState<TicketType[]>([]);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [error, setError] = useState('');
@@ -32,16 +35,16 @@ export default function TicketSelectionScreen() {
   const total = Object.values(quantities).reduce((sum, quantity) => sum + quantity, 0);
 
   return (
-    <Screen title="Choose tickets">
-      {loading ? <Label>Loading availability...</Label> : error ? <>
-        <Label>{error}</Label>
-        <Button title="Retry" onPress={() => setRetry((value) => value + 1)} />
+    <Screen title={t('Choose tickets')}>
+      {loading ? <Label>{t('Loading availability...')}</Label> : error ? <>
+        <Label>{t(error)}</Label>
+        <Button title={t('Retry')} onPress={() => setRetry((value) => value + 1)} />
       </> : <>
-        {!types.length && <Label>No ticket types available.</Label>}
-        {types.map((type) => <Label key={type.id}>{type.name}: {price(type.price_minor, type.currency)} / {type.available} available</Label>)}
+        {!types.length && <Label>{t('No ticket types available.')}</Label>}
+        {types.map((type) => <Label key={type.id}>{t('{ticket}: {price} / {count} available', { ticket: type.name, price: price(type.price_minor, type.currency), count: formatNumber(type.available) })}</Label>)}
         {types.map((type) => <Button
           key={type.id}
-          title={`${type.name}: ${quantities[type.id] ?? 0} selected (tap to add or reset at limit)`}
+          title={t('{ticket}: {count} selected (tap to add or reset at limit)', { ticket: type.name, count: formatNumber(quantities[type.id] ?? 0) })}
           disabled={!ticketLimit(type)}
           onPress={() => setQuantities((current) => {
             const next = { ...current };
@@ -52,7 +55,7 @@ export default function TicketSelectionScreen() {
           })}
         />)}
         <Button
-          title={`Continue (${total})`}
+          title={t('Continue ({count})', { count: formatNumber(total) })}
           disabled={!total}
           onPress={() => router.push({ pathname: '/checkout', params: { slug, selection: JSON.stringify(quantities) } })}
         />

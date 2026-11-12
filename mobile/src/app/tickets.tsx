@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, RefreshControl, ScrollVi
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { useI18n } from '@/i18n';
 import { TicketQr } from '@/components/ticket-qr';
 import { useAuth } from '@/hooks/use-auth';
 import { downloadOrderTicketsPdf, openEventCalendar } from '@/shared/api/documents';
@@ -18,6 +19,7 @@ const palette = {
 
 export default function TicketsScreen() {
   const router = useRouter();
+  const { t, formatDate } = useI18n();
   const { authenticatedFetch } = useAuth();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -105,10 +107,10 @@ export default function TicketsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
       <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <Pressable accessibilityLabel="Back to events" onPress={() => router.back()} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
+        <Pressable accessibilityLabel={t("Back to events")} onPress={() => router.back()} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
           <ThemedText style={{ color: colors.text, fontSize: 19 }}>‹</ThemedText>
         </Pressable>
-        <ThemedText style={{ flex: 1, color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '800' }}>My tickets</ThemedText>
+        <ThemedText style={{ flex: 1, color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '800' }}>{t("My tickets")}</ThemedText>
         <View style={{ width: 36 }} />
       </View>
 
@@ -116,19 +118,19 @@ export default function TicketsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 17, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={isLoading && orders.length > 0} onRefresh={refresh} tintColor={colors.accent} />}>
-        <ThemedText style={{ color: colors.text, fontSize: 23, fontWeight: '900' }}>Your orders</ThemedText>
-        <ThemedText style={{ marginTop: 4, marginBottom: 16, color: colors.muted, fontSize: 12 }}>Tickets and order status for your account.</ThemedText>
+        <ThemedText style={{ color: colors.text, fontSize: 23, fontWeight: '900' }}>{t("Your orders")}</ThemedText>
+        <ThemedText style={{ marginTop: 4, marginBottom: 16, color: colors.muted, fontSize: 12 }}>{t("Tickets and order status for your account.")}</ThemedText>
 
-        {isLoading && orders.length === 0 && <View style={{ alignItems: 'center', paddingVertical: 48 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted }}>Loading your orders…</ThemedText></View>}
+        {isLoading && orders.length === 0 && <View style={{ alignItems: 'center', paddingVertical: 48 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted }}>{t("Loading your orders…")}</ThemedText></View>}
 
-        {error && <FeedbackCard message={error} colors={colors} buttonLabel="Try again" onPress={refresh} />}
+        {error && <FeedbackCard message={error} colors={colors} buttonLabel={t("Try again")} onPress={refresh} />}
 
         {!isLoading && !error && orders.length === 0 && (
           <View style={{ alignItems: 'center', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
             <View style={{ width: 58, height: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 29, backgroundColor: colors.raised }}><ThemedText style={{ color: colors.accent, fontSize: 27 }}>▣</ThemedText></View>
-            <ThemedText style={{ marginTop: 13, color: colors.text, fontSize: 16, fontWeight: '800' }}>No orders yet</ThemedText>
-            <ThemedText style={{ marginTop: 5, color: colors.muted, textAlign: 'center', fontSize: 12, lineHeight: 18 }}>When you register for an event or buy a ticket, your order and tickets will appear here.</ThemedText>
-            <Pressable onPress={() => router.replace('/')} style={{ marginTop: 16, paddingHorizontal: 17, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '800' }}>Browse events</ThemedText></Pressable>
+            <ThemedText style={{ marginTop: 13, color: colors.text, fontSize: 16, fontWeight: '800' }}>{t("No orders yet")}</ThemedText>
+            <ThemedText style={{ marginTop: 5, color: colors.muted, textAlign: 'center', fontSize: 12, lineHeight: 18 }}>{t("When you register for an event or buy a ticket, your order and tickets will appear here.")}</ThemedText>
+            <Pressable onPress={() => router.replace('/')} style={{ marginTop: 16, paddingHorizontal: 17, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '800' }}>{t("Browse events")}</ThemedText></Pressable>
           </View>
         )}
 
@@ -141,48 +143,51 @@ export default function TicketsScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                   <View style={{ flex: 1 }}>
                     <ThemedText numberOfLines={2} style={{ color: colors.text, fontSize: 15, fontWeight: '800' }}>{order.event.title}</ThemedText>
-                    <ThemedText style={{ marginTop: 5, color: colors.muted, fontSize: 11 }}>{formatEventDate(order.event.starts_at)}</ThemedText>
+                    <ThemedText style={{ marginTop: 5, color: colors.muted, fontSize: 11 }}>{formatDate(order.event.starts_at, order.event.timezone)}</ThemedText>
                     <ThemedText numberOfLines={1} style={{ marginTop: 3, color: colors.muted, fontSize: 11 }}>{order.event.venue_name}</ThemedText>
                   </View>
                   <StatusBadge status={order.status} colors={colors} />
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 13, paddingTop: 11, borderTopWidth: 1, borderTopColor: colors.border }}>
-                  <ThemedText style={{ color: colors.muted, fontSize: 11 }}>Order {order.order_number}</ThemedText>
+                  <ThemedText style={{ color: colors.muted, fontSize: 11 }}>{t("Order")} {order.order_number}</ThemedText>
                   <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{formatOrderMoney(order.total_minor, order.currency)}</ThemedText>
                 </View>
-                <ThemedText style={{ marginTop: 8, color: colors.accent, fontSize: 11, fontWeight: '700' }}>{expanded ? 'Hide details  ↑' : `View details${order.tickets.length ? ` · ${order.tickets.length} tickets` : ''}  ↓`}</ThemedText>
+                <ThemedText style={{ marginTop: 8, color: colors.accent, fontSize: 11, fontWeight: '700' }}>{expanded ? t("Hide details  ↑") : `View details${order.tickets.length ? ` · ${order.tickets.length} tickets` : ''}  ↓`}</ThemedText>
               </Pressable>
 
               {expanded && (
                 <View style={{ paddingHorizontal: 14, paddingBottom: 14 }}>
+                  <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/support-new', params: { eventId: String(order.event_id), orderNumber: order.order_number } })} style={{ minHeight: 44, justifyContent: 'center', marginTop: 8 }}>
+                    <ThemedText style={{ color: colors.accent, fontWeight: '700' }}>{t('Order support')}</ThemedText>
+                  </Pressable>
                   <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                    <ThemedText style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>Order summary</ThemedText>
-                    {order.items.map((item) => <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>{item.quantity} × ticket</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(item.subtotal_minor, order.currency)}</ThemedText></View>)}
-                    {order.fee_minor > 0 && <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 7 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>Processing fee</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(order.fee_minor, order.currency)}</ThemedText></View>}
+                    <ThemedText style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>{t("Order summary")}</ThemedText>
+                    {order.items.map((item) => <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>{item.quantity} {t("× ticket")}</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(item.subtotal_minor, order.currency)}</ThemedText></View>)}
+                    {order.fee_minor > 0 && <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 7 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>{t("Processing fee")}</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(order.fee_minor, order.currency)}</ThemedText></View>}
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: 9, marginTop: 13 }}>
                     {order.tickets.some((ticket) => ticket.status === 'valid' || ticket.status === 'checked_in') && (
-                      <ActionButton label={documentBusy === order.order_number ? 'Preparing PDF…' : 'Download tickets PDF'} disabled={documentBusy !== null} colors={colors} onPress={() => void savePdf(order)} />
+                      <ActionButton label={documentBusy === order.order_number ? t("Preparing PDF…") : t("Download tickets PDF")} disabled={documentBusy !== null} colors={colors} onPress={() => void savePdf(order)} />
                     )}
-                    <ActionButton label="Add to calendar" disabled={documentBusy !== null} secondary colors={colors} onPress={() => void addToCalendar(order)} />
+                    <ActionButton label={t("Add to calendar")} disabled={documentBusy !== null} secondary colors={colors} onPress={() => void addToCalendar(order)} />
                   </View>
-                  {documentError && <ThemedText style={{ marginTop: 8, color: colors.danger, fontSize: 12 }}>{documentError}</ThemedText>}
+                  {documentError && <ThemedText style={{ marginTop: 8, color: colors.danger, fontSize: 12 }}>{t(documentError)}</ThemedText>}
 
                   {order.status === 'pending' && (
                     <View style={{ flexDirection: 'row', gap: 9, marginTop: 13 }}>
-                      <ActionButton label={isBusy ? 'Working…' : 'Pay (demo)'} disabled={isBusy} colors={colors} onPress={() => void runOrderAction(order, 'pay')} />
-                      <ActionButton label={isBusy ? 'Working…' : 'Cancel'} disabled={isBusy} secondary colors={colors} onPress={() => confirmCancel(order)} />
+                      <ActionButton label={isBusy ? t("Working…") : t("Pay (demo)")} disabled={isBusy} colors={colors} onPress={() => void runOrderAction(order, 'pay')} />
+                      <ActionButton label={isBusy ? t("Working…") : t("Cancel")} disabled={isBusy} secondary colors={colors} onPress={() => confirmCancel(order)} />
                     </View>
                   )}
 
-                  {actionError && busyOrder === null && <ThemedText style={{ marginTop: 10, color: colors.danger, fontSize: 12 }}>{actionError}</ThemedText>}
-                  {order.status === 'pending' && <ThemedText style={{ marginTop: 9, color: colors.muted, fontSize: 10 }}>Demo payment only. No real payment is made.</ThemedText>}
+                  {actionError && busyOrder === null && <ThemedText style={{ marginTop: 10, color: colors.danger, fontSize: 12 }}>{t(actionError)}</ThemedText>}
+                  {order.status === 'pending' && <ThemedText style={{ marginTop: 9, color: colors.muted, fontSize: 10 }}>{t("Demo payment only. No real payment is made.")}</ThemedText>}
 
                   <View style={{ marginTop: 15 }}>
-                    <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>Tickets ({order.tickets.length})</ThemedText>
+                    <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{t("Tickets (")}{order.tickets.length})</ThemedText>
                     {order.tickets.length === 0 ? (
-                      <ThemedText style={{ marginTop: 7, color: colors.muted, fontSize: 11 }}>{order.status === 'pending' ? 'Tickets are issued after successful payment.' : 'This order has no tickets.'}</ThemedText>
+                      <ThemedText style={{ marginTop: 7, color: colors.muted, fontSize: 11 }}>{order.status === 'pending' ? t("Tickets are issued after successful payment.") : t("This order has no tickets.")}</ThemedText>
                     ) : order.tickets.map((ticket) => <TicketCard key={ticket.public_code} ticket={ticket} order={order} colors={colors} />)}
                   </View>
                 </View>
@@ -196,12 +201,15 @@ export default function TicketsScreen() {
 }
 
 function StatusBadge({ status, colors }: { status: OrderStatus; colors: typeof palette.dark }) {
+  const { t, formatDate } = useI18n();
   const color = status === 'confirmed' ? colors.success : status === 'pending' ? colors.warning : colors.muted;
-  const label = status.replace('_', ' ');
-  return <View style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 15, backgroundColor: `${color}20` }}><ThemedText style={{ color, fontSize: 10, fontWeight: '800', textTransform: 'capitalize' }}>{label}</ThemedText></View>;
+  const label = t(status);
+  return <View style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 15, backgroundColor: `${color}20` }}><ThemedText style={{ color, fontSize: 10, fontWeight: '800', textTransform: 'capitalize' }}>{t(label)}</ThemedText></View>;
 }
 
 function TicketCard({ ticket, order, colors }: { ticket: Order['tickets'][number]; order: Order; colors: typeof palette.dark }) {
+  const router = useRouter();
+  const { t, formatDate } = useI18n();
   const statusColor = ticket.status === 'valid' ? colors.success : ticket.status === 'checked_in' ? colors.warning : colors.muted;
   const canScan = (ticket.status === 'valid' || ticket.status === 'checked_in') && ticket.qr_payload.length > 0;
   return (
@@ -209,22 +217,27 @@ function TicketCard({ ticket, order, colors }: { ticket: Order['tickets'][number
       <View style={{ width: '100%', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <View style={{ flex: 1 }}>
           <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{ticket.ticket_type_name}</ThemedText>
-          <ThemedText style={{ marginTop: 4, color: colors.muted, fontSize: 11 }}>For {ticket.attendee_name}</ThemedText>
+          <ThemedText style={{ marginTop: 4, color: colors.muted, fontSize: 11 }}>{t("For")} {ticket.attendee_name}</ThemedText>
         </View>
-        <ThemedText style={{ color: statusColor, fontSize: 10, fontWeight: '800', textTransform: 'capitalize' }}>{ticket.status.replace('_', ' ')}</ThemedText>
+        <ThemedText style={{ color: statusColor, fontSize: 10, fontWeight: '800', textTransform: 'capitalize' }}>{t(ticket.status)}</ThemedText>
       </View>
-      <ThemedText style={{ alignSelf: 'flex-start', marginTop: 10, color: colors.muted, fontSize: 10 }}>Ticket code · {ticket.public_code}</ThemedText>
-      {canScan ? <View style={{ marginTop: 13, overflow: 'hidden', borderRadius: 5 }}><TicketQr payload={ticket.qr_payload} /></View> : <ThemedText style={{ marginTop: 13, color: colors.muted, fontSize: 11 }}>This ticket is no longer valid for entry.</ThemedText>}
+      <ThemedText style={{ alignSelf: 'flex-start', marginTop: 10, color: colors.muted, fontSize: 10 }}>{t("Ticket code ·")} {ticket.public_code}</ThemedText>
+      {canScan ? <View style={{ marginTop: 13, overflow: 'hidden', borderRadius: 5 }}><TicketQr payload={ticket.qr_payload} /></View> : <ThemedText style={{ marginTop: 13, color: colors.muted, fontSize: 11 }}>{t("This ticket is no longer valid for entry.")}</ThemedText>}
+      <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/support-new', params: { eventId: String(order.event_id), orderNumber: order.order_number, ticketCode: ticket.public_code } })} style={{ marginTop: 12, minHeight: 44, justifyContent: 'center' }}>
+        <ThemedText style={{ color: colors.accent, fontWeight: '700' }}>{t('Ticket support')}</ThemedText>
+      </Pressable>
       <ThemedText style={{ marginTop: 12, color: colors.text, textAlign: 'center', fontSize: 12, fontWeight: '700' }}>{order.event.title}</ThemedText>
-      <ThemedText style={{ marginTop: 4, color: colors.muted, textAlign: 'center', fontSize: 10 }}>{formatEventDate(order.event.starts_at)} · {order.event.venue_name}</ThemedText>
+      <ThemedText style={{ marginTop: 4, color: colors.muted, textAlign: 'center', fontSize: 10 }}>{formatDate(order.event.starts_at, order.event.timezone)} · {order.event.venue_name}</ThemedText>
     </View>
   );
 }
 
 function FeedbackCard({ message, colors, buttonLabel, onPress }: { message: string; colors: typeof palette.dark; buttonLabel: string; onPress: () => void }) {
-  return <View style={{ alignItems: 'center', padding: 18, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}><ThemedText style={{ color: colors.text, textAlign: 'center', fontSize: 13 }}>{message}</ThemedText><Pressable onPress={onPress} style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '800' }}>{buttonLabel}</ThemedText></Pressable></View>;
+  const { t, formatDate } = useI18n();
+  return <View style={{ alignItems: 'center', padding: 18, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}><ThemedText style={{ color: colors.text, textAlign: 'center', fontSize: 13 }}>{message}</ThemedText><Pressable onPress={onPress} style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '800' }}>{t(buttonLabel)}</ThemedText></Pressable></View>;
 }
 
 function ActionButton({ label, disabled, secondary = false, colors, onPress }: { label: string; disabled: boolean; secondary?: boolean; colors: typeof palette.dark; onPress: () => void }) {
-  return <Pressable disabled={disabled} onPress={onPress} style={{ flex: 1, alignItems: 'center', paddingVertical: 11, borderRadius: 10, borderWidth: secondary ? 1 : 0, borderColor: colors.border, backgroundColor: secondary ? colors.surface : colors.accent, opacity: disabled ? 0.55 : 1 }}><ThemedText style={{ color: secondary ? colors.text : '#FFFFFF', fontSize: 12, fontWeight: '800' }}>{label}</ThemedText></Pressable>;
+  const { t, formatDate } = useI18n();
+  return <Pressable disabled={disabled} onPress={onPress} style={{ flex: 1, alignItems: 'center', paddingVertical: 11, borderRadius: 10, borderWidth: secondary ? 1 : 0, borderColor: colors.border, backgroundColor: secondary ? colors.surface : colors.accent, opacity: disabled ? 0.55 : 1 }}><ThemedText style={{ color: secondary ? colors.text : '#FFFFFF', fontSize: 12, fontWeight: '800' }}>{t(label)}</ThemedText></Pressable>;
 }

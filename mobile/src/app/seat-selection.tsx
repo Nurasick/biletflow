@@ -6,8 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ticketLimit } from '@/api/public';
 import { ThemedText } from '@/components/themed-text';
+import { useI18n } from '@/i18n';
 import { EVENT, ROWS, SEAT_PRICE, SEATS_PER_ROW, SOLD_SEATS, type SeatType } from '@/constants/seating';
-import { eventsApi, formatEventDate, type EventDetail, type PublicTicketType } from '@/shared/api/events';
+import { eventsApi, type EventDetail, type PublicTicketType } from '@/shared/api/events';
 
 const PALETTE = {
   dark: {
@@ -45,6 +46,7 @@ function seatTier(seatId: string): SeatType {
 
 export default function SeatSelectionScreen() {
   const router = useRouter();
+  const { t, locale, formatDate, formatNumber } = useI18n();
   const { slug: rawSlug } = useLocalSearchParams<{ slug?: string | string[] }>();
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
   const { colorScheme } = useColorScheme();
@@ -116,16 +118,16 @@ export default function SeatSelectionScreen() {
   };
 
   const title = event?.title ?? EVENT.title;
-  const eventWhen = event ? `${formatEventDate(event.starts_at)} · ${event.venue_name}` : `${EVENT.date} · ${EVENT.time} · ${EVENT.hall}`;
+  const eventWhen = event ? `${formatDate(event.starts_at, event.timezone)} · ${event.venue_name}` : `${EVENT.date} · ${EVENT.time} · ${EVENT.hall}`;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
       <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <Pressable accessibilityLabel="Go back to event details" onPress={() => router.back()} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
+        <Pressable accessibilityLabel={t('Go back to event details')} onPress={() => router.back()} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
           <ThemedText style={{ color: colors.text, fontSize: 19 }}>‹</ThemedText>
         </Pressable>
-        <ThemedText style={{ flex: 1, color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '800' }}>Select seats</ThemedText>
+        <ThemedText style={{ flex: 1, color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '800' }}>{t('Select seats')}</ThemedText>
         <View style={{ width: 36 }} />
       </View>
 
@@ -135,15 +137,15 @@ export default function SeatSelectionScreen() {
 
         <View style={{ marginTop: 14, padding: 11, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
           <ThemedText style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>
-            Seat map preview. This backend currently reserves ticket quantities only; selected seat numbers are not held or saved on the ticket.
+            {t('Seat map preview. This backend currently reserves ticket quantities only; selected seat numbers are not held or saved on the ticket.')}
           </ThemedText>
         </View>
 
-        {loading ? <View style={{ alignItems: 'center', paddingVertical: 36 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 10, color: colors.muted }}>Loading event and ticket types…</ThemedText></View> : error ? (
-          <View style={{ alignItems: 'center', paddingVertical: 30 }}><ThemedText style={{ color: colors.text, textAlign: 'center' }}>{error}</ThemedText></View>
+        {loading ? <View style={{ alignItems: 'center', paddingVertical: 36 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 10, color: colors.muted }}>{t('Loading event and ticket types...')}</ThemedText></View> : error ? (
+          <View style={{ alignItems: 'center', paddingVertical: 30 }}><ThemedText style={{ color: colors.text, textAlign: 'center' }}>{t(error)}</ThemedText></View>
         ) : <>
           <View style={{ height: 36, marginTop: 23, alignItems: 'center', justifyContent: 'center', borderBottomLeftRadius: 28, borderBottomRightRadius: 28, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
-            <ThemedText style={{ color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 2 }}>STAGE</ThemedText>
+            <ThemedText style={{ color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 2 }}>{t('STAGE')}</ThemedText>
           </View>
 
           <View style={{ marginTop: 17, gap: 5 }}>
@@ -160,7 +162,7 @@ export default function SeatSelectionScreen() {
                 return <Pressable
                   key={seatId}
                   accessibilityRole="button"
-                  accessibilityLabel={`Row ${row.name}, seat ${index + 1}, ${sold ? 'sold' : selected ? 'selected' : unavailable ? 'unavailable' : row.type}`}
+                  accessibilityLabel={t('Row {row}, seat {seat}, {status}', { row: row.name, seat: formatNumber(index + 1), status: t(sold ? 'sold' : selected ? 'selected' : unavailable ? 'unavailable' : row.type) })}
                   accessibilityState={{ disabled: sold || unavailable, selected }}
                   disabled={sold || unavailable}
                   onPress={() => toggleSeat(seatId)}
@@ -173,28 +175,28 @@ export default function SeatSelectionScreen() {
           </View>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 11, marginTop: 17 }}>
-            <Legend color={colors.accent} label="Selected" colors={colors} filled />
-            <Legend color={colors.standard} label="Standard" colors={colors} />
-            <Legend color={colors.premium} label="Premium" colors={colors} filled />
-            <Legend color={colors.vip} label="VIP" colors={colors} filled />
-            <Legend color={colors.sold} label="Sold" colors={colors} filled />
+            <Legend color={colors.accent} label={t('Selected')} colors={colors} filled />
+            <Legend color={colors.standard} label={t('Standard')} colors={colors} />
+            <Legend color={colors.premium} label={t('Premium')} colors={colors} filled />
+            <Legend color={colors.vip} label={t('VIP')} colors={colors} filled />
+            <Legend color={colors.sold} label={t('Sold')} colors={colors} filled />
           </View>
 
           <View style={{ marginTop: 16, overflow: 'hidden', borderRadius: 13, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 13, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-              <ThemedText style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>Selected seats ({selectedSeats.length})</ThemedText>
-              <Pressable accessibilityRole="button" disabled={!selectedSeats.length} onPress={() => setSelectedSeats([])}><ThemedText style={{ color: colors.accent, fontSize: 10, fontWeight: '800' }}>Clear all</ThemedText></Pressable>
+              <ThemedText style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>{t('Selected seats ({count})', { count: formatNumber(selectedSeats.length) })}</ThemedText>
+              <Pressable accessibilityRole="button" disabled={!selectedSeats.length} onPress={() => setSelectedSeats([])}><ThemedText style={{ color: colors.accent, fontSize: 10, fontWeight: '800' }}>{t('Clear all')}</ThemedText></Pressable>
             </View>
-            {!selectedSeats.length ? <ThemedText style={{ padding: 13, color: colors.muted, fontSize: 11 }}>Choose available seats from the map above.</ThemedText> : selectedSeats.map((seatId) => {
+            {!selectedSeats.length ? <ThemedText style={{ padding: 13, color: colors.muted, fontSize: 11 }}>{t('Choose available seats from the map above.')}</ThemedText> : selectedSeats.map((seatId) => {
               const tier = seatTier(seatId);
               const type = ticketMap[tier];
               const amount = previewOnly ? SEAT_PRICE[tier] * 100 : (type?.price_minor ?? 0);
               return <View key={seatId} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 13, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                 <View>
-                  <ThemedText style={{ color: colors.text, fontSize: 11, fontWeight: '700' }}>Row {seatId.split('-')[0]} · Seat {seatId.split('-')[1]}</ThemedText>
-                  <ThemedText style={{ marginTop: 2, color: colors.muted, fontSize: 10, textTransform: 'capitalize' }}>{type?.name ?? tier}</ThemedText>
+                  <ThemedText style={{ color: colors.text, fontSize: 11, fontWeight: '700' }}>{t('Row {row}, seat {seat}', { row: seatId.split('-')[0], seat: seatId.split('-')[1] })}</ThemedText>
+                  <ThemedText style={{ marginTop: 2, color: colors.muted, fontSize: 10, textTransform: 'capitalize' }}>{type?.name ?? t(tier)}</ThemedText>
                 </View>
-                <ThemedText style={{ color: colors.text, fontSize: 11, fontWeight: '800' }}>{new Intl.NumberFormat('en-US', { style: 'currency', currency: type?.currency ?? 'KZT', maximumFractionDigits: 0 }).format(amount / 100)}</ThemedText>
+                <ThemedText style={{ color: colors.text, fontSize: 11, fontWeight: '800' }}>{new Intl.NumberFormat(locale, { style: 'currency', currency: type?.currency ?? 'KZT', maximumFractionDigits: 0 }).format(amount / 100)}</ThemedText>
               </View>;
             })}
           </View>
@@ -203,11 +205,11 @@ export default function SeatSelectionScreen() {
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 15, paddingVertical: 11, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface }}>
         <View>
-          <ThemedText style={{ color: colors.muted, fontSize: 10 }}>Total</ThemedText>
-          <ThemedText style={{ marginTop: 2, color: colors.text, fontSize: 14, fontWeight: '900' }}>{new Intl.NumberFormat('en-US', { style: 'currency', currency: ticketTypes[0]?.currency ?? 'KZT', maximumFractionDigits: 0 }).format(selectedTotalMinor / 100)}</ThemedText>
+          <ThemedText style={{ color: colors.muted, fontSize: 10 }}>{t('Total')}</ThemedText>
+          <ThemedText style={{ marginTop: 2, color: colors.text, fontSize: 14, fontWeight: '900' }}>{new Intl.NumberFormat(locale, { style: 'currency', currency: ticketTypes[0]?.currency ?? 'KZT', maximumFractionDigits: 0 }).format(selectedTotalMinor / 100)}</ThemedText>
         </View>
         <Pressable accessibilityRole="button" disabled={!slug || !selectedSeats.length || loading || !!error} onPress={continueToCheckout} style={{ minWidth: 154, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, height: 46, borderRadius: 12, backgroundColor: slug && selectedSeats.length ? colors.accent : colors.sold, opacity: loading || error ? 0.5 : 1 }}>
-          <ThemedText style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>{previewOnly ? 'Preview only' : 'Continue'}</ThemedText>
+          <ThemedText style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>{t(previewOnly ? 'Preview only' : 'Continue')}</ThemedText>
         </Pressable>
       </View>
     </SafeAreaView>

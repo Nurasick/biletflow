@@ -6,10 +6,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
 import { API_V1_URL } from '@/constants/api';
+import { singleFlight } from '@/lib/single-flight';
 
 const SESSION_STORAGE_KEY = 'biletflow.auth.session.v1';
 
@@ -47,6 +49,10 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+class AuthRequestError extends Error {
+  constructor(message: string, readonly status: number) { super(message); }
+}
 
 function getErrorMessage(body: unknown, status: number) {
   if (typeof body === 'object' && body !== null && 'detail' in body) {
@@ -87,7 +93,7 @@ async function requestTokens(path: '/login' | '/refresh', body: Record<string, s
   const responseBody: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(getErrorMessage(responseBody, response.status));
+    throw new AuthRequestError(getErrorMessage(responseBody, response.status), response.status);
   }
 
   if (!isTokenResponse(responseBody) || !responseBody.refresh_token) {
@@ -138,11 +144,29 @@ async function readStoredSession(): Promise<StoredSession | null> {
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(null);
+  const sessionRef = useRef<AuthSession | null>(null);
+  const refreshOnce = useRef(singleFlight<AuthSession>());
+  const sessionVersion = useRef(0);
+  const persistence = useRef<Promise<void>>(Promise.resolve());
+  const persist = useCallback((next: AuthSession | null, version: number) => {
+    const operation = persistence.current.catch(() => {}).then(async () => {
+      if (version !== sessionVersion.current) return;
+      if (next?.rememberMe) await saveStoredSession(next);
+      else await clearStoredSession();
+    });
+    persistence.current = operation.catch(() => {});
+    return operation;
+  }, []);
+  const commitSession = useCallback((next: AuthSession | null) => {
+    sessionRef.current = next;
+    setSession(next);
+  }, []);
   const [isRestoring, setIsRestoring] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const restoreSession = useCallback(async () => {
+    const version = sessionVersion.current;
     try {
       const stored = await readStoredSession();
       if (!stored) {
@@ -150,6 +174,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       const tokens = await requestTokens('/refresh', { refresh_token: stored.refreshToken });
+      if (version !== sessionVersion.current) return;
       const restoredSession: AuthSession = {
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
@@ -157,15 +182,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
         rememberMe: true,
       };
 
-      await saveStoredSession(restoredSession);
-      setSession(restoredSession);
+      await persist(restoredSession, version);
+      if (version !== sessionVersion.current) return;
+      commitSession(restoredSession);
     } catch {
-      await clearStoredSession();
-      setSession(null);
+      await persist(null, version);
+      if (version === sessionVersion.current) commitSession(null);
     } finally {
       setIsRestoring(false);
     }
-  }, []);
+  }, [commitSession, persist]);
 
   useEffect(() => {
     const restoreTimer = setTimeout(() => {
@@ -175,39 +201,47 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => clearTimeout(restoreTimer);
   }, [restoreSession]);
 
-  const refreshSession = useCallback(async () => {
-    if (!session) {
+  const refreshSession = useCallback(() => refreshOnce.current(async () => {
+    const activeSession = sessionRef.current;
+    const version = sessionVersion.current;
+    if (!activeSession) {
       throw new Error('Your session has ended. Please sign in again.');
     }
 
     try {
-      const tokens = await requestTokens('/refresh', { refresh_token: session.refreshToken });
+      const tokens = await requestTokens('/refresh', { refresh_token: activeSession.refreshToken });
+      if (sessionRef.current !== activeSession) throw new Error('Your session has changed. Please try again.');
       const refreshedSession: AuthSession = {
-        ...session,
+        ...activeSession,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
       };
 
       if (refreshedSession.rememberMe) {
-        await saveStoredSession(refreshedSession);
+        await persist(refreshedSession, version);
       }
 
-      setSession(refreshedSession);
+      if (sessionRef.current !== activeSession) throw new Error('Your session has changed. Please try again.');
+      commitSession(refreshedSession);
       return refreshedSession;
     } catch (refreshError) {
-      await clearStoredSession();
-      setSession(null);
+      if (sessionRef.current === activeSession && refreshError instanceof AuthRequestError && [401, 403].includes(refreshError.status)) {
+        commitSession(null);
+        await persist(null, version);
+      }
       throw refreshError;
     }
-  }, [session]);
+  }), [commitSession, persist]);
 
   const login = useCallback(async (email: string, password: string, rememberMe: boolean) => {
+    const version = ++sessionVersion.current;
     setLoading(true);
     setError(null);
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const tokens = await requestTokens('/login', { email: normalizedEmail, password });
+      if (version !== sessionVersion.current) return false;
       const nextSession: AuthSession = {
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
@@ -215,28 +249,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
         rememberMe,
       };
 
-      if (rememberMe) {
-        await saveStoredSession(nextSession);
-      } else {
-        await clearStoredSession();
-      }
+      await persist(nextSession, version);
 
-      setSession(nextSession);
+      if (version !== sessionVersion.current) return false;
+      commitSession(nextSession);
       return true;
     } catch (loginError) {
-      setSession(null);
+      if (version === sessionVersion.current) {
+        commitSession(null);
+        await persist(null, version);
+      }
       setError(loginError instanceof Error ? loginError.message : 'Unable to sign in.');
       return false;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [commitSession, persist]);
 
   const logout = useCallback(async () => {
-    const activeSession = session;
-    setSession(null);
+    const activeSession = sessionRef.current;
+    const version = ++sessionVersion.current;
+    commitSession(null);
     setError(null);
-    await clearStoredSession();
+    await persist(null, version);
 
     if (activeSession) {
       try {
@@ -250,11 +285,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // Local token removal is enough for the bearer-mode client.
       }
     }
-  }, [session]);
+  }, [commitSession, persist]);
 
   const authenticatedFetch = useCallback(
     async (path: string, init: RequestInit = {}) => {
-      if (!session) {
+      const activeSession = sessionRef.current;
+      if (!activeSession) {
         throw new Error('Your session has ended. Please sign in again.');
       }
 
@@ -265,15 +301,31 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return fetch(url, { ...init, headers });
       };
 
-      const response = await request(session.accessToken);
+      const assertActive = () => {
+        if (!init.signal?.aborted) return;
+        const aborted = new Error('Request aborted');
+        aborted.name = 'AbortError';
+        throw aborted;
+      };
+
+      assertActive();
+      const response = await request(activeSession.accessToken);
       if (response.status !== 401) {
         return response;
       }
 
+      if (sessionRef.current?.refreshToken !== activeSession.refreshToken) {
+        assertActive();
+        if (!sessionRef.current) throw new Error('Your session has ended. Please sign in again.');
+        if (sessionRef.current.user.email !== activeSession.user.email) throw new Error('Your session has changed. Please try again.');
+        return request(sessionRef.current.accessToken);
+      }
+      assertActive();
       const refreshedSession = await refreshSession();
+      assertActive();
       return request(refreshedSession.accessToken);
     },
-    [refreshSession, session],
+    [refreshSession],
   );
 
   const value = useMemo<AuthContextValue>(

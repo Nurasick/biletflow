@@ -8,8 +8,10 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/hooks/use-auth';
 import { requestPasswordReset } from '@/shared/api/auth';
+import { LanguageSelector, useI18n } from '@/i18n';
 
 export default function LoginScreen() {
+  const { t } = useI18n();
   const [registering, setRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,27 +69,29 @@ export default function LoginScreen() {
 
       <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
         <ThemedView className="relative z-10 flex-1 px-6">
-          <View className="mb-12 flex-row gap-2">
+          <View className="mb-3 flex-row gap-2">
             <View className="h-7 w-6 rounded bg-[#FF5C35]" />
             <ThemedText className="text-2xl font-extrabold">
               Bilet<ThemedText className="text-[#FF5C35]">Flow</ThemedText>
             </ThemedText>
           </View>
+          <LanguageSelector disabled={loading || resetBusy} />
 
           <View className="mb-7">
-            <ThemedText className="mb-2 text-xs font-bold tracking-widest text-[#FF5C35]">WELCOME BACK</ThemedText>
+            <ThemedText className="mb-2 text-xs font-bold tracking-widest text-[#FF5C35]">{t('WELCOME BACK')}</ThemedText>
             <ThemedText className="mb-2 text-3xl font-bold leading-tight">
-              Your next great{'\n'}night starts here.
+              {t('Your next great night starts here.')}
             </ThemedText>
             <ThemedText className="text-sm text-[#98A2B3]">
-              Sign in to access your tickets, saved events and faster checkout.
+              {t('Sign in to access your tickets, saved events and faster checkout.')}
             </ThemedText>
           </View>
 
           {resetMode ? (
             <View className="mb-6 gap-4">
-              <ThemedText className="text-sm text-[#98A2B3]">Enter your account email and we’ll send a password reset link if the account exists.</ThemedText>
+              <ThemedText className="text-sm text-[#98A2B3]">{t('Enter your account email and we will send a password reset link if the account exists.')}</ThemedText>
               <TextInput
+                accessibilityLabel={t('Email address')}
                 autoCapitalize="none"
                 autoComplete="email"
                 editable={!resetBusy}
@@ -98,29 +102,33 @@ export default function LoginScreen() {
                 value={email}
                 onChangeText={(value) => { setEmail(value); setResetError(null); setResetMessage(null); }}
               />
-              {!!resetError && <ThemedText className="text-sm text-red-500">{resetError}</ThemedText>}
-              {!!resetMessage && <ThemedText className="text-sm text-green-500">{resetMessage}</ThemedText>}
+              {!!resetError && <ThemedText className="text-sm text-red-500">{t(resetError)}</ThemedText>}
+              {!!resetMessage && <ThemedText className="text-sm text-green-500">{t(resetMessage)}</ThemedText>}
               <TouchableOpacity
                 accessibilityRole="button"
                 className={`items-center rounded-lg bg-[#FF5C35] py-4 ${resetBusy ? 'opacity-70' : ''}`}
                 disabled={resetBusy}
                 onPress={() => void handlePasswordReset()}>
-                <ThemedText className="text-base font-bold text-white">{resetBusy ? 'Sending...' : 'Send reset link'}</ThemedText>
+                <ThemedText className="text-base font-bold text-white">{t(resetBusy ? 'Sending...' : 'Send reset link')}</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity disabled={resetBusy} onPress={() => { setResetMode(false); setResetError(null); setResetMessage(null); }}>
-                <ThemedText className="text-center text-sm font-semibold text-[#FF5C35]">Back to sign in</ThemedText>
+                <ThemedText className="text-center text-sm font-semibold text-[#FF5C35]">{t('Back to sign in')}</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity disabled={resetBusy} onPress={() => router.push('/reset-password')}>
+                <ThemedText className="text-center text-sm font-semibold text-[#FF5C35]">{t('I have a reset token')}</ThemedText>
               </TouchableOpacity>
             </View>
           ) : <>
           {displayedError && (
             <ThemedText className="mb-4 rounded bg-red-900/20 px-3 py-2 text-sm text-red-500">
-              {displayedError}
+              {t(displayedError)}
             </ThemedText>
           )}
 
           <View className="mb-4">
-            <ThemedText className="mb-2 text-sm font-semibold">Email address</ThemedText>
+            <ThemedText className="mb-2 text-sm font-semibold">{t('Email address')}</ThemedText>
             <TextInput
+              accessibilityLabel={t('Email address')}
               autoCapitalize="none"
               autoComplete="email"
               editable={!loading}
@@ -138,16 +146,17 @@ export default function LoginScreen() {
 
           <View className="mb-6">
             <View className="mb-2 flex-row items-center justify-between">
-              <ThemedText className="text-sm font-semibold">Password</ThemedText>
+              <ThemedText className="text-sm font-semibold">{t('Password')}</ThemedText>
               <TouchableOpacity onPress={() => { setResetMode(true); setResetError(null); setResetMessage(null); }}>
-                <ThemedText className="text-xs font-semibold text-[#FF5C35]">Forgot password?</ThemedText>
+                <ThemedText className="text-xs font-semibold text-[#FF5C35]">{t('Forgot password?')}</ThemedText>
               </TouchableOpacity>
             </View>
             <View className="flex-row items-center rounded-lg border border-[#344054] bg-[#101828]">
               <TextInput
+                accessibilityLabel={t('Password')}
                 autoComplete="current-password"
                 editable={!loading}
-                placeholder="Password"
+                placeholder={t('Password')}
                 placeholderTextColor="#98A2B3"
                 secureTextEntry={!showPassword}
                 className="flex-1 px-4 py-3 text-base text-[#F5F5F0]"
@@ -158,7 +167,7 @@ export default function LoginScreen() {
                 }}
               />
               <TouchableOpacity onPress={() => setShowPassword((visible) => !visible)} className="px-4">
-                <ThemedText className="text-lg">{showPassword ? 'Hide' : 'Show'}</ThemedText>
+                <ThemedText className="text-lg">{t(showPassword ? 'Hide' : 'Show')}</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -174,11 +183,10 @@ export default function LoginScreen() {
                 }`}>
                 {rememberMe && <ThemedText className="text-xs font-bold text-white">x</ThemedText>}
               </TouchableOpacity>
-              <ThemedText className="text-sm">Remember me</ThemedText>
+              <ThemedText className="text-sm">{t('Remember me')}</ThemedText>
             </View>
             <ThemedText className="text-xs text-[#98A2B3]">
-              By signing in, you agree to our <ThemedText className="font-semibold text-[#FF5C35]">Terms of Service</ThemedText>{' '}
-              and <ThemedText className="font-semibold text-[#FF5C35]">Privacy Policy</ThemedText>
+              {t('By signing in, you agree to our Terms of Service and Privacy Policy.')}
             </ThemedText>
           </View>
 
@@ -187,15 +195,18 @@ export default function LoginScreen() {
             className={`mb-6 items-center rounded-lg bg-[#FF5C35] py-4 ${loading ? 'opacity-70' : ''}`}
             disabled={loading}
             onPress={handleLogin}>
-            <ThemedText className="text-base font-bold text-white">{loading ? 'Signing in...' : 'Sign in'}</ThemedText>
+            <ThemedText className="text-base font-bold text-white">{t(loading ? 'Signing in...' : 'Sign in')}</ThemedText>
           </TouchableOpacity>
 
           <View className="flex-row justify-center gap-1">
-            <ThemedText className="text-sm text-[#98A2B3]">Don&apos;t have an account?</ThemedText>
+            <ThemedText className="text-sm text-[#98A2B3]">{t("Don't have an account?")}</ThemedText>
             <TouchableOpacity onPress={() => setRegistering(true)}>
-              <ThemedText className="text-sm font-bold text-[#FF5C35]">Sign up</ThemedText>
+              <ThemedText className="text-sm font-bold text-[#FF5C35]">{t('Sign up')}</ThemedText>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity className="mt-5" onPress={() => router.push('/verify-email')}>
+            <ThemedText className="text-center text-sm font-semibold text-[#FF5C35]">{t('Verify email')}</ThemedText>
+          </TouchableOpacity>
           </>}
         </ThemedView>
       </ScrollView>

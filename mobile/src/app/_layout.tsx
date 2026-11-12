@@ -7,7 +7,7 @@ import { useColorScheme as useNativeWindColorScheme } from 'nativewind';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
-import LoginScreen from './login';
+import { I18nProvider } from '@/i18n';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,9 +21,11 @@ function getBrowserColorScheme(): 'light' | 'dark' | null {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootLayoutContent />
-    </AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <RootLayoutContent />
+      </AuthProvider>
+    </I18nProvider>
   );
 }
 
@@ -58,10 +60,20 @@ function RootLayoutContent() {
       <AnimatedSplashOverlay />
       {isRestoring ? (
         <View className="flex-1 bg-[#F5F5F0] dark:bg-[#101828]" />
-      ) : isLoggedIn ? (
-        <Stack screenOptions={{ headerShown: false }} />
       ) : (
-        <LoginScreen />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Protected guard={isLoggedIn}>
+            {['index', 'about', 'home', 'explore', 'checkout', 'event-details', 'tickets',
+              'ticket-selection', 'seat-selection', 'staff', 'staff-event', 'workspace',
+              'support', 'support-new', 'support-case', 'notifications', 'account']
+              .map(name => <Stack.Screen key={name} name={name} />)}
+          </Stack.Protected>
+          <Stack.Protected guard={!isLoggedIn}>
+            <Stack.Screen name="login" />
+          </Stack.Protected>
+          <Stack.Screen name="reset-password" />
+          <Stack.Screen name="verify-email" />
+        </Stack>
       )}
     </ThemeProvider>
   );
