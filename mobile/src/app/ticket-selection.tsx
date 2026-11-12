@@ -6,7 +6,8 @@ import { Screen, Label, Button } from '@/components/api-screen';
 import { useI18n } from '@/i18n';
 
 export default function TicketSelectionScreen() {
-  const { slug } = useLocalSearchParams<{ slug?: string }>();
+  const { slug, campaignToken } = useLocalSearchParams<{ slug?: string; campaignToken?: string|string[] }>();
+  const token = Array.isArray(campaignToken) ? campaignToken[0] : campaignToken;
   const router = useRouter();
   const { t, locale, formatNumber } = useI18n();
   const price = (minor: number, currency: string) => new Intl.NumberFormat(locale, { style: 'currency', currency }).format(minor / 100);
@@ -57,7 +58,7 @@ export default function TicketSelectionScreen() {
         <Button
           title={t('Continue ({count})', { count: formatNumber(total) })}
           disabled={!total}
-          onPress={() => router.push({ pathname: '/checkout', params: { slug, selection: JSON.stringify(quantities) } })}
+          onPress={() => router.push({ pathname: '/checkout', params: { slug, selection: JSON.stringify(quantities), ...(token ? { campaignToken: token } : {}) } })}
         />
       </>}
     </Screen>
