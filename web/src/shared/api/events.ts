@@ -62,6 +62,9 @@ export type CheckoutInput = {
 
 export type EventFilters = { q?: string; category?: string; limit?: number };
 
+export const eventReportReasons = ["fraud", "misleading", "illegal", "duplicate", "other"] as const;
+export type EventReportReason = (typeof eventReportReasons)[number];
+
 const query = (params: Record<string, string | number | undefined>) => {
   const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== "");
   return entries.length ? `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)]))}` : "";
@@ -78,6 +81,9 @@ export const eventsApi = {
   ticketTypes: (slug: string) =>
     rawRequest<PublicTicketType[]>(`/events/${encodeURIComponent(slug)}/ticket-types`),
   calendar: (slug: string) => publicFile(`/events/${encodeURIComponent(slug)}/calendar.ics`, "text/calendar"),
+  report: (slug: string, reason: EventReportReason, details: string) =>
+    optionalAuthRequest<{ detail: string }>(`/events/${encodeURIComponent(slug)}/report`,
+      api.json("POST", { reason, details: details.trim() || null })),
 };
 
 export const ordersApi = {

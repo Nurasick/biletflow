@@ -72,6 +72,39 @@ test('admin search passes the explicit page bounds and encoded title or slug que
   assert.deepEqual(Object.fromEntries(url.searchParams), { limit: '21', offset: '40', q: 'Private & Night' });
 });
 
+test('admin overview uses the live response and user suspension and reinstatement use the account routes', async () => {
+  const overview = { users: 8, open_reports: 2, gross_minor: 50_000, is_simulated: true };
+  const account = { id: 14, status: 'active' };
+  const suspended = { ...account, status: 'suspended' };
+  const fake = scriptApi([[200, overview], [200, [account]], [200, suspended], [200, account]]);
+  assert.deepEqual(await adminApi.overview(), overview);
+  assert.deepEqual(await adminApi.users('  Алия & Co  ', 21, 20), [account]);
+  assert.deepEqual(await adminApi.suspendUser(14, '  Account review  '), suspended);
+  assert.deepEqual(await adminApi.reinstateUser(14), account);
+  const search = new URL(fake.calls[1].path, 'https://example.test');
+  assert.equal(search.pathname, '/admin/users');
+  assert.deepEqual(Object.fromEntries(search.searchParams), { limit: '21', offset: '20', q: 'Алия & Co' });
+  assert.equal(fake.calls[0].path, '/admin/overview');
+  assert.deepEqual(fake.calls.slice(2), [
+    { method: 'POST', path: '/admin/users/14/suspend', body: { reason: 'Account review' } },
+    { method: 'POST', path: '/admin/users/14/unsuspend', body: undefined },
+  ]);
+});
+
+test('admin report review filters and pages server results and preserves the chosen resolution', async () => {
+  const report = { id: 39, event_id: 7, status: 'open' };
+  const resolved = { ...report, status: 'actioned', resolved_at: '2026-11-09T10:00:00Z' };
+  const fake = scriptApi([[200, [report]], [200, [report, resolved]], [200, resolved]]);
+  assert.deepEqual(await adminApi.reports('open', 21, 20), [report]);
+  assert.deepEqual(await adminApi.reports(undefined, 21, 0), [report, resolved]);
+  assert.deepEqual(await adminApi.resolveReport(39, 'actioned'), resolved);
+  assert.deepEqual(fake.calls, [
+    { method: 'GET', path: '/admin/reports?limit=21&offset=20&status=open', body: undefined },
+    { method: 'GET', path: '/admin/reports?limit=21&offset=0', body: undefined },
+    { method: 'POST', path: '/admin/reports/39/resolve', body: { status: 'actioned' } },
+  ]);
+});
+
 test('admin detail resolves non-public events via the slug-hinted authorized list', async () => {
   const fake = scriptApi([[200, [{ ...event, id: 8 }, event]]]);
   assert.deepEqual(await adminApi.event(7, 'private-night'), event);
@@ -143,6 +176,9 @@ test('operations caches isolate accounts and mutation invalidation prefixes cove
   assert.deepEqual(operationsKeys.timeline(1, 7, 4).slice(0, prefix.length), prefix);
   const listPrefix = operationsKeys.adminLists(1);
   assert.deepEqual(operationsKeys.adminList(1, 'night', 5).slice(0, listPrefix.length), listPrefix);
+  const reportsPrefix = operationsKeys.adminReports(1);
+  assert.deepEqual(operationsKeys.adminReportList(1, 'open', 4).slice(0, reportsPrefix.length), reportsPrefix);
+  assert.notDeepEqual(operationsKeys.adminUserList(1, 'Ali', 0), operationsKeys.adminUserList(2, 'Ali', 0));
 });
 
 test('route IDs reject malformed and unsafe values before making requests', () => {

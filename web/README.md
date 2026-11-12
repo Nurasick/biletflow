@@ -12,12 +12,15 @@ Camera scanning uses browser QR detection when available and requires a secure
 context (HTTPS or localhost) and camera permission. Pasting QR content and manual
 ticket lookup remain available when the browser cannot scan with a camera.
 
-Accounts with the backend `is_platform_admin` flag also see **Platform
-administration** at `/admin/events`. The workspace provides paginated event
-search, event details and history, event suspension/restoration/cancellation,
-and paid-sales activation inspection/suspension/reinstatement. Moderation
-actions require confirmation; suspensions require a reason. The frontend checks
-the role and the backend authorizes every request. Payment data remains simulated.
+Accounts with the backend `is_platform_admin` flag can open **Platform
+administration** at `/admin` to see counts for users, events, ticket sales,
+simulated payments, and open reports and support cases. **User management**
+provides account search, suspension with a reason, and reinstatement.
+
+Guests and signed-in users can choose **Report event** on an event page. Admins
+review those submissions under **Event reports**, open the event's moderation
+page, then dismiss the report or mark action taken. **Event moderation** also
+provides event history and paid-sales activation controls.
 
 ## Attendees and event activity
 

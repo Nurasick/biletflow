@@ -20,6 +20,9 @@ import { StaffEventsPage } from "./pages/StaffEventsPage";
 import { StaffEventPage } from "./pages/StaffEventPage";
 import { AdminEventsPage } from "./pages/AdminEventsPage";
 import { AdminEventPage } from "./pages/AdminEventPage";
+import { AdminOverviewPage } from "./pages/AdminOverviewPage";
+import { AdminUsersPage } from "./pages/AdminUsersPage";
+import { AdminEventReportsPage } from "./pages/AdminEventReportsPage";
 import { AdminRoute } from "./shared/auth/AdminRoute";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { SupportPage } from "./pages/SupportPage";
@@ -77,8 +80,11 @@ function App() {
         {
           element: <AdminRoute />,
           children: [
+            { path: "/admin", element: <AdminOverviewPage /> },
             { path: "/admin/events", element: <AdminEventsPage /> },
             { path: "/admin/events/:eventId", element: <AdminEventPage /> },
+            { path: "/admin/users", element: <AdminUsersPage /> },
+            { path: "/admin/reports", element: <AdminEventReportsPage /> },
           ],
         },
         {

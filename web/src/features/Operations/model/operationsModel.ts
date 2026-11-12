@@ -1,4 +1,4 @@
-import type { AdminActivationAction, AdminEventAction } from "../../../shared/api/admin";
+import type { AdminActivationAction, AdminEventAction, EventReportStatus } from "../../../shared/api/admin";
 import type { ScannedTicket } from "../../../shared/api/staff";
 
 export const operationsKeys = {
@@ -9,6 +9,12 @@ export const operationsKeys = {
   adminLists: (userId?: number) => ["operations", userId, "admin-events"] as const,
   adminList: (userId: number | undefined, query: string, page: number) => ["operations", userId, "admin-events", query, page] as const,
   adminEvent: (userId: number | undefined, eventId: number) => ["operations", userId, "admin-event", eventId] as const,
+  adminOverview: (userId?: number) => ["operations", userId, "admin-overview"] as const,
+  adminUsers: (userId: number) => ["operations", userId, "admin-users"] as const,
+  adminUserList: (userId: number, query: string, page: number) => ["operations", userId, "admin-users", query, page] as const,
+  adminReports: (userId?: number) => ["operations", userId, "admin-reports"] as const,
+  adminReportList: (userId: number, status: EventReportStatus | "all", page: number) =>
+    ["operations", userId, "admin-reports", status, page] as const,
   activation: (userId: number | undefined, eventId: number) => ["operations", userId, "activation", eventId] as const,
   timelines: (userId: number | undefined, eventId: number) => ["operations", userId, "timeline", eventId] as const,
   timeline: (userId: number | undefined, eventId: number, page: number) => ["operations", userId, "timeline", eventId, page] as const,

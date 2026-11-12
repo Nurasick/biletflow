@@ -2,9 +2,16 @@ import { Alert, Button, ConfigProvider, Tag } from "antd";
 import { ArrowLeft, LoaderCircle, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 import { ApiError } from "../../../shared/api/auth";
+
+const adminLinks = [
+  { to: "/admin", label: "adminOverview.title", end: true },
+  { to: "/admin/events", label: "ops.adminEvents", end: false },
+  { to: "/admin/users", label: "adminUsers.title", end: true },
+  { to: "/admin/reports", label: "eventReport.queue", end: true },
+] as const;
 
 export const OperationsWorkspace = ({ children, admin = false, detail = false }: { children: ReactNode; admin?: boolean; detail?: boolean }) => {
   const { t } = useTranslation();
@@ -19,9 +26,14 @@ export const OperationsWorkspace = ({ children, admin = false, detail = false }:
             className="inline-flex items-center gap-2 rounded text-sm text-[#475467] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF5C35]">
             <ArrowLeft size={16} aria-hidden="true" />{t(detail ? "ops.back" : "ops.account")}
           </Link>
-          <span className="rounded-full border border-[#D0D5DD] bg-white px-3 py-1.5 text-xs font-semibold text-[#475467]">
-            {t(admin ? "ops.adminWorkspace" : "ops.staffWorkspace")}
-          </span>
+          {admin ? <nav aria-label={t("ops.adminWorkspace")} className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold">
+            {adminLinks.map(({ to, label, end }) => <NavLink key={to} to={to} end={end}
+              className={({ isActive }) => `rounded px-1 py-1 focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                isActive ? "text-[#A93216] underline underline-offset-4" : "text-[#475467] hover:text-[#101828]"
+              }`}>{t(label)}</NavLink>)}
+          </nav> : <span className="rounded-full border border-[#D0D5DD] bg-white px-3 py-1.5 text-xs font-semibold text-[#475467]">
+            {t("ops.staffWorkspace")}
+          </span>}
         </div>
         {children}
       </div>

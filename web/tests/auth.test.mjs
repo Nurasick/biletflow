@@ -140,6 +140,24 @@ test('guest ticket PDFs and the public calendar keep their file contents and gue
   assert.ok(calls.every(call => !call.headers.has('Authorization')));
 });
 
+test('event reports accept guests and attach the signed-in session when available', async () => {
+  const accepted = { detail: 'Report accepted' };
+  const { authApi, authUrl, calls } = await setup([[202, accepted], [200, tokens], [200, user], [202, accepted]]);
+  const { eventsApi } = await import(await moduleUrl('../src/shared/api/events.ts', {
+    '"./auth"': JSON.stringify(authUrl),
+  }));
+  assert.deepEqual(await eventsApi.report('weekend-event', 'duplicate', '  '), accepted);
+  await authApi.login(credentials);
+  await eventsApi.report('weekend-event', 'misleading', '  Venue description differs  ');
+  const guest = calls[0];
+  const signedIn = calls.at(-1);
+  assert.ok([guest, signedIn].every(call => call.method === 'POST' && new URL(call.url).pathname === '/api/v1/events/weekend-event/report'));
+  assert.equal(guest.headers.get('Authorization'), null);
+  assert.deepEqual(JSON.parse(guest.body), { reason: 'duplicate', details: null });
+  assert.equal(signedIn.headers.get('Authorization'), 'Bearer access-1');
+  assert.deepEqual(JSON.parse(signedIn.body), { reason: 'misleading', details: 'Venue description differs' });
+});
+
 test('the signed-in order owner can download a PDF after access-token refresh', async () => {
   const { authApi, authUrl, calls } = await setup([
     [200, tokens], [200, user], [401, {}], [200, { access_token: 'access-2', csrf_token: 'csrf-2' }],
