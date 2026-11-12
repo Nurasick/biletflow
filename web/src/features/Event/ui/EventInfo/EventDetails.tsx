@@ -6,6 +6,7 @@ import { useLocale } from "../../../../i18n/useLocale";
 import type { EventDetail } from "../../../../shared/api/events";
 import { SupportRequestButton } from "../../../Support/ui/SupportRequestButton";
 import { EventCalendarButton } from "../EventCalendarButton";
+import { ReportEventButton } from "../ReportEventButton";
 
 export const EventDetails = ({ event }: { event: EventDetail }) => {
   const { t } = useTranslation();
@@ -39,6 +40,7 @@ export const EventDetails = ({ event }: { event: EventDetail }) => {
               <EventCalendarButton slug={event.slug} cancelled={event.status === "cancelled"} />
               <SupportRequestButton target={{ audience: "attendee", event_id: event.id }}
                 eventTitle={event.title} label={t("support.contactOrganizer")} />
+              <ReportEventButton key={event.slug} slug={event.slug} title={event.title} />
             </div>
           </div>
         </div>

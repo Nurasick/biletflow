@@ -30,7 +30,7 @@ export const AccountPage = () => {
         <Link to="/support">{t("common.help")}</Link>
         <Link to="/staff/events">{t("nav.checkIn")}</Link>
         {(user.is_organizer || user.is_platform_admin) && <Link to="/staff/support">{t("support.queue")}</Link>}
-        {user.is_platform_admin && <Link to="/admin/events">{t("nav.admin")}</Link>}
+        {user.is_platform_admin && <Link to="/admin">{t("nav.admin")}</Link>}
       </nav>
       <AccountForm key={user.id} user={user} onEditingChange={setAccountEditing} />
       <section aria-labelledby="my-orders" className="my-10">

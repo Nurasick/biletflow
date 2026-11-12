@@ -1,4 +1,5 @@
 import { ApiError, api } from "./auth";
+import type { EventReportReason } from "./events";
 import type { OrganizerEventRecord } from "./organizerEvents";
 
 export type AdminEvent = OrganizerEventRecord & {
@@ -45,6 +46,36 @@ export type AdminUser = {
   is_platform_admin: boolean;
   created_at: string;
 };
+export type AdminOverview = {
+  users: number;
+  organizers: number;
+  events_published: number;
+  events_suspended: number;
+  orders_confirmed: number;
+  tickets_issued: number;
+  gross_minor: number;
+  refunds_minor: number;
+  payments_failed: number;
+  open_reports: number;
+  open_support_cases: number;
+  is_simulated: boolean;
+};
+
+export const eventReportStatuses = ["open", "dismissed", "actioned"] as const;
+export type EventReportStatus = (typeof eventReportStatuses)[number];
+export type EventReportResolution = Exclude<EventReportStatus, "open">;
+export type AdminEventReport = {
+  id: number;
+  event_id: number;
+  event_title: string;
+  event_slug: string;
+  event_status: AdminEvent["status"];
+  reason: EventReportReason;
+  details: string | null;
+  status: EventReportStatus;
+  created_at: string;
+  resolved_at: string | null;
+};
 
 const base = (eventId: number) => `/admin/events/${eventId}`;
 const params = (limit: number, offset: number, query?: string) => {
@@ -54,8 +85,19 @@ const params = (limit: number, offset: number, query?: string) => {
 };
 
 export const adminApi = {
+  overview: (signal?: AbortSignal) => api.get<AdminOverview>("/admin/overview", { signal }),
   users: (query: string, limit: number, offset: number, signal?: AbortSignal) =>
     api.get<AdminUser[]>(`/admin/users?${params(limit, offset, query)}`, { signal }),
+  suspendUser: (userId: number, reason: string) =>
+    api.post<AdminUser>(`/admin/users/${userId}/suspend`, { reason: reason.trim() }),
+  reinstateUser: (userId: number) => api.post<AdminUser>(`/admin/users/${userId}/unsuspend`),
+  reports: (status: EventReportStatus | undefined, limit: number, offset: number, signal?: AbortSignal) => {
+    const search = params(limit, offset);
+    if (status) search.set("status", status);
+    return api.get<AdminEventReport[]>(`/admin/reports?${search}`, { signal });
+  },
+  resolveReport: (reportId: number, status: EventReportResolution) =>
+    api.post<AdminEventReport>(`/admin/reports/${reportId}/resolve`, { status }),
   events: (query = "", limit = 20, offset = 0, signal?: AbortSignal) =>
     api.get<AdminEvent[]>(`/admin/events?${params(limit, offset, query)}`, { signal }),
   // The current backend exposes event reads only through its paginated admin

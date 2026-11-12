@@ -65,7 +65,7 @@ export const Header = () => {
         <nav className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-7 py-3 text-sm">
           <Link to="/staff/events" className="font-semibold text-[#A93216]">{t("nav.checkIn")}</Link>
           {(user.is_organizer || user.is_platform_admin) && <Link to="/staff/support" className="font-semibold text-[#A93216]">{t("support.queue")}</Link>}
-          {user.is_platform_admin && <Link to="/admin/events" className="font-semibold text-[#A93216]">{t("nav.admin")}</Link>}
+          {user.is_platform_admin && <Link to="/admin" className="font-semibold text-[#A93216]">{t("nav.admin")}</Link>}
         </nav>
       )}
     </header>
