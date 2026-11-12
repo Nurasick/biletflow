@@ -3,7 +3,7 @@ import type { AuthenticatedFetch } from './orders';
 
 export type Account = {
   id: number; email: string; first_name: string; last_name: string; phone: string | null;
-  locale: 'en' | 'kk' | 'ru'; is_email_verified: boolean; is_organizer: boolean;
+  locale: 'en' | 'kk' | 'ru'; is_email_verified: boolean; is_organizer: boolean; is_platform_admin: boolean;
 };
 
 export async function accountResponse<T>(response: Response): Promise<T> {

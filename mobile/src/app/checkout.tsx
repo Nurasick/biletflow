@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -9,7 +9,8 @@ import { useI18n } from '@/i18n';
 import { promotionsApi, type PromoQuote } from '@/shared/api/events';
 
 export default function Checkout() {
-  const { slug, selection, seats } = useLocalSearchParams<{ slug: string; selection: string; seats?: string }>();
+  const { slug, selection, seats, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug: string; selection: string; seats?: string; campaignToken?: string|string[] }>();
+  const campaignToken = Array.isArray(rawCampaignToken) ? rawCampaignToken[0] : rawCampaignToken;
   const router = useRouter();
   const { t, locale, formatDate, formatNumber } = useI18n();
   const price = (minor: number, currency: string) => new Intl.NumberFormat(locale, { style: 'currency', currency }).format(minor / 100);
@@ -21,6 +22,7 @@ export default function Checkout() {
   const [promoBusy, setPromoBusy] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [promoQuote, setPromoQuote] = useState<PromoQuote | null>(null);
+  const [activeCampaignToken, setActiveCampaignToken] = useState(campaignToken ?? '');
   const [promoError, setPromoError] = useState('');
   const lock = useRef(false);
   const [order, setOrder] = useState<Order | null>(null);
@@ -38,6 +40,24 @@ export default function Checkout() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [slug]));
+
+  useEffect(() => {
+    if (!campaignToken || loading || !types.length || !slug) return;
+    let active = true;
+    setPromoBusy(true);
+    setPromoError('');
+    let items: { ticket_type_id: number; quantity: number }[] = [];
+    try {
+      const values = JSON.parse(selection ?? '{}') as Record<string, number>;
+      items = Object.entries(values).map(([id, quantity]) => ({ ticket_type_id: Number(id), quantity }));
+    } catch { /* The normal selection validation below will show the error. */ }
+    void promotionsApi.quote(slug, { token: campaignToken }, items).then(quote => {
+      if (active) { setPromoQuote(quote); setPromoCode(quote.code); setActiveCampaignToken(campaignToken); }
+    }).catch(failure => {
+      if (active) setPromoError(failure instanceof Error ? failure.message : 'Could not apply this campaign.');
+    }).finally(() => { if (active) setPromoBusy(false); });
+    return () => { active = false; };
+  }, [campaignToken, loading, types.length, slug, selection]);
 
   let attendees: { key: string; label: string }[] = [];
   let estimated = 0;
@@ -72,9 +92,10 @@ export default function Checkout() {
     try {
       const values = JSON.parse(selection ?? '{}') as Record<string, number>;
       const items = Object.entries(values).map(([id, quantity]) => ({ ticket_type_id: Number(id), quantity }));
-      const quote = await promotionsApi.quote(slug, promoCode.trim(), items);
+      const quote = await promotionsApi.quote(slug, promoCode.trim() ? { code: promoCode.trim() } : { token: campaignToken ?? '' }, items);
       setPromoQuote(quote);
       setPromoCode(quote.code);
+      setActiveCampaignToken(promoCode.trim() ? '' : campaignToken ?? '');
     } catch (promoFailure) {
       setPromoError(promoFailure instanceof Error ? promoFailure.message : 'Could not apply this promo code.');
     } finally {
@@ -93,7 +114,7 @@ export default function Checkout() {
       setOrder(await decode<Order>(await authenticatedFetch(`/events/${encodeURIComponent(slug ?? '')}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contact_name: name.trim(), contact_email: email.trim(), items, ...(promoQuote ? { promo_code: promoQuote.code } : {}) }),
+        body: JSON.stringify({ contact_name: name.trim(), contact_email: email.trim(), items, ...(promoQuote ? (activeCampaignToken ? { campaign_token: activeCampaignToken } : { promo_code: promoQuote.code }) : {}) }),
       })));
     } catch (reserveFailure) {
       setError(reserveFailure instanceof Error ? reserveFailure.message : 'Reservation failed.');
@@ -146,7 +167,7 @@ export default function Checkout() {
             placeholder={t('Promo code')}
             placeholderTextColor="#98A2B3"
             value={promoCode}
-            onChangeText={(value) => { setPromoCode(value); setPromoQuote(null); setPromoError(''); }}
+            onChangeText={(value) => { setPromoCode(value); setPromoQuote(null); setActiveCampaignToken(''); setPromoError(''); }}
             autoCapitalize="characters"
             editable={!busy && !promoBusy}
             maxLength={64}

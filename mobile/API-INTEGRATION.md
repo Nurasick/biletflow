@@ -16,6 +16,16 @@ English, Kazakh, and Russian can be selected on login or in the workspace. Selec
 
 The existing attendee flow retains demo payment, QR tickets, PDF download/share, and calendar export. Assigned seating remains an explicitly labelled preview: the API reserves ticket-type quantities, not individual seats. It is a bonus, not a replacement for required staff verification.
 
+## Organizer and platform administration
+
+The signed-in workspace now links to an organizer workspace that creates or updates the organizer profile, uses only sandbox payout references, and manages owned events. Event management connects to the existing event, image, ticket-type, lifecycle, paid-sales activation, order/refund, attendee, staff-assignment, campaign, analytics, and timeline endpoints. Event image capture uploads JPEG data URLs through the backend's existing five-image/2 MB limits. Ticket and campaign amounts are entered in KZT and converted to minor units for API requests. Activation-fee and ticket-payment actions are clearly marked as simulations.
+
+Campaign QR codes are generated from the campaign's server-issued link and labelled as promotional, never admission, QRs. The in-app campaign scanner accepts an event link with the opaque `c` token, passes it to the event and checkout screens, requests a quote from the promo endpoint, and submits the token for the server's independent checkout validation. The server remains authoritative for discount, ticket applicability, validity dates, and redemption limits.
+
+Accounts with the platform-admin role get a separate admin workspace for overview metrics, event/user moderation, report resolution, order/payment/refund monitoring, activation review, campaign activity, settings, and operational CSV exports. Backend permission checks remain authoritative. Admin operations are not available to ordinary accounts.
+
+Organizer and admin routes are API-backed and TypeScript-checked. Device behavior, camera image capture, campaign scanning, role-specific API access, downloads/sharing, and end-to-end workflows still need acceptance on iOS/Android and against the shared development backend. Assigned seating is still preview-only because the backend does not persist individual seats.
+
 ## Additional checks
 
 - `npm run test:e2e`: browser smoke tests using intercepted API fixtures. Start Expo on port 8090 first; the default browser is locally installed Microsoft Edge. Override `MOBILE_WEB_URL` or `PLAYWRIGHT_CHANNEL` if needed.

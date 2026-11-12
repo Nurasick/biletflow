@@ -94,13 +94,13 @@ export const eventsApi = {
 };
 
 export const promotionsApi = {
-  quote: async (slug: string, code: string, items: { ticket_type_id: number; quantity: number }[]): Promise<PromoQuote> => {
+  quote: async (slug: string, source: { code?: string; token?: string }, items: { ticket_type_id: number; quantity: number }[]): Promise<PromoQuote> => {
     let response: Response;
     try {
       response = await fetch(`${API_V1_URL}/events/${encodeURIComponent(slug)}/promo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, items }),
+        body: JSON.stringify({ ...source, items }),
       });
     } catch {
       throw new Error('Could not reach the BiletFlow API. Check your connection and try again.');
@@ -113,6 +113,20 @@ export const promotionsApi = {
       throw new Error(typeof detail === 'string' ? detail : 'Could not apply this promo code.');
     }
     return body as PromoQuote;
+  },
+};
+
+export const eventReportApi = {
+  submit: async (fetcher: (path: string, init?: RequestInit) => Promise<Response>, slug: string, reason: 'fraud'|'misleading'|'illegal'|'duplicate'|'other', details: string) => {
+    const response = await fetcher(`/events/${encodeURIComponent(slug)}/report`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason, details: details.trim() || null }),
+    });
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      const detail = typeof body === 'object' && body !== null && 'detail' in body ? (body as { detail?: unknown }).detail : null;
+      throw new Error(typeof detail === 'string' ? detail : 'Could not submit this event report.');
+    }
   },
 };
 

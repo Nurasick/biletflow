@@ -19,8 +19,9 @@ const palette = {
 export default function EventDetailsScreen() {
   const router = useRouter();
   const { t, formatDate, formatNumber, locale } = useI18n();
-  const { slug: rawSlug } = useLocalSearchParams<{ slug?: string | string[] }>();
+  const { slug: rawSlug, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug?: string | string[]; campaignToken?: string|string[] }>();
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
+  const campaignToken = Array.isArray(rawCampaignToken) ? rawCampaignToken[0] : rawCampaignToken;
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = isDark ? palette.dark : palette.light;
@@ -147,7 +148,10 @@ export default function EventDetailsScreen() {
             <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/support-new', params: { eventId: String(event.id) } })} style={{ padding: 12, alignItems: 'center' }}>
               <ThemedText style={{ color: colors.accent, fontWeight: '700' }}>{t('Contact support')}</ThemedText>
             </Pressable>
-            <Pressable accessibilityRole="button" disabled={!canBook} onPress={() => router.push({ pathname: event.seating_mode === 'assigned' ? '/seat-selection' : '/ticket-selection', params: { slug: event.slug } })} style={{ alignItems: 'center', paddingVertical: 13, borderRadius: 12, backgroundColor: colors.accent, opacity: canBook ? 1 : 0.5 }}>
+            <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/report-event', params: { slug: event.slug } })} style={{ padding: 8, alignItems: 'center' }}>
+              <ThemedText style={{ color: colors.muted, fontSize: 12 }}>{t('Report this event')}</ThemedText>
+            </Pressable>
+            <Pressable accessibilityRole="button" disabled={!canBook} onPress={() => router.push({ pathname: event.seating_mode === 'assigned' ? '/seat-selection' : '/ticket-selection', params: { slug: event.slug, ...(campaignToken ? { campaignToken } : {}) } })} style={{ alignItems: 'center', paddingVertical: 13, borderRadius: 12, backgroundColor: colors.accent, opacity: canBook ? 1 : 0.5 }}>
               <ThemedText style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>{canBook ? t("Choose tickets") : t("Booking unavailable")}</ThemedText>
             </Pressable>
           </View>

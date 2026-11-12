@@ -3,7 +3,7 @@ import { toQR } from 'toqr';
 import { View } from 'react-native';
 
 /** Render the server-signed admission payload locally; it is never sent to a QR service. */
-export function TicketQr({ payload, size = 224 }: { payload: string; size?: number }) {
+export function TicketQr({ payload, size = 224, label = 'Ticket admission QR code' }: { payload: string; size?: number; label?: string }) {
   const matrix = useMemo(() => {
     try {
       const bits = toQR(payload);
@@ -18,7 +18,7 @@ export function TicketQr({ payload, size = 224 }: { payload: string; size?: numb
   if (!matrix) return null;
 
   return (
-    <View accessibilityLabel="Ticket admission QR code" accessible style={{ width: size, height: size, padding: 8, backgroundColor: '#FFFFFF' }}>
+    <View accessibilityLabel={label} accessible style={{ width: size, height: size, padding: 8, backgroundColor: '#FFFFFF' }}>
       <View style={{ flex: 1 }}>
         {Array.from({ length: matrix.side }, (_, row) => (
           <View key={row} style={{ flex: 1, flexDirection: 'row' }}>
