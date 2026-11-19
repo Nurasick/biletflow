@@ -257,10 +257,25 @@ class AdminPayment(BaseModel):
     created_at: datetime
 
 
-def _payments(db: DbSession, payment_status: str | None, limit: int, offset: int):
+def _payments(db: DbSession, q: str | None, payment_status: str | None, limit: int, offset: int):
     query = select(Payment, Order.order_number, Order.event_id).outerjoin(
         Order, Order.id == Payment.order_id
     )
+    if q:
+        q = q.strip()
+        if q.isdigit():
+            # All digits is a payment id, matched exactly. As a substring it
+            # would also hit 112 and 120, and every order number (BF-YYMMDD-…)
+            # carrying the digit in its date.
+            query = query.where(Payment.id == int(q))
+        else:
+            needle = _like(q)
+            query = query.where(
+                or_(
+                    Order.order_number.ilike(needle, escape="\\"),
+                    Payment.provider_ref.ilike(needle, escape="\\"),
+                )
+            )
     if payment_status:
         query = query.where(Payment.status == payment_status)
     return db.execute(query.order_by(Payment.id.desc()).limit(limit).offset(offset)).all()
@@ -282,6 +297,7 @@ def _payment_row(payment: Payment, order_number: str | None, order_event_id: int
 def search_payments(
     admin: CurrentAdmin,
     db: DbSession,
+    q: Search = None,
     payment_status: Annotated[
         Literal["pending", "succeeded", "failed", "refunded"] | None, Query(alias="status")
     ] = None,
@@ -289,9 +305,10 @@ def search_payments(
     offset: Offset = 0,
 ) -> list[dict]:
     """§4.12 "Monitor refunds, disputes, and payment failures": filter by
-    `status=failed` or `status=refunded`. Every row is a simulated payment
-    and says so (§4.6)."""
-    return [_payment_row(*row) for row in _payments(db, payment_status, limit, offset)]
+    `status=failed` or `status=refunded`, and find one payment with `q`: its
+    id, its order's number, or its provider reference. Every row is a
+    simulated payment and says so (§4.6)."""
+    return [_payment_row(*row) for row in _payments(db, q, payment_status, limit, offset)]
 
 
 class AdminRefund(BaseModel):
@@ -316,19 +333,103 @@ def list_refunds(
         .limit(limit)
         .offset(offset)
     ).all()
-    return [
-        {
-            "id": refund.id,
-            "order_number": number,
-            "event_id": event_id,
-            "amount_minor": refund.amount_minor,
-            "currency": refund.currency,
-            "status": refund.status,
-            "reason": refund.reason,
-            "created_at": refund.created_at,
-        }
-        for refund, number, event_id in rows
-    ]
+    return [_refund_row(*row) for row in rows]
+
+
+def _refund_row(refund: Refund, order_number: str, event_id: int) -> dict:
+    return {
+        "id": refund.id,
+        "order_number": order_number,
+        "event_id": event_id,
+        "amount_minor": refund.amount_minor,
+        "currency": refund.currency,
+        "status": refund.status,
+        "reason": refund.reason,
+        "created_at": refund.created_at,
+    }
+
+
+class PaymentOrder(BaseModel):
+    order_number: str
+    status: str
+    event_id: int
+    event_title: str
+    contact_name: str
+    contact_email: str
+    total_minor: int
+    currency: str
+    created_at: datetime
+
+
+class PaymentCase(BaseModel):
+    """A support case about the payment's order: its existence and state only.
+
+    Attendee cases are read by the attendee and the event's organizer
+    (06-support.md, "Authorization"); an admin reviewing a payment learns that
+    a case exists and where it stands, never what was written in it.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    case_number: str
+    audience: str
+    category: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    resolved_at: datetime | None
+
+
+class AdminPaymentDetail(AdminPayment):
+    order: PaymentOrder | None
+    refunds: list[AdminRefund]
+    support_cases: list[PaymentCase]
+
+
+@router.get("/admin/payments/{payment_id}", response_model=AdminPaymentDetail)
+def read_payment(payment_id: int, admin: CurrentAdmin, db: DbSession) -> dict:
+    """§4.12: one simulated payment with its order, its refunds and the
+    support cases about that order, to judge a payment complaint. Activation
+    fees have no order, so they come back with no order and no cases."""
+    row = db.execute(
+        select(Payment, Order.order_number, Order.event_id)
+        .outerjoin(Order, Order.id == Payment.order_id)
+        .where(Payment.id == payment_id)
+    ).first()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
+    payment = row[0]
+
+    order = None
+    cases: list[SupportCase] = []
+    if payment.order_id is not None:
+        order_row, title = db.execute(
+            select(Order, Event.title)
+            .join(Event, Event.id == Order.event_id)
+            .where(Order.id == payment.order_id)
+        ).one()
+        order = _order_row(order_row, title)
+        cases = list(
+            db.scalars(
+                select(SupportCase)
+                .where(SupportCase.order_id == payment.order_id)
+                .order_by(SupportCase.created_at, SupportCase.id)
+            )
+        )
+
+    refunds = db.execute(
+        select(Refund, Order.order_number, Order.event_id)
+        .join(Order, Order.id == Refund.order_id)
+        .where(Refund.payment_id == payment.id)
+        .order_by(Refund.id)
+    ).all()
+
+    return {
+        **_payment_row(*row),
+        "order": order,
+        "refunds": [_refund_row(*refund_row) for refund_row in refunds],
+        "support_cases": cases,
+    }
 
 
 class AdminActivation(BaseModel):
@@ -590,6 +691,6 @@ def export_payments(admin: CurrentAdmin, db: DbSession) -> Response:
                 payment.failure_reason or "",
                 payment.created_at.isoformat(),
             ]
-            for payment, order_number, _ in _payments(db, None, 10_000, 0)
+            for payment, order_number, _ in _payments(db, None, None, 10_000, 0)
         ),
     )
