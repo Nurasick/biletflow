@@ -65,6 +65,10 @@ class SalesPoint(BaseModel):
 class TicketTypeAnalytics(TicketTypeSales):
     # Sold inside the selected date range (quantity_sold is the count now).
     tickets_in_range: int
+    # This type's share of the refunds in the date range. A refund is of a
+    # whole order, split across its lines by what each line was paid, so the
+    # rows add up to the event's refunds_minor.
+    refunds_minor: int
 
 
 class CampaignAnalytics(BaseModel):
@@ -98,6 +102,11 @@ class EventAnalytics(BaseModel):
     by_ticket_type: list[TicketTypeAnalytics]
     campaigns: list[CampaignAnalytics]
     attendance: AttendanceRead
+    # Which filters each part honours: "inventory", "money", "sales_over_time",
+    # "by_ticket_type", "campaigns" and "attendance", each mapped to the
+    # subset of ["date_range", "ticket_type"] that applies. Campaigns are
+    # lifetime totals and inventory is the count now, whatever the filters.
+    filter_scope: dict[str, list[str]]
 
 
 class TimelineEntry(BaseModel):
