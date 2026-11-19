@@ -52,6 +52,9 @@ server forwards `/api/` and `/media/` to FastAPI. Open
 [the health endpoint](http://localhost:5173/api/v1/health) to check the
 connection through the web server. Registration, verification and password
 reset emails arrive in the [local development inbox](http://localhost:8025).
+If the direct API at `http://localhost:8000/api/v1/health` returns JSON while
+the same path through port 5173 returns HTML, run `docker compose restart web`
+to load the current proxy configuration.
 
 ## Environment
 
@@ -72,6 +75,27 @@ API (for example, after a `relation "users" does not exist` error):
 ```bash
 docker compose exec api alembic upgrade head
 ```
+
+### Event photo storage
+
+Set `AWS_S3_BUCKET` and `AWS_REGION` in the API environment to store new
+event photos in an existing private S3 bucket. Grant the API's IAM identity
+`s3:PutObject`, `s3:GetObject`, and `s3:DeleteObject` on
+`arn:aws:s3:::YOUR_BUCKET/events/*`. Boto3 uses its standard credential chain.
+Use an IAM role in AWS, or pass your development credentials to the API through
+the gitignored `.env` when using Compose. When running the API directly, use an
+AWS profile or export the credentials in the API process environment.
+
+Set `PUBLIC_API_URL` to the browser-reachable API origin. The API keeps stable
+photo URLs and redirects requests for S3 photos to short-lived signed URLs.
+With `AWS_S3_BUCKET` empty, new uploads use local disk. Existing disk uploads
+continue to use `MEDIA_ROOT` when S3 is enabled, so keep that directory available.
+
+To move existing photos, run `docker compose exec api python scripts/migrate_event_photos.py`.
+It verifies SHA-256 checksums against S3 and updates the existing gallery and
+cover URLs in a database transaction. After confirming that these photos load
+through the site, run `docker compose exec api python scripts/migrate_event_photos.py --delete-local`
+to recheck the copies and remove the corresponding local files.
 
 ## Backend development
 

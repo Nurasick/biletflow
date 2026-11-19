@@ -1,7 +1,9 @@
 from collections.abc import Sequence
 
 from fastapi import APIRouter, HTTPException, Response, status
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from app.api.deps import DbSession, OwnedEvent
 from app.core.config import settings
@@ -11,6 +13,7 @@ from app.services import event_image as image_service
 from app.services import storage
 
 router = APIRouter(tags=["events"])
+media_router = APIRouter(prefix=f"{settings.MEDIA_URL_PATH}/{storage.S3_PREFIX.rstrip('/')}")
 
 
 class ImageUpload(BaseModel):
@@ -37,6 +40,10 @@ def upload_image(event: OwnedEvent, data: ImageUpload, db: DbSession) -> EventIm
         return image_service.add_image(db, event, data.data_url)
     except storage.InvalidImage as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, exc.reason) from None
+    except storage.StorageUnavailable:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Image storage unavailable"
+        ) from None
     except image_service.TooManyImages:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
@@ -53,3 +60,17 @@ def delete_image(event: OwnedEvent, image_id: int, db: DbSession) -> Response:
     if not image_service.delete_image(db, event, image_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Image not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@media_router.get("/{path:path}", include_in_schema=False)
+def serve_s3_image(path: str, db: DbSession) -> RedirectResponse:
+    key = storage.S3_PREFIX + path
+    if db.scalar(select(EventImage.id).where(EventImage.storage_key == key)) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Image not found")
+    try:
+        url = storage.s3_read_url(key)
+    except storage.StorageUnavailable:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Image storage unavailable"
+        ) from None
+    return RedirectResponse(url, headers={"Cache-Control": "no-store"})

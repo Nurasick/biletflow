@@ -28,8 +28,9 @@ def list_images(db: Session, event_id: int) -> Sequence[EventImage]:
 def add_image(db: Session, event: Event, data_url: str) -> EventImage:
     """Validate, store, and append an image. The first one becomes the cover.
 
-    Raises storage.InvalidImage, TooManyImages or EventClosedForChanges.
+    Serialize image edits for this event so limits and cover updates stay consistent.
     """
+    db.refresh(event, with_for_update=True)
     if event.status == EventStatus.CANCELLED:
         raise EventClosedForChanges
     count = db.scalar(select(func.count()).where(EventImage.event_id == event.id))
@@ -60,6 +61,7 @@ def add_image(db: Session, event: Event, data_url: str) -> EventImage:
 
 
 def delete_image(db: Session, event: Event, image_id: int) -> bool:
+    db.refresh(event, with_for_update=True)
     image = db.scalar(
         select(EventImage).where(EventImage.id == image_id, EventImage.event_id == event.id)
     )

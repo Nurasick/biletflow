@@ -1,17 +1,22 @@
-"""File storage for uploaded images. Local disk now; S3-compatible later (§9).
-
-Only this module knows where bytes live. Callers hand it bytes and get back a
-storage key and a public URL, so swapping the backend means rewriting the three
-functions below and nothing else.
-"""
+"""Store event image bytes on local disk or in a private S3 bucket."""
 
 import base64
 import binascii
+import logging
 import re
 import secrets
+from functools import lru_cache
 from pathlib import Path
 
+from boto3.session import Session
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
+
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+S3_PREFIX = "s3/"
 
 # Recognised by content, never by the name or the declared type: a file called
 # photo.png that is really HTML must not be served back as an image.
@@ -30,6 +35,10 @@ class InvalidImage(Exception):
     def __init__(self, reason: str):
         super().__init__(reason)
         self.reason = reason
+
+
+class StorageUnavailable(Exception):
+    """The image store could not complete the operation."""
 
 
 def decode_data_url(data_url: str) -> tuple[bytes, str]:
@@ -59,26 +68,74 @@ def decode_data_url(data_url: str) -> tuple[bytes, str]:
 def save(prefix: str, content: bytes, content_type: str) -> tuple[str, str]:
     """Store `content` under a fresh random name. Returns (storage_key, public_url)."""
     key = f"{prefix}/{secrets.token_hex(16)}.{_EXTENSIONS[content_type]}"
-    path = _path(key)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
+    try:
+        if settings.AWS_S3_BUCKET:
+            _s3_client(settings.AWS_REGION).put_object(
+                Bucket=settings.AWS_S3_BUCKET, Key=key, Body=content, ContentType=content_type
+            )
+            key = S3_PREFIX + key
+        else:
+            path = local_path(key)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+    except (BotoCoreError, ClientError, OSError) as exc:
+        logger.exception("could not store event image %s", key)
+        raise StorageUnavailable from exc
     return key, url_for(key)
-
-
-def delete(key: str) -> None:
-    # Missing is fine: the row is the record, the file is best effort.
-    _path(key).unlink(missing_ok=True)
 
 
 def url_for(key: str) -> str:
     return f"{settings.PUBLIC_API_URL.rstrip('/')}{settings.MEDIA_URL_PATH}/{key}"
 
 
+def delete(key: str) -> None:
+    """Best-effort cleanup after a committed deletion or failed upload transaction."""
+    try:
+        if key.startswith(S3_PREFIX):
+            if not settings.AWS_S3_BUCKET:
+                raise StorageUnavailable("AWS_S3_BUCKET is unset")
+            _s3_client(settings.AWS_REGION).delete_object(
+                Bucket=settings.AWS_S3_BUCKET, Key=key.removeprefix(S3_PREFIX)
+            )
+        else:
+            local_path(key).unlink(missing_ok=True)
+    except (BotoCoreError, ClientError, OSError, StorageUnavailable):
+        logger.exception("could not clean up event image %s", key)
+
+
+def s3_read_url(key: str) -> str:
+    if not settings.AWS_S3_BUCKET:
+        raise StorageUnavailable("AWS_S3_BUCKET is unset")
+    try:
+        return _s3_client(settings.AWS_REGION).generate_presigned_url(
+            "get_object",
+            Params={"Bucket": settings.AWS_S3_BUCKET, "Key": key.removeprefix(S3_PREFIX)},
+            ExpiresIn=300,
+        )
+    except (BotoCoreError, ClientError) as exc:
+        logger.exception("could not sign event image %s", key)
+        raise StorageUnavailable from exc
+
+
+@lru_cache(maxsize=1)
+def _s3_client(region: str):
+    return Session().client(
+        "s3",
+        region_name=region or None,
+        config=Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "virtual"},
+            connect_timeout=3,
+            read_timeout=5,
+        ),
+    )
+
+
 def media_root() -> Path:
     return Path(settings.MEDIA_ROOT).resolve()
 
 
-def _path(key: str) -> Path:
+def local_path(key: str) -> Path:
     root = media_root()
     path = (root / key).resolve()
     # Keys are generated here, never taken from a client, but a key that
