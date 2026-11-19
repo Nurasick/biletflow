@@ -8,16 +8,19 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
+from app.models.activation import EventActivation
 from app.models.audit import AuditLog
 from app.models.event import Event, EventStatus
-from app.models.order import Order
+from app.models.order import Order, OrderStatus
 from app.models.organizer import OrganizerProfile, VerificationStatus
 from app.models.payment import Payment, PaymentStatus, Refund
-from app.models.ticket import Ticket
+from app.models.ticket import Ticket, TicketStatus
 from app.models.ticket_type import TicketType
 from app.models.user import User
+from app.services import activation as activation_service
+from app.services import event_lifecycle
 from app.services import hold as hold_service
-from tests.test_events import add_event, add_organizer, auth
+from tests.test_events import add_event, add_organizer, add_user, auth
 from tests.test_orders import activate_paid_sales, payload
 from tests.test_ticket_types import add_ticket_type
 
@@ -250,6 +253,94 @@ def test_a_stranger_cannot_pay_or_cancel_someone_elses_order(api, db, event, vip
 
     assert api.post(PAY.format(number=order["order_number"]), json={}).status_code == 404
     assert api.post(CANCEL.format(number=order["order_number"])).status_code == 404
+
+
+# --- T13: a suspension also stops checkouts that are already pending --------
+#
+# Checkout refuses new paid reservations once an admin suspends (see
+# test_suspended_paid_sales_stop_paid_checkout_but_not_free above). These cover
+# the buyer who reserved *before* the suspension and pays *after* it. The race
+# itself (pay and suspend at the same moment) needs real row locks, so it
+# lives in test_payment_suspension_race.py against Postgres.
+
+
+@pytest.fixture
+def platform_admin(db: Session) -> User:
+    user = add_user(db, "platform-admin@example.com")
+    user.is_platform_admin = True
+    db.commit()
+    return user
+
+
+def suspend_paid_sales(db: Session, event: Event, admin: User) -> None:
+    activation = db.scalar(select(EventActivation).where(EventActivation.event_id == event.id))
+    activation_service.suspend(db, activation, admin, "fraud review")
+    db.commit()
+
+
+def suspend_event(db: Session, event: Event, admin: User) -> None:
+    event_lifecycle.suspend(db, event, admin, "policy review")  # commits itself
+
+
+@pytest.mark.parametrize("suspend", [suspend_paid_sales, suspend_event])
+def test_a_pending_order_cannot_be_paid_after_a_suspension(
+    api, db, event, vip, platform_admin, suspend
+):
+    order = buy(api, event, vip, 2)
+    suspend(db, event, platform_admin)
+
+    response = pay(api, order)
+
+    assert response.status_code == 409, response.text
+    assert "Nothing was charged" in response.json()["detail"]
+    # Nothing charged, nothing issued...
+    assert db.scalar(select(func.count()).select_from(Payment)) == 0
+    assert db.scalar(select(func.count()).select_from(Ticket)) == 0
+    # ...and the hold went back now, not in ten minutes when the sweeper runs.
+    db.expire_all()
+    assert db.scalar(select(Order.status)) == OrderStatus.CANCELLED
+    db.refresh(vip)
+    assert (vip.quantity_sold, vip.quantity_reserved) == (0, 0)
+    assert hold_service.find_reserved_drift(db) == []
+
+
+@pytest.mark.parametrize("suspend", [suspend_paid_sales, suspend_event])
+def test_a_suspension_leaves_already_confirmed_tickets_valid(
+    api, db, event, vip, platform_admin, suspend
+):
+    paid_before = buy(api, event, vip)
+    assert pay(api, paid_before).status_code == 200
+    pending = buy(api, event, vip)
+    suspend(db, event, platform_admin)
+
+    assert pay(api, pending).status_code == 409
+
+    # The suspension stops *new* money. Whoever already paid keeps a ticket
+    # that still scans; cancelling the event (with refunds) is a separate act.
+    db.expire_all()
+    assert list(db.scalars(select(Ticket.status))) == [TicketStatus.VALID]
+    db.refresh(vip)
+    assert (vip.quantity_sold, vip.quantity_reserved) == (1, 0)
+
+
+def test_paying_twice_after_a_suspension_is_refused_both_times(api, db, event, vip, platform_admin):
+    """A double-click: the second request finds the order already cancelled by
+    the first and must still answer 409, not 500."""
+    order = buy(api, event, vip)
+    suspend_paid_sales(db, event, platform_admin)
+
+    first, second = pay(api, order), pay(api, order)
+
+    assert first.status_code == second.status_code == 409
+
+
+def test_free_registration_still_works_while_only_paid_sales_are_suspended(
+    api, db, event, vip, platform_admin
+):
+    free = add_ticket_type(db, event.id, name="Free", price_minor=0)
+    suspend_paid_sales(db, event, platform_admin)
+
+    assert buy(api, event, free)["status"] == "confirmed"
 
 
 # --- §4.9: refunds and cancelled registrations ------------------------------

@@ -10,7 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.clock import as_utc, utcnow
-from app.models.event import Event
+from app.models.activation import ActivationStatus, EventActivation
+from app.models.event import Event, EventStatus
 from app.models.order import Order, OrderStatus
 from app.models.payment import Payment, PaymentPurpose, PaymentStatus
 from app.models.user import User
@@ -26,6 +27,15 @@ class IdempotencyKeyReused(Exception):
 
 class ReservationExpired(Exception):
     """The order's 10-minute hold ran out before payment. Nothing was charged."""
+
+
+class SalesSuspended(Exception):
+    """An admin stopped sales after this order was reserved (§4.5, §4.12).
+    Nothing was charged. `reason` is safe to show the buyer."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
 
 
 def pay_order(
@@ -53,6 +63,9 @@ def pay_order(
         return replay
 
     _ensure_payable(order, now)
+    # Before the charge, not after: with a real provider, refusing after
+    # charging would mean a refund. The simulator would roll back anyway.
+    _ensure_still_on_sale(db, order)
     result = provider.charge(order.total_minor, outcome)
     payment = Payment(
         purpose=PaymentPurpose.TICKET_ORDER,
@@ -105,6 +118,53 @@ def _ensure_payable(order: Order, now: datetime) -> None:
         raise IllegalOrderTransition("a free order needs no payment")
     if order.expires_at is not None and as_utc(order.expires_at) <= now:
         raise ReservationExpired
+
+
+def _ensure_still_on_sale(db: Session, order: Order) -> None:
+    """Re-check, at payment time, what checkout checked at reservation time (T13).
+
+    Checkout refuses paid lines unless the event is published and its paid
+    sales are active, but a buyer can reserve, then an admin suspends, then
+    the buyer pays. Without this the payment went through and issued tickets
+    for an event the admin had just stopped.
+
+    Why FOR SHARE and not a plain read: under READ COMMITTED a plain SELECT
+    never waits for an uncommitted UPDATE; it returns the last committed row.
+    So a payment could read "active" while a suspension is half-done, then
+    confirm after the admin was told sales had stopped. A locking read closes
+    that window in both directions:
+
+    - suspension first: its UPDATE holds the row, our FOR SHARE waits for it
+      to commit, and Postgres re-reads the row, so we see "suspended";
+    - payment first: our FOR SHARE holds the row, the suspension's UPDATE
+      waits until this payment commits. The payment completed before the
+      suspension took effect, which is the honest order of events.
+
+    FOR SHARE, not FOR UPDATE: concurrent payments for the same event can all
+    hold a share lock at once, so this does not serialize the checkout queue;
+    only the (rare) suspension waits. Lock order is event, then activation,
+    the same event-first order checkout uses (_ensure_capacity), so the two
+    cannot deadlock. SQLite ignores the lock clause; the race test runs on
+    Postgres (tests/test_payment_suspension_race.py).
+
+    Only paid orders reach this function (_ensure_payable refuses free ones),
+    so an inactive activation always means "refuse". Free registration on an
+    event with only its paid sales suspended never comes through here.
+    """
+    event_status = db.scalar(
+        select(Event.status).where(Event.id == order.event_id).with_for_update(read=True)
+    )
+    if event_status != EventStatus.PUBLISHED:
+        # Covers suspended, and also cancelled/draft as a backstop, though
+        # cancelling an event already cancels its pending orders.
+        raise SalesSuspended("Sales for this event have been stopped")
+    activation_status = db.scalar(
+        select(EventActivation.status)
+        .where(EventActivation.event_id == order.event_id)
+        .with_for_update(read=True)
+    )
+    if activation_status != ActivationStatus.ACTIVE:
+        raise SalesSuspended("Paid sales for this event are suspended")
 
 
 def _audit_payment(db: Session, order: Order, payment: Payment, actor: User | None) -> None:
