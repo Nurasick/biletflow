@@ -24,109 +24,37 @@ skips without Postgres.
 
 import time
 import uuid
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import delete, func, select, text, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.activation import ActivationStatus, EventActivation
 from app.models.event import Event, EventStatus
-from app.models.notification import Notification
 from app.models.order import Order, OrderStatus
-from app.models.organizer import OrganizerProfile
 from app.models.payment import Payment
 from app.models.ticket import Ticket
 from app.models.ticket_type import TicketType
 from app.models.user import User
-from app.schemas.order import CheckoutRequest
 from app.services import activation as activation_service
 from app.services import order as order_service
 from app.services import payment as payment_service
-from tests.test_holds_concurrency import pg, purge_event  # noqa: F401 - pg is a fixture
+from tests.test_checkout_concurrency import PaidStock, paid_stock, request  # noqa: F401
+from tests.test_holds_concurrency import pg  # noqa: F401 - pg is a fixture
 
 LOCK_WAIT_TIMEOUT_SECONDS = 10
 
 
 @pytest.fixture
-def paid_event(pg: sessionmaker) -> Iterator[dict]:  # noqa: F811 - the imported fixture
-    """A published event with active paid sales, one paid ticket type, a
-    platform admin, and one pending order waiting to be paid."""
-    suffix = uuid.uuid4().hex[:12]
+def paid_event(pg: sessionmaker, paid_stock: PaidStock) -> dict:  # noqa: F811 - imported fixture
+    """A published event with active paid sales and one pending order waiting
+    to be paid. The event, users and cleanup come from paid_stock."""
+    ids = paid_stock()
     with pg() as db:
-        organizer = User(
-            email=f"susp-org-{suffix}@example.com",
-            hashed_password="$argon2id$fake",
-            first_name="Org",
-            last_name="Race",
-        )
-        admin = User(
-            email=f"susp-admin-{suffix}@example.com",
-            hashed_password="$argon2id$fake",
-            first_name="Admin",
-            last_name="Race",
-            is_platform_admin=True,
-        )
-        db.add_all([organizer, admin])
-        db.flush()
-        profile = OrganizerProfile(
-            user_id=organizer.id, display_name="Race", contact_email=organizer.email
-        )
-        db.add(profile)
-        db.flush()
-        starts = datetime.now(UTC) + timedelta(days=30)
-        event = Event(
-            slug=f"susp-{suffix}",
-            title="Suspension race",
-            venue_name="Nowhere",
-            venue_address="Nowhere 1",
-            starts_at=starts,
-            ends_at=starts + timedelta(hours=2),
-            timezone="Asia/Almaty",
-            organizer_profile_id=profile.id,
-            status=EventStatus.PUBLISHED,
-        )
-        db.add(event)
-        db.flush()
-        db.add(
-            EventActivation(
-                event_id=event.id, status=ActivationStatus.ACTIVE, activation_fee_minor=0
-            )
-        )
-        vip = TicketType(event_id=event.id, name="VIP", price_minor=500_000, quantity_total=10)
-        db.add(vip)
-        db.commit()
-        order = order_service.checkout(
-            db,
-            event,
-            CheckoutRequest(
-                contact_name="Race",
-                contact_email=f"buyer-{suffix}@example.com",
-                items=[{"ticket_type_id": vip.id, "attendees": [{"full_name": "A"}]}],
-            ),
-            None,
-        )
-        ids = {
-            "organizer_id": organizer.id,
-            "admin_id": admin.id,
-            "profile_id": profile.id,
-            "event_id": event.id,
-            "ticket_type_id": vip.id,
-            "order_id": order.id,
-        }
-
-    yield ids
-
-    users = [ids["organizer_id"], ids["admin_id"]]
-    with pg() as db:
-        purge_event(db, ids["event_id"])
-        # activation_service.suspend tells the organizer (§4.10 payout status).
-        db.execute(delete(Notification).where(Notification.user_id.in_(users)))
-        db.execute(delete(OrganizerProfile).where(OrganizerProfile.id == ids["profile_id"]))
-        db.execute(delete(User).where(User.id.in_(users)))
-        db.commit()
+        order = order_service.checkout(db, db.get(Event, ids["event_id"]), request(ids, 0), None)
+        return ids | {"order_id": order.id}
 
 
 def suspend_paid_sales_uncommitted(db: Session, ids: dict) -> None:
