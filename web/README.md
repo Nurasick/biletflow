@@ -124,20 +124,33 @@ information through the organizer API. Saving a profile for the first time
 grants access to the organizer workspace. Payouts and identity verification
 use the backend sandbox.
 
-Run `npm install`, then `npm run dev`. The backend must be running with its
-migrations applied. The default API URL is `http://localhost:8000/api/v1`;
-copy `.env.example` to `.env.local` to override `VITE_API_URL`.
+## Connecting to FastAPI
 
-Use `http://localhost:5173` for local development, and include that exact origin
-in the backend's `CORS_ORIGINS`. Keep the frontend and API on the same site
-(e.g. both on localhost, not one on 127.0.0.1) so the SameSite=Lax refresh cookie
-is sent. Production requires HTTPS because the backend sets Secure cookies.
-Vite reads API configuration at startup/build time.
+From the repository root, `docker compose up -d --build web` starts PostgreSQL,
+applies migrations, and starts FastAPI, the development inbox, and the web app.
+Open [the web app](http://localhost:5173) and
+[the local inbox](http://localhost:8025) for verification and password-reset links.
+
+For host development, run `npm ci` and `npm run dev` in `web/` with a migrated
+backend running on port 8000. Vite and `npm run preview` forward requests
+under `/api/` and `/media/` to `http://127.0.0.1:8000`. To use another upstream,
+set `API_PROXY_TARGET` in `web/.env.local`. Compose supplies `http://api:8000`.
+Opening `/api/v1/health` on the web origin returns the backend status.
+
+The production web image serves the built app with Nginx and forwards the same
+paths. Set its runtime `API_PROXY_TARGET` to the backend origin (default
+`http://api:8000`, without a trailing slash). Set the backend's `PUBLIC_WEB_URL`
+and `PUBLIC_API_URL` to the public HTTPS origin for emailed links, QR codes,
+and uploaded media. HTTPS carries the backend's Secure session cookie.
+
+For a separate API origin, set `VITE_API_URL` including `/api/v1` before the
+Vite build, or pass it as a Docker build argument. Add the web origin to
+`CORS_ORIGINS` on FastAPI and use same-site hosts for its SameSite=Lax cookie.
 
 Registration creates an account, then directs the user to sign in. Login sends
 JSON credentials to `/auth/login`; `/users/me` uses the returned bearer access
-token. The access token stays in memory. Only the CSRF proof is kept in
-localStorage; the backend stores the refresh token in an HttpOnly cookie.
+token. The access token stays in memory. The browser keeps the CSRF proof
+and a sign-in identifier in localStorage. The refresh token lives in an HttpOnly cookie.
 Reloads restore the session through `/auth/refresh`, and expired access tokens
 trigger a single refresh and retry. Refresh requests share a promise within a
 tab and a Web Lock across tabs when supported. The backend controls the session

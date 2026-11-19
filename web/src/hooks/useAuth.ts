@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { authApi } from "../shared/api/auth";
@@ -9,22 +8,6 @@ export const authKeys = {
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const onSessionEnded = () => {
-      void queryClient.cancelQueries({ queryKey: authKeys.me });
-      queryClient.setQueryData(authKeys.me, null);
-    };
-    // A different account signed in elsewhere: everything cached belonged to
-    // the previous one, so drop it all and let `me` load the new account.
-    const onSessionChanged = () => { queryClient.clear(); void queryClient.invalidateQueries(); };
-    window.addEventListener("biletflow:session-ended", onSessionEnded);
-    window.addEventListener("biletflow:session-changed", onSessionChanged);
-    return () => {
-      window.removeEventListener("biletflow:session-ended", onSessionEnded);
-      window.removeEventListener("biletflow:session-changed", onSessionChanged);
-    };
-  }, [queryClient]);
 
   const me = useQuery({
     queryKey: authKeys.me,
@@ -38,6 +21,7 @@ export const useAuth = () => {
     onSuccess: async (user) => {
       await queryClient.cancelQueries({ queryKey: authKeys.me });
       queryClient.setQueryData(authKeys.me, user);
+      void queryClient.resetQueries({ predicate: (query) => query.queryKey[0] !== "auth" });
     },
   });
 
@@ -59,6 +43,7 @@ export const useAuth = () => {
     onSuccess: async () => {
       await queryClient.cancelQueries({ queryKey: authKeys.me });
       queryClient.setQueryData(authKeys.me, null);
+      void queryClient.resetQueries({ predicate: (query) => query.queryKey[0] !== "auth" });
     },
   });
 

@@ -13,6 +13,7 @@ const schemaUrl = await moduleUrl('../src/features/Organizer/model/eventSchema.t
 });
 const imageUrl = await moduleUrl('../src/features/Organizer/model/eventImages.ts', {
   '"./eventSchema"': JSON.stringify(schemaUrl),
+  '"../../../shared/lib/randomId"': JSON.stringify(await moduleUrl('../src/shared/lib/randomId.ts')),
 });
 const apiUrl = await moduleUrl('../src/shared/api/organizerEvents.ts', {
   '"../../features/Organizer/model/eventDateTime"': JSON.stringify(dateTimeUrl),

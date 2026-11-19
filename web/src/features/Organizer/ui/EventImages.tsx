@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { validationMessage } from "../../../i18n/validation";
+import { eventImageSrc } from "../../../shared/api/urls";
 import { readEventImage, validateEventImageFiles } from "../model/eventImages";
 import { EVENT_IMAGE_TYPES, MAX_EVENT_IMAGES } from "../model/eventSchema";
 import type { EventImage } from "../model/eventSchema";
@@ -71,7 +72,7 @@ export const EventImages = ({ images, onChange, onBusyChange, disabled }: EventI
         {images.map((image, index) => (
           <li key={image.id} className="overflow-hidden rounded-lg border border-[#D0D5DD]">
             <div className="relative">
-              <img src={image.dataUrl} alt={image.name} className="aspect-video w-full object-cover" />
+              <img src={eventImageSrc(image.dataUrl)} alt={image.name} className="aspect-video w-full object-cover" />
               <button type="button" onClick={() => { setError(null); onChange(images.filter((item) => item.id !== image.id)); }}
                 disabled={disabled || reading} aria-label={t("organizerEvent.removeImage", { name: image.name })}
                 className="absolute right-2 top-2 rounded-full border border-[#D0D5DD] bg-white p-2 text-[#101828] focus-visible:outline-2 focus-visible:outline-[#FF5C35] disabled:opacity-50">

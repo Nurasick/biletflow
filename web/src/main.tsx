@@ -8,6 +8,9 @@ import { LocaleProvider } from "./i18n/LocaleProvider";
 import "./index.css";
 
 const queryClient = new QueryClient();
+const reloadSessionData = () => { void queryClient.resetQueries(); };
+window.addEventListener("biletflow:session-changed", reloadSessionData);
+window.addEventListener("biletflow:session-ended", reloadSessionData);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

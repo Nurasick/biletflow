@@ -9,15 +9,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-  api: 
+  mailpit:
+    image: axllent/mailpit:v1.27.0
+    ports: ["127.0.0.1:8025:8025"]
+  api:
     build: ./backend
     env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      SMTP_HOST: ${SMTP_HOST-mailpit}
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/api/v1/health', timeout=2).close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
     volumes: ["./backend:/app"]
     command:
       - sh
@@ -28,8 +40,10 @@ services:
       context: ./web
       target: development
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     environment:
+      API_PROXY_TARGET: http://api:8000
       VITE_USE_POLLING: "true"
     ports: ["5173:5173"]
     volumes:

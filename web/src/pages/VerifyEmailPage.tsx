@@ -1,6 +1,5 @@
-import { useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Alert } from "antd";
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -13,14 +12,22 @@ export const VerifyEmailPage = () => {
   const { t } = useTranslation();
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
-  const verify = useMutation({ mutationFn: authApi.verifyEmail });
-  const { mutate } = verify;
-  useEffect(() => { if (token) mutate(token); }, [token, mutate]);
+  // The emailed token can be consumed once. Share the result across remounts.
+  const verify = useQuery({
+    queryKey: ["auth", "verify-email", token],
+    queryFn: () => authApi.verifyEmail(token),
+    enabled: Boolean(token),
+    staleTime: "static",
+    retry: false,
+    retryOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
   return (
     <AuthShell top={null}>
       <AuthHeading title={t("verify.title")} />
-      {verify.isPending && <p role="status" className="mt-6 text-sm text-[#667085]">{t("verify.loading")}</p>}
+      {token && verify.isPending && <p role="status" className="mt-6 text-sm text-[#667085]">{t("verify.loading")}</p>}
       {verify.isSuccess && <Alert className="mt-6" type="success" showIcon title={t("verify.done")} />}
       {(verify.isError || !token) && <Alert className="mt-6" type="error" showIcon title={t("verify.failed")} />}
       <Link to="/account" className="mt-6 inline-block font-semibold text-[#D9431F]">{t("auth.continueSignIn")}</Link>

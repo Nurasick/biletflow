@@ -11,6 +11,7 @@ import { useLocale } from "../i18n/useLocale";
 import { ApiError } from "../shared/api/auth";
 import { ordersApi } from "../shared/api/events";
 import { formatMinor } from "../shared/lib/formatPrice";
+import { randomId } from "../shared/lib/randomId";
 import { useAuthErrorMessage } from "../shared/lib/useAuthErrorMessage";
 
 export const OrderPage = () => {
@@ -37,7 +38,7 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
   });
   const act = useMutation({
     mutationFn: (action: "pay" | "cancel") => action === "pay"
-      ? ordersApi.pay(orderNumber, token, paymentKey.current ??= crypto.randomUUID())
+      ? ordersApi.pay(orderNumber, token, paymentKey.current ??= randomId())
       : ordersApi.cancel(orderNumber, token),
     onMutate: () => queryClient.cancelQueries({ queryKey }),
     onSuccess: (updated) => { queryClient.setQueryData(queryKey, updated); },
