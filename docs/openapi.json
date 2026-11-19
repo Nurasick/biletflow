@@ -1760,6 +1760,16 @@
             "title": "Discounts Minor",
             "type": "integer"
           },
+          "filter_scope": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Filter Scope",
+            "type": "object"
+          },
           "gross_minor": {
             "title": "Gross Minor",
             "type": "integer"
@@ -1810,7 +1820,8 @@
           "sales_over_time",
           "by_ticket_type",
           "campaigns",
-          "attendance"
+          "attendance",
+          "filter_scope"
         ],
         "title": "EventAnalytics",
         "type": "object"
@@ -4819,6 +4830,10 @@
             "title": "Quantity Total",
             "type": "integer"
           },
+          "refunds_minor": {
+            "title": "Refunds Minor",
+            "type": "integer"
+          },
           "revenue_minor": {
             "title": "Revenue Minor",
             "type": "integer"
@@ -4840,7 +4855,8 @@
           "quantity_sold",
           "quantity_reserved",
           "revenue_minor",
-          "tickets_in_range"
+          "tickets_in_range",
+          "refunds_minor"
         ],
         "title": "TicketTypeAnalytics",
         "type": "object"
