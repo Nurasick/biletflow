@@ -1,29 +1,24 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useColorScheme } from 'nativewind';
-import { ActivityIndicator, Alert, Platform, Pressable, RefreshControl, ScrollView, StatusBar, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Platform, Pressable, View } from 'react-native';
 
+import { Icon } from '@/components/design';
 import { ThemedText } from '@/components/themed-text';
+import { Action, WorkspaceScreen } from '@/components/workspace';
 import { useI18n } from '@/i18n';
 import { TicketQr } from '@/components/ticket-qr';
 import { useAuth } from '@/hooks/use-auth';
+import { useTheme } from '@/hooks/use-theme';
+import type { AppColors } from '@/constants/theme';
 import { downloadOrderTicketsPdf, openEventCalendar } from '@/shared/api/documents';
 import { formatEventDate } from '@/shared/api/events';
 import { formatOrderMoney, ordersApi, type Order, type OrderStatus } from '@/shared/api/orders';
-
-const palette = {
-  dark: { background: '#101828', surface: '#182230', raised: '#1D2939', border: '#344054', text: '#F5F5F0', muted: '#98A2B3', accent: '#FF5C35', success: '#12B76A', warning: '#F79009', danger: '#F97066' },
-  light: { background: '#F5F5F0', surface: '#FFFFFF', raised: '#F9FAF7', border: '#D0D5DD', text: '#101828', muted: '#667085', accent: '#D9431F', success: '#039855', warning: '#DC6803', danger: '#D92D20' },
-};
 
 export default function TicketsScreen() {
   const router = useRouter();
   const { t, formatDate } = useI18n();
   const { authenticatedFetch } = useAuth();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const colors = isDark ? palette.dark : palette.light;
+  const colors = useTheme();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,22 +99,8 @@ export default function TicketsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
-      <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <Pressable accessibilityLabel={t("Back to events")} onPress={() => router.back()} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
-          <ThemedText style={{ color: colors.text, fontSize: 19 }}>‹</ThemedText>
-        </Pressable>
-        <ThemedText style={{ flex: 1, color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '800' }}>{t("My tickets")}</ThemedText>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 17, paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={isLoading && orders.length > 0} onRefresh={refresh} tintColor={colors.accent} />}>
-        <ThemedText style={{ color: colors.text, fontSize: 23, fontWeight: '900' }}>{t("Your orders")}</ThemedText>
-        <ThemedText style={{ marginTop: 4, marginBottom: 16, color: colors.muted, fontSize: 12 }}>{t("Tickets and order status for your account.")}</ThemedText>
+    <WorkspaceScreen tab="tickets" title={t('Your orders')} onRefresh={refresh} refreshing={isLoading && orders.length > 0}>
+        <ThemedText style={{ color: colors.muted, fontSize: 14 }}>{t("Tickets and order status for your account.")}</ThemedText>
 
         {isLoading && orders.length === 0 && <View style={{ alignItems: 'center', paddingVertical: 48 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted }}>{t("Loading your orders…")}</ThemedText></View>}
 
@@ -127,22 +108,22 @@ export default function TicketsScreen() {
 
         {!isLoading && !error && orders.length === 0 && (
           <View style={{ alignItems: 'center', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
-            <View style={{ width: 58, height: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 29, backgroundColor: colors.raised }}><ThemedText style={{ color: colors.accent, fontSize: 27 }}>▣</ThemedText></View>
+            <View style={{ width: 54, height: 54, alignItems: 'center', justifyContent: 'center', borderRadius: 15, backgroundColor: colors.accentWash }}><Icon name="ticket" color={colors.accent} size={26} /></View>
             <ThemedText style={{ marginTop: 13, color: colors.text, fontSize: 16, fontWeight: '800' }}>{t("No orders yet")}</ThemedText>
             <ThemedText style={{ marginTop: 5, color: colors.muted, textAlign: 'center', fontSize: 12, lineHeight: 18 }}>{t("When you register for an event or buy a ticket, your order and tickets will appear here.")}</ThemedText>
-            <Pressable onPress={() => router.replace('/')} style={{ marginTop: 16, paddingHorizontal: 17, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '800' }}>{t("Browse events")}</ThemedText></Pressable>
+            <View style={{ marginTop: 16 }}><Action label={t('Browse events')} onPress={() => router.dismissTo('/')} /></View>
           </View>
         )}
 
-        {orders.map((order) => {
+        {!error && orders.map((order) => {
           const expanded = openOrder === order.order_number;
           const isBusy = busyOrder === order.order_number;
           return (
-            <View key={order.order_number} style={{ marginBottom: 12, overflow: 'hidden', borderRadius: 15, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
-              <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setOpenOrder(expanded ? null : order.order_number)} style={{ padding: 14 }}>
+            <View key={order.order_number} style={{ overflow: 'hidden', borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
+              <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setOpenOrder(expanded ? null : order.order_number)} style={({ pressed }) => ({ padding: 16, backgroundColor: pressed ? colors.raised : colors.surface })}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                   <View style={{ flex: 1 }}>
-                    <ThemedText numberOfLines={2} style={{ color: colors.text, fontSize: 15, fontWeight: '800' }}>{order.event.title}</ThemedText>
+                    <ThemedText style={{ color: colors.text, fontSize: 17, fontWeight: '800' }}>{order.event.title}</ThemedText>
                     <ThemedText style={{ marginTop: 5, color: colors.muted, fontSize: 11 }}>{formatDate(order.event.starts_at, order.event.timezone)}</ThemedText>
                     <ThemedText numberOfLines={1} style={{ marginTop: 3, color: colors.muted, fontSize: 11 }}>{order.event.venue_name}</ThemedText>
                   </View>
@@ -152,7 +133,7 @@ export default function TicketsScreen() {
                   <ThemedText style={{ color: colors.muted, fontSize: 11 }}>{t("Order")} {order.order_number}</ThemedText>
                   <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{formatOrderMoney(order.total_minor, order.currency)}</ThemedText>
                 </View>
-                <ThemedText style={{ marginTop: 8, color: colors.accent, fontSize: 11, fontWeight: '700' }}>{expanded ? t("Hide details  ↑") : `View details${order.tickets.length ? ` · ${order.tickets.length} tickets` : ''}  ↓`}</ThemedText>
+                <ThemedText style={{ marginTop: 8, color: colors.accent, fontSize: 13, fontWeight: '700' }}>{expanded ? t("Hide details  ↑") : t('View details')}</ThemedText>
               </Pressable>
 
               {expanded && (
@@ -195,19 +176,19 @@ export default function TicketsScreen() {
             </View>
           );
         })}
-      </ScrollView>
-    </SafeAreaView>
+    </WorkspaceScreen>
   );
 }
 
-function StatusBadge({ status, colors }: { status: OrderStatus; colors: typeof palette.dark }) {
-  const { t, formatDate } = useI18n();
+function StatusBadge({ status, colors }: { status: OrderStatus; colors: AppColors }) {
+  const { t } = useI18n();
   const color = status === 'confirmed' ? colors.success : status === 'pending' ? colors.warning : colors.muted;
   const label = t(status);
-  return <View style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 15, backgroundColor: `${color}20` }}><ThemedText style={{ color, fontSize: 10, fontWeight: '800', textTransform: 'capitalize' }}>{t(label)}</ThemedText></View>;
+  const backgroundColor = status === 'confirmed' ? colors.successWash : status === 'pending' ? colors.warningWash : colors.raised;
+  return <View style={{ maxWidth: '51%', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 15, backgroundColor }}><ThemedText style={{ color, fontSize: 11, fontWeight: '800', textTransform: 'capitalize' }}>{label}</ThemedText></View>;
 }
 
-function TicketCard({ ticket, order, colors }: { ticket: Order['tickets'][number]; order: Order; colors: typeof palette.dark }) {
+function TicketCard({ ticket, order, colors }: { ticket: Order['tickets'][number]; order: Order; colors: AppColors }) {
   const router = useRouter();
   const { t, formatDate } = useI18n();
   const statusColor = ticket.status === 'valid' ? colors.success : ticket.status === 'checked_in' ? colors.warning : colors.muted;
@@ -232,12 +213,11 @@ function TicketCard({ ticket, order, colors }: { ticket: Order['tickets'][number
   );
 }
 
-function FeedbackCard({ message, colors, buttonLabel, onPress }: { message: string; colors: typeof palette.dark; buttonLabel: string; onPress: () => void }) {
+function FeedbackCard({ message, colors, buttonLabel, onPress }: { message: string; colors: AppColors; buttonLabel: string; onPress: () => void }) {
   const { t, formatDate } = useI18n();
   return <View style={{ alignItems: 'center', padding: 18, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}><ThemedText style={{ color: colors.text, textAlign: 'center', fontSize: 13 }}>{message}</ThemedText><Pressable onPress={onPress} style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '800' }}>{t(buttonLabel)}</ThemedText></Pressable></View>;
 }
 
-function ActionButton({ label, disabled, secondary = false, colors, onPress }: { label: string; disabled: boolean; secondary?: boolean; colors: typeof palette.dark; onPress: () => void }) {
-  const { t, formatDate } = useI18n();
-  return <Pressable disabled={disabled} onPress={onPress} style={{ flex: 1, alignItems: 'center', paddingVertical: 11, borderRadius: 10, borderWidth: secondary ? 1 : 0, borderColor: colors.border, backgroundColor: secondary ? colors.surface : colors.accent, opacity: disabled ? 0.55 : 1 }}><ThemedText style={{ color: secondary ? colors.text : '#FFFFFF', fontSize: 12, fontWeight: '800' }}>{t(label)}</ThemedText></Pressable>;
+function ActionButton({ label, disabled, secondary = false, onPress }: { label: string; disabled: boolean; secondary?: boolean; colors: AppColors; onPress: () => void }) {
+  return <View style={{ flex: 1 }}><Action label={label} disabled={disabled} secondary={secondary} onPress={onPress} /></View>;
 }

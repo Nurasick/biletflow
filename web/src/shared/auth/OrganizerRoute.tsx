@@ -15,8 +15,8 @@ export const OrganizerRoute = ({ requireProfile = true }: { requireProfile?: boo
   const { me } = useAuth();
 
   if (me.isPending) {
-    return <div role="status" className="grid min-h-screen place-items-center bg-[#F5F5F0] text-sm text-[#667085]">
-      <span className="flex items-center gap-2"><LoaderCircle className="animate-spin text-[#FF5C35]" size={18} aria-hidden="true" />{t("errors.checkingSession")}</span>
+    return <div role="status" className="grid min-h-screen place-items-center bg-paper text-sm text-muted">
+      <span className="flex items-center gap-2"><LoaderCircle className="animate-spin text-primary" size={18} aria-hidden="true" />{t("errors.checkingSession")}</span>
     </div>;
   }
   if (!me.data) {
@@ -26,11 +26,11 @@ export const OrganizerRoute = ({ requireProfile = true }: { requireProfile?: boo
   const isOrganizer = Boolean(me.data.is_organizer);
   if (requireProfile && !isOrganizer) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#F5F5F0] px-6 text-[#101828]">
+      <main className="grid min-h-screen place-items-center bg-paper px-6 text-ink">
         <div className="max-w-md text-center">
-          <h1 className="text-2xl font-bold">{t("organizer.accessOnly")}</h1>
-          <p className="mt-3 text-sm text-[#667085]">{t("organizer.becomeOrganizer")}</p>
-          <Link to="/organizer/profile" className="mt-6 inline-block rounded-xl bg-[#FF5C35] px-5 py-3 font-semibold">{t("organizer.createProfile")}</Link>
+          <h1 className="page-title">{t("organizer.accessOnly")}</h1>
+          <p className="mt-3 text-sm text-muted">{t("organizer.becomeOrganizer")}</p>
+          <Link to="/organizer/profile" className="action-button action-button--primary mt-6">{t("organizer.createProfile")}</Link>
         </div>
       </main>
     );

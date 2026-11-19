@@ -116,11 +116,11 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = fa
           <div role="radiogroup" aria-labelledby="event-visibility-heading" aria-invalid={Boolean(errors.visibility)}
             aria-describedby={errors.visibility ? "event-visibility-error" : undefined} className="grid gap-3 sm:grid-cols-3">
             {EVENT_VISIBILITIES.map((visibility) => (
-              <label key={visibility} className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#D0D5DD] p-4 has-checked:border-[#FF5C35] has-checked:bg-[#FFF0EA] has-focus-visible:ring-2 has-focus-visible:ring-[#FF5C35]">
-                <input {...register("visibility")} type="radio" value={visibility} className="mt-0.5 accent-[#FF5C35]" />
+              <label key={visibility} className="flex cursor-pointer items-start gap-3 rounded-lg border border-line p-4 has-checked:border-primary has-checked:bg-accent-wash has-focus-visible:ring-2 has-focus-visible:ring-primary">
+                <input {...register("visibility")} type="radio" value={visibility} className="mt-0.5 accent-primary" />
                 <span>
                   <span className="block text-xs font-semibold">{t(`organizerEvent.visibility.${visibility}`)}</span>
-                  <span className="mt-1 block text-xs leading-5 text-[#667085]">{t(`organizerEvent.visibility.${visibility}Description`)}</span>
+                  <span className="mt-1 block text-xs leading-5 text-muted">{t(`organizerEvent.visibility.${visibility}Description`)}</span>
                 </span>
               </label>
             ))}
@@ -141,8 +141,8 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = fa
         {saved && <Alert role="status" type="success" showIcon title={t(editing ? "eventEdit.saved" : "organizerEvent.saved")} className="mb-4" />}
         {errors.root && <Alert role="alert" type="error" showIcon title={validationMessage(t, errors.root)} className="mb-4" />}
       </div>
-      <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-4 border-t border-[#D0D5DD] bg-[#F5F5F0]/95 px-1 py-5 backdrop-blur-sm">
-        <p role="status" className="text-xs text-[#667085]">
+      <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-4 border-t border-line bg-paper/95 px-1 py-5 backdrop-blur-sm">
+        <p role="status" className="text-xs text-muted">
           {readingImages ? t("organizerEvent.readingImages") : isDirty ? t("organizer.unsaved") : t("organizerEvent.noChanges")}
         </p>
         <div className="flex flex-wrap gap-3">

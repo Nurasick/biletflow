@@ -24,7 +24,7 @@ export const LoginForm = () => {
       />
       <AuthField
         id="login-password" label={t("common.password")} type="password"
-        labelAction={<Link to="/forgot-password" className="text-xs font-semibold text-[#A93216] hover:underline">{t("auth.forgotPassword")}</Link>}
+        labelAction={<Link to="/forgot-password" className="text-xs font-semibold text-primary-hover hover:underline">{t("auth.forgotPassword")}</Link>}
         registration={register("password")} error={errors.password}
       />
 

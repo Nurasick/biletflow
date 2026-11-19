@@ -1,15 +1,18 @@
 import '../../global.css';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Platform, View, useColorScheme as useSystemColorScheme } from 'react-native';
+import { ActivityIndicator, Platform, View, useColorScheme as useSystemColorScheme } from 'react-native';
 import { useColorScheme as useNativeWindColorScheme } from 'nativewind';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { Wordmark } from '@/components/design';
+import { Colors, Fonts, Stage } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { I18nProvider } from '@/i18n';
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function getBrowserColorScheme(): 'light' | 'dark' | null {
   if (Platform.OS !== 'web' || typeof window === 'undefined') {
@@ -35,6 +38,15 @@ function RootLayoutContent() {
   const colorScheme = browserColorScheme ?? systemColorScheme;
   const { setColorScheme } = useNativeWindColorScheme();
   const { isLoggedIn, isRestoring } = useAuth();
+  const [fontsLoaded, fontError] = useFonts({
+    [Fonts.sans]: require('@/assets/fonts/Onest-Medium.ttf'),
+    [Fonts.bold]: require('@/assets/fonts/Onest-Bold.ttf'),
+    [Fonts.display]: require('@/assets/fonts/Onest-ExtraBold.ttf'),
+  });
+  const ready = !isRestoring && (fontsLoaded || !!fontError);
+  const isDark = colorScheme === 'dark';
+  const colors = isDark ? Colors.dark : Colors.light;
+  const navigationTheme = isDark ? DarkTheme : DefaultTheme;
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') {
@@ -55,11 +67,21 @@ function RootLayoutContent() {
     setColorScheme(colorScheme === 'dark' ? 'dark' : 'light');
   }, [colorScheme, setColorScheme]);
 
+  useEffect(() => {
+    if (ready) void SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      {isRestoring ? (
-        <View className="flex-1 bg-[#F5F5F0] dark:bg-[#101828]" />
+    <ThemeProvider value={{ ...navigationTheme, colors: {
+      ...navigationTheme.colors, background: colors.background, card: colors.surface,
+      text: colors.text, primary: colors.accent, border: colors.border,
+    } }}>
+      <StatusBar style={!ready || isDark ? 'light' : 'dark'} />
+      {!ready ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 18, backgroundColor: Stage.background }}>
+          <Wordmark onStage />
+          <ActivityIndicator color={Stage.accent} />
+        </View>
       ) : (
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={isLoggedIn}>

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Action, FormField, Info, WorkspaceScreen } from '@/components/workspace';
+import { AuthLink, AuthScreen } from '@/components/auth-screen';
+import { Action, FormField, Info } from '@/components/workspace';
 import { useI18n } from '@/i18n';
 import { accountApi } from '@/shared/api/account';
 
@@ -26,7 +27,7 @@ export function ConfirmAccount({ reset = false }: { reset?: boolean }) {
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'The account request failed. Please try again.'); }
     finally { lock.current = false; setBusy(false); }
   };
-  return <WorkspaceScreen title={t(reset ? 'Reset password' : 'Verify email')}>
+  return <AuthScreen title={t(reset ? 'Reset password' : 'Verify email')} busy={busy}>
     {!!(error) && <Info tone="error">{t(error)}</Info>}
     {done ? <>
       <Info tone="success">{t(reset ? 'Password updated. Sign in with your new password.' : 'Email verified successfully.')}</Info>
@@ -39,6 +40,7 @@ export function ConfirmAccount({ reset = false }: { reset?: boolean }) {
         <FormField label={t('Repeat password')} value={repeat} onChangeText={setRepeat} maxLength={50} secureTextEntry autoCapitalize="none" editable={!busy} />
       </>}
       <Action label={t(busy ? 'Working…' : 'Confirm')} disabled={busy || !token.trim()} onPress={() => void submit()} />
+      <AuthLink label={t('Back')} disabled={busy} onPress={() => router.canGoBack() ? router.back() : router.replace('/')} />
     </>}
-  </WorkspaceScreen>;
+  </AuthScreen>;
 }

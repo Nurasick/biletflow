@@ -25,8 +25,8 @@ export const AuthField = ({
 
   return (
     <div className={className}>
-      <div className="mb-1.5 flex items-center justify-between">
-        <label htmlFor={id} className="text-[11.5px] font-semibold">{label}</label>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <label htmlFor={id} className="text-sm font-semibold">{label}</label>
         {labelAction}
       </div>
       <FieldInput

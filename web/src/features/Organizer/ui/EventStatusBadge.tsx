@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { EventStatus } from "../../../shared/api/eventLifecycle";
 
 const statusStyles: Record<EventStatus, string> = {
-  draft: "border-[#D0D5DD] bg-white text-[#667085]",
+  draft: "border-line bg-white text-muted",
   published: "border-green-200 bg-green-50 text-green-800",
   cancelled: "border-red-200 bg-red-50 text-red-800",
   suspended: "border-amber-200 bg-amber-50 text-amber-800",

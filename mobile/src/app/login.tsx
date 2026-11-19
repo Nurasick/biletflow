@@ -1,17 +1,21 @@
-import { RegisterForm } from '@/components/register-form';
-import { useState } from 'react';
-import { StatusBar, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { AuthLink, AuthScreen } from '@/components/auth-screen';
+import { AppText, Icon } from '@/components/design';
+import { RegisterForm } from '@/components/register-form';
+import { Action, FormField, FormInput, Info } from '@/components/workspace';
 import { useAuth } from '@/hooks/use-auth';
+import { useTheme } from '@/hooks/use-theme';
+import { useI18n } from '@/i18n';
 import { requestPasswordReset } from '@/shared/api/auth';
-import { LanguageSelector, useI18n } from '@/i18n';
 
 export default function LoginScreen() {
   const { t } = useI18n();
+  const colors = useTheme();
+  const router = useRouter();
+  const { login, loading, error } = useAuth();
   const [registering, setRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,25 +26,20 @@ export default function LoginScreen() {
   const [resetBusy, setResetBusy] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
-  const { login, loading, error } = useAuth();
-  const router = useRouter();
 
   const handleLogin = async () => {
+    if (loading) return;
     if (!email.trim() || !password) {
       setFormError('Enter your email address and password.');
       return;
     }
-
     setFormError(null);
     const signedIn = await login(email, password, rememberMe);
-    if (signedIn) {
-      router.replace('/');
-    }
+    if (signedIn) router.replace('/');
   };
 
-  const displayedError = formError ?? error;
-
   const handlePasswordReset = async () => {
+    if (resetBusy) return;
     if (!email.trim()) {
       setResetError('Enter your email address first.');
       setResetMessage(null);
@@ -59,157 +58,79 @@ export default function LoginScreen() {
     }
   };
 
+  const changeEmail = (value: string) => {
+    setEmail(value);
+    setFormError(null);
+    setResetError(null);
+    setResetMessage(null);
+  };
+  const emailField = (
+    <FormField label={t('Email address')} autoCapitalize="none" autoComplete="email" keyboardType="email-address"
+      editable={!(resetMode ? resetBusy : loading)} placeholder="you@example.com" value={email} onChangeText={changeEmail} />
+  );
+
   if (registering) return <RegisterForm onBack={() => setRegistering(false)} />;
+  if (resetMode) {
+    return (
+      <AuthScreen title={t('Reset password')} busy={resetBusy}>
+        <Info tone="muted">{t('Enter your account email and we will send a password reset link if the account exists.')}</Info>
+        {emailField}
+        {resetError && <Info tone="error">{t(resetError)}</Info>}
+        {resetMessage && <Info tone="success">{t(resetMessage)}</Info>}
+        <Action label={t(resetBusy ? 'Sending...' : 'Send reset link')} disabled={resetBusy} onPress={() => void handlePasswordReset()} />
+        <View style={styles.links}>
+          <AuthLink label={t('Back to sign in')} disabled={resetBusy} onPress={() => setResetMode(false)} />
+          <AuthLink label={t('I have a reset token')} disabled={resetBusy} onPress={() => router.push('/reset-password')} />
+        </View>
+      </AuthScreen>
+    );
+  }
 
+  const displayedError = formError ?? error;
   return (
-    <SafeAreaView className="flex-1 bg-[#182230]">
-      <StatusBar barStyle="light-content" backgroundColor="#101828" />
-
-      <View className="absolute right-0 top-0 h-64 w-64 rounded-full bg-[#FF5C35] opacity-10 blur-3xl" />
-
-      <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-        <ThemedView className="relative z-10 flex-1 px-6">
-          <View className="mb-3 flex-row gap-2">
-            <View className="h-7 w-6 rounded bg-[#FF5C35]" />
-            <ThemedText className="text-2xl font-extrabold">
-              Bilet<ThemedText className="text-[#FF5C35]">Flow</ThemedText>
-            </ThemedText>
+    <AuthScreen title={t('Sign in')} busy={loading}>
+      <Info tone="muted">{t('Sign in to access your tickets and orders.')}</Info>
+      {emailField}
+      <View style={{ gap: 3 }}>
+        <View style={styles.fieldHeader}>
+          <AppText style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{t('Password')}</AppText>
+          <AuthLink label={t(showPassword ? 'Hide' : 'Show')} disabled={loading} onPress={() => setShowPassword((previous) => !previous)} />
+        </View>
+        <FormInput accessibilityLabel={t('Password')} autoComplete="current-password" autoCapitalize="none" editable={!loading}
+          secureTextEntry={!showPassword} value={password} onChangeText={(value) => { setPassword(value); setFormError(null); }}
+          returnKeyType="go" onSubmitEditing={() => void handleLogin()} />
+      </View>
+      <View style={styles.options}>
+        <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: rememberMe, disabled: loading }} disabled={loading} onPress={() => setRememberMe((value) => !value)}
+          style={({ pressed }) => [styles.remember, { opacity: pressed ? 0.72 : 1 }]}>
+          <View style={[styles.checkbox, { borderColor: rememberMe ? colors.button : colors.border, backgroundColor: rememberMe ? colors.button : colors.surface }]}>
+            {rememberMe && <Icon name="check" color="#FFFFFF" size={15} />}
           </View>
-          <LanguageSelector disabled={loading || resetBusy} />
-
-          <View className="mb-7">
-            <ThemedText className="mb-2 text-xs font-bold tracking-widest text-[#FF5C35]">{t('WELCOME BACK')}</ThemedText>
-            <ThemedText className="mb-2 text-3xl font-bold leading-tight">
-              {t('Your next great night starts here.')}
-            </ThemedText>
-            <ThemedText className="text-sm text-[#98A2B3]">
-              {t('Sign in to access your tickets, saved events and faster checkout.')}
-            </ThemedText>
-          </View>
-
-          {resetMode ? (
-            <View className="mb-6 gap-4">
-              <ThemedText className="text-sm text-[#98A2B3]">{t('Enter your account email and we will send a password reset link if the account exists.')}</ThemedText>
-              <TextInput
-                accessibilityLabel={t('Email address')}
-                autoCapitalize="none"
-                autoComplete="email"
-                editable={!resetBusy}
-                keyboardType="email-address"
-                placeholder="you@example.com"
-                placeholderTextColor="#98A2B3"
-                className="rounded-lg border border-[#344054] bg-[#101828] px-4 py-3 text-base text-[#F5F5F0]"
-                value={email}
-                onChangeText={(value) => { setEmail(value); setResetError(null); setResetMessage(null); }}
-              />
-              {!!resetError && <ThemedText className="text-sm text-red-500">{t(resetError)}</ThemedText>}
-              {!!resetMessage && <ThemedText className="text-sm text-green-500">{t(resetMessage)}</ThemedText>}
-              <TouchableOpacity
-                accessibilityRole="button"
-                className={`items-center rounded-lg bg-[#FF5C35] py-4 ${resetBusy ? 'opacity-70' : ''}`}
-                disabled={resetBusy}
-                onPress={() => void handlePasswordReset()}>
-                <ThemedText className="text-base font-bold text-white">{t(resetBusy ? 'Sending...' : 'Send reset link')}</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity disabled={resetBusy} onPress={() => { setResetMode(false); setResetError(null); setResetMessage(null); }}>
-                <ThemedText className="text-center text-sm font-semibold text-[#FF5C35]">{t('Back to sign in')}</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity disabled={resetBusy} onPress={() => router.push('/reset-password')}>
-                <ThemedText className="text-center text-sm font-semibold text-[#FF5C35]">{t('I have a reset token')}</ThemedText>
-              </TouchableOpacity>
-            </View>
-          ) : <>
-          {displayedError && (
-            <ThemedText className="mb-4 rounded bg-red-900/20 px-3 py-2 text-sm text-red-500">
-              {t(displayedError)}
-            </ThemedText>
-          )}
-
-          <View className="mb-4">
-            <ThemedText className="mb-2 text-sm font-semibold">{t('Email address')}</ThemedText>
-            <TextInput
-              accessibilityLabel={t('Email address')}
-              autoCapitalize="none"
-              autoComplete="email"
-              editable={!loading}
-              keyboardType="email-address"
-              placeholder="you@example.com"
-              placeholderTextColor="#98A2B3"
-              className="rounded-lg border border-[#344054] bg-[#101828] px-4 py-3 text-base text-[#F5F5F0]"
-              value={email}
-              onChangeText={(value) => {
-                setEmail(value);
-                setFormError(null);
-              }}
-            />
-          </View>
-
-          <View className="mb-6">
-            <View className="mb-2 flex-row items-center justify-between">
-              <ThemedText className="text-sm font-semibold">{t('Password')}</ThemedText>
-              <TouchableOpacity onPress={() => { setResetMode(true); setResetError(null); setResetMessage(null); }}>
-                <ThemedText className="text-xs font-semibold text-[#FF5C35]">{t('Forgot password?')}</ThemedText>
-              </TouchableOpacity>
-            </View>
-            <View className="flex-row items-center rounded-lg border border-[#344054] bg-[#101828]">
-              <TextInput
-                accessibilityLabel={t('Password')}
-                autoComplete="current-password"
-                editable={!loading}
-                placeholder={t('Password')}
-                placeholderTextColor="#98A2B3"
-                secureTextEntry={!showPassword}
-                className="flex-1 px-4 py-3 text-base text-[#F5F5F0]"
-                value={password}
-                onChangeText={(value) => {
-                  setPassword(value);
-                  setFormError(null);
-                }}
-              />
-              <TouchableOpacity onPress={() => setShowPassword((visible) => !visible)} className="px-4">
-                <ThemedText className="text-lg">{t(showPassword ? 'Hide' : 'Show')}</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View className="mb-6 gap-3">
-            <View className="flex-row items-center gap-2">
-              <TouchableOpacity
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: rememberMe }}
-                onPress={() => setRememberMe((remembered) => !remembered)}
-                className={`h-5 w-5 items-center justify-center rounded border-2 ${
-                  rememberMe ? 'border-[#FF5C35] bg-[#FF5C35]' : 'border-[#344054]'
-                }`}>
-                {rememberMe && <ThemedText className="text-xs font-bold text-white">x</ThemedText>}
-              </TouchableOpacity>
-              <ThemedText className="text-sm">{t('Remember me')}</ThemedText>
-            </View>
-            <ThemedText className="text-xs text-[#98A2B3]">
-              {t('By signing in, you agree to our Terms of Service and Privacy Policy.')}
-            </ThemedText>
-          </View>
-
-          <TouchableOpacity
-            accessibilityRole="button"
-            className={`mb-6 items-center rounded-lg bg-[#FF5C35] py-4 ${loading ? 'opacity-70' : ''}`}
-            disabled={loading}
-            onPress={handleLogin}>
-            <ThemedText className="text-base font-bold text-white">{t(loading ? 'Signing in...' : 'Sign in')}</ThemedText>
-          </TouchableOpacity>
-
-          <View className="flex-row justify-center gap-1">
-            <ThemedText className="text-sm text-[#98A2B3]">{t("Don't have an account?")}</ThemedText>
-            <TouchableOpacity onPress={() => setRegistering(true)}>
-              <ThemedText className="text-sm font-bold text-[#FF5C35]">{t('Sign up')}</ThemedText>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity className="mt-5" onPress={() => router.push('/verify-email')}>
-            <ThemedText className="text-center text-sm font-semibold text-[#FF5C35]">{t('Verify email')}</ThemedText>
-          </TouchableOpacity>
-          </>}
-        </ThemedView>
-      </ScrollView>
-    </SafeAreaView>
+          <AppText style={{ color: colors.text, fontSize: 13 }}>{t('Remember me')}</AppText>
+        </Pressable>
+        <AuthLink label={t('Forgot password?')} disabled={loading}
+          onPress={() => { setResetMode(true); setResetError(null); setResetMessage(null); }} />
+      </View>
+      {displayedError && <View style={[styles.error, { backgroundColor: colors.dangerWash }]}><Info tone="error">{t(displayedError)}</Info></View>}
+      <Action icon="arrowRight" label={t(loading ? 'Signing in...' : 'Sign in')} disabled={loading} onPress={() => void handleLogin()} />
+      <AppText style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>{t('By signing in, you agree to our Terms of Service and Privacy Policy.')}</AppText>
+      <View style={[styles.secondary, { borderTopColor: colors.border }]}>
+        <View style={styles.links}>
+          <AppText style={{ color: colors.muted, fontSize: 13 }}>{t("Don't have an account?")}</AppText>
+          <AuthLink label={t('Sign up')} disabled={loading} onPress={() => setRegistering(true)} />
+        </View>
+        <AuthLink label={t('Verify email')} disabled={loading} onPress={() => router.push('/verify-email')} />
+      </View>
+    </AuthScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  fieldHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginVertical: -6 },
+  options: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 3, marginVertical: -3 },
+  remember: { flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: 8 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  secondary: { borderTopWidth: 1, paddingTop: 4, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: 7 },
+  links: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 5 },
+  error: { padding: 10, borderRadius: 10 },
+});

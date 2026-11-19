@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { AppText } from '@/components/design';
+import { useTheme } from '@/hooks/use-theme';
 import * as SessionStorage from '@/lib/session-storage';
 import { createLocalePreference, formatLocalizedDate, translate, type Locale, type TranslationParams } from './core';
 
@@ -49,11 +51,14 @@ export function useI18n() {
 
 export function LanguageSelector({ disabled = false }: { disabled?: boolean }) {
   const { locale, setLocale, t } = useI18n();
+  const colors = useTheme();
   return (
-    <View accessibilityLabel={t('Language')} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 14 }}>
+    <View accessibilityLabel={t('Language')} style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 7 }}>
       {LANGUAGES.map((language) => (
-        <Pressable key={language.locale} accessibilityRole="button" accessibilityState={{ selected: locale === language.locale, disabled }} disabled={disabled} onPress={() => setLocale(language.locale)} style={{ paddingHorizontal: 12, paddingVertical: 9, borderRadius: 9, borderWidth: 1, borderColor: locale === language.locale ? '#FF5C35' : '#667085', backgroundColor: locale === language.locale ? '#FF5C35' : '#182230', opacity: disabled ? 0.6 : 1 }}>
-          <Text style={{ color: '#FFFFFF', fontWeight: locale === language.locale ? '700' : '400', fontSize: 13 }}>{language.label}</Text>
+        <Pressable key={language.locale} accessibilityRole="button" accessibilityState={{ selected: locale === language.locale, disabled }} disabled={disabled}
+          onPress={() => setLocale(language.locale)} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1,
+            borderColor: locale === language.locale ? colors.accent : colors.border, backgroundColor: locale === language.locale ? colors.accentWash : colors.surface, opacity: disabled || pressed ? 0.6 : 1 })}>
+          <AppText style={{ color: locale === language.locale ? colors.accent : colors.muted, fontWeight: '700', fontSize: 13 }}>{language.label}</AppText>
         </Pressable>
       ))}
     </View>

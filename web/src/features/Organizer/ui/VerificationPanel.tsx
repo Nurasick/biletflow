@@ -21,18 +21,18 @@ export const VerificationPanel = ({ userId }: { userId: number }) => {
   const verified = record.data.verification_status === "verified";
 
   return (
-    <section aria-labelledby="verification" className="mt-6 rounded-xl border border-[#D0D5DD] bg-white p-5">
+    <section aria-labelledby="verification" className="mt-6 rounded-xl border border-line bg-white p-5">
       <h2 id="verification" className="flex items-center gap-2 font-semibold">
-        <ShieldCheck size={18} aria-hidden="true" className={verified ? "text-green-700" : "text-[#667085]"} />
+        <ShieldCheck size={18} aria-hidden="true" className={verified ? "text-green-700" : "text-muted"} />
         {t("organizer.verification")}
       </h2>
-      <p className="mt-2 text-sm text-[#667085]">
+      <p className="mt-2 text-sm text-muted">
         {t(verified ? "organizer.verified" : "organizer.notVerified")}
       </p>
       {!verified && <Button className="mt-4" loading={verify.isPending} onClick={() => verify.mutate()}>
         {t("organizer.verifySimulated")}
       </Button>}
-      {verify.isError && <p role="alert" className="mt-2 text-sm text-[#A93216]">{t("organizer.saveError")}</p>}
+      {verify.isError && <p role="alert" className="mt-2 text-sm text-primary-hover">{t("organizer.saveError")}</p>}
     </section>
   );
 };

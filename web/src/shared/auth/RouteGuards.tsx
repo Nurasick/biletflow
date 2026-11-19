@@ -7,9 +7,9 @@ import { useAuth } from "../../hooks/useAuth";
 const SessionLoader = () => {
   const { t } = useTranslation();
   return (
-    <div className="grid min-h-screen place-items-center bg-[#F5F5F0] text-[#101828]">
-      <div className="flex items-center gap-2 text-sm text-[#667085]">
-        <LoaderCircle className="animate-spin text-[#FF5C35]" size={18} />
+    <div className="grid min-h-screen place-items-center bg-paper text-ink">
+      <div className="flex items-center gap-2 text-sm text-muted">
+        <LoaderCircle className="animate-spin text-primary" size={18} />
         {t("errors.checkingSession")}
       </div>
     </div>
@@ -19,10 +19,10 @@ const SessionLoader = () => {
 const SessionError = ({ retry }: { retry: () => void }) => {
   const { t } = useTranslation();
   return (
-    <div className="grid min-h-screen place-items-center bg-[#F5F5F0] text-[#101828]">
+    <div className="grid min-h-screen place-items-center bg-paper text-ink">
       <div role="alert" className="text-center">
         <p>{t("errors.sessionCheck")}</p>
-        <button type="button" onClick={retry} className="mt-3 font-semibold text-[#D9431F]">
+        <button type="button" onClick={retry} className="mt-3 font-semibold text-primary-hover">
           {t("common.retry")}
         </button>
       </div>

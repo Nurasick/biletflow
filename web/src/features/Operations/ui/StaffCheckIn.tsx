@@ -23,7 +23,7 @@ const ticketStatusLabels = {
 
 const TicketIdentity = ({ ticket }: { ticket: ScannedTicket }) => <div className="min-w-0">
   <p className="break-words font-semibold">{ticket.attendee_name}</p>
-  <p className="mt-1 break-words text-sm text-[#667085]">{ticket.ticket_type_name}</p>
+  <p className="mt-1 break-words text-sm text-muted">{ticket.ticket_type_name}</p>
   <p className="mt-1 break-all font-mono text-sm">{ticket.public_code}</p>
 </div>;
 
@@ -75,7 +75,7 @@ export const StaffCheckIn = ({ eventId, userId, ready }: { eventId: number; user
   return <div className="grid items-start gap-6 lg:grid-cols-2">
     <section className={operationsCard}>
       <h2 className="text-xl font-bold">{t("ops.scanTitle")}</h2>
-      <p className="mt-2 text-sm leading-6 text-[#667085]">{t("ops.scanHint")}</p>
+      <p className="mt-2 text-sm leading-6 text-muted">{t("ops.scanHint")}</p>
       <form className="mt-4 space-y-3" onSubmit={(event) => { event.preventDefault(); submitQr(qr); }}>
         <label htmlFor="ticket-qr" className="block text-sm font-semibold">{t("ops.qrLabel")}</label>
         <Input.TextArea id="ticket-qr" value={qr} onChange={(event) => { setQr(event.target.value); setInputError(false); }}
@@ -93,7 +93,7 @@ export const StaffCheckIn = ({ eventId, userId, ready }: { eventId: number; user
     </section>
     <section className={operationsCard}>
       <h2 className="text-xl font-bold">{t("ops.searchAttendees")}</h2>
-      <p className="mt-2 text-sm leading-6 text-[#667085]">{t("ops.attendeeSearchHint")}</p>
+      <p className="mt-2 text-sm leading-6 text-muted">{t("ops.attendeeSearchHint")}</p>
       <form className="mt-4 space-y-3" onSubmit={(event) => {
         event.preventDefault();
         const value = searchDraft.trim();
@@ -108,8 +108,8 @@ export const StaffCheckIn = ({ eventId, userId, ready }: { eventId: number; user
       </form>
       {searchQuery && <div className="mt-5">
         {search.isPending ? <OperationsLoading /> : search.isError ? <OperationsError error={search.error} retry={() => void search.refetch()} />
-          : search.data?.length === 0 ? <p role="status" className="text-sm text-[#667085]">{t("ops.searchEmpty")}</p>
-            : <ul className="divide-y divide-[#EAECF0]">
+          : search.data?.length === 0 ? <p role="status" className="text-sm text-muted">{t("ops.searchEmpty")}</p>
+            : <ul className="divide-y divide-line-soft">
               {search.data?.map((ticket) => {
                 const action = ticketAction(ticket);
                 return <li key={ticket.public_code} className="flex flex-wrap items-center justify-between gap-3 py-4">
@@ -126,7 +126,7 @@ export const StaffCheckIn = ({ eventId, userId, ready }: { eventId: number; user
                 </li>;
               })}
             </ul>}
-        {search.data?.length === 25 && <p className="mt-3 text-xs leading-5 text-[#667085]">{t("ops.searchMore")}</p>}
+        {search.data?.length === 25 && <p className="mt-3 text-xs leading-5 text-muted">{t("ops.searchMore")}</p>}
       </div>}
     </section>
     <Modal open={Boolean(confirmation)} title={confirmation && t(confirmation.kind === "admit" ? "ops.admitConfirm" : "ops.reverseConfirm", { name: confirmation.ticket.attendee_name })}

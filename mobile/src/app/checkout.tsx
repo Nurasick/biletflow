@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { checkoutItems, decode, get, type Order, type TicketType } from '@/api/public';
 import { Screen, Label, Button } from '@/components/api-screen';
+import { Action, FormField, Panel } from '@/components/workspace';
 import { useAuth } from '@/hooks/use-auth';
 import { useI18n } from '@/i18n';
 import { promotionsApi, type PromoQuote } from '@/shared/api/events';
@@ -125,17 +126,14 @@ export default function Checkout() {
   };
 
   const field = (label: string, value: string, change: (next: string) => void, isEmail = false) => (
-    <TextInput
-      accessibilityLabel={label}
-      placeholder={label}
-      placeholderTextColor="#98A2B3"
+    <FormField
+      label={label}
       value={value}
       onChangeText={change}
       editable={!busy}
       maxLength={isEmail ? 254 : 200}
       keyboardType={isEmail ? 'email-address' : 'default'}
       autoCapitalize={isEmail ? 'none' : 'words'}
-      className="rounded border border-gray-500 p-3 text-white"
     />
   );
   const seatPreview = seats?.split(',').filter(Boolean) ?? [];
@@ -143,12 +141,14 @@ export default function Checkout() {
   if (order) {
     return (
       <Screen title={t('Order created')}>
-        <Label>{t('Order {number}: {status}', { number: order.order_number, status: t(order.status) })}</Label>
-        <Label>{t('Total: {amount}', { amount: price(order.total_minor, order.currency) })}</Label>
-        <Label>{order.expires_at ? t('Reserved until {date}', { date: formatDate(order.expires_at) }) : t('Order confirmed.')}</Label>
-        <Label>{t(order.status === 'pending' ? 'Payment is still required. Open My tickets to complete the demo payment.' : 'Your free order is confirmed.')}</Label>
+        <Panel>
+          <Label>{t('Order {number}: {status}', { number: order.order_number, status: t(order.status) })}</Label>
+          <Label>{t('Total: {amount}', { amount: price(order.total_minor, order.currency) })}</Label>
+          <Label tone={order.expires_at ? 'muted' : 'success'}>{order.expires_at ? t('Reserved until {date}', { date: formatDate(order.expires_at) }) : t('Order confirmed.')}</Label>
+          <Label tone="muted">{t(order.status === 'pending' ? 'Payment is still required. Open My tickets to complete the demo payment.' : 'Your free order is confirmed.')}</Label>
+        </Panel>
         <Button title={t('Open my tickets')} onPress={() => router.replace('/tickets')} />
-        <Button title={t('Back to events')} onPress={() => router.replace('/')} />
+        <Button secondary title={t('Back to events')} onPress={() => router.dismissTo('/')} />
       </Screen>
     );
   }
@@ -156,36 +156,34 @@ export default function Checkout() {
   return (
     <Screen title={t('Review reservation')}>
       {loading && <Label>{t('Checking availability...')}</Label>}
-      {(error || selectionError) && <Label>{t(error || selectionError)}</Label>}
+      {(error || selectionError) && <Label tone="error">{t(error || selectionError)}</Label>}
       {!loading && !selectionError && <>
-        <Label>{t('Ticket subtotal: {amount}', { amount: price(estimated, types[0]?.currency ?? 'KZT') })}</Label>
-        {promoQuote && <Label>{t('Promo {code} applied: -{discount}. Total {total}.', { code: promoQuote.code, discount: price(promoQuote.discount_minor, types[0]?.currency ?? 'KZT'), total: price(promoQuote.total_minor, types[0]?.currency ?? 'KZT') })}</Label>}
-        {!!seatPreview.length && <Label>{t('Seat preview: {seats}. The backend will reserve the ticket types, but does not hold or save seat numbers yet.', { seats: seatPreview.map((seat) => t('Row {row}, seat {seat}', { row: seat.split('-')[0], seat: seat.split('-')[1] })).join(' / ') })}</Label>}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TextInput
-            accessibilityLabel={t('Promo code')}
-            placeholder={t('Promo code')}
-            placeholderTextColor="#98A2B3"
+        <Panel>
+          <Label>{t('Ticket subtotal: {amount}', { amount: price(estimated, types[0]?.currency ?? 'KZT') })}</Label>
+          {promoQuote && <Label tone="success">{t('Promo {code} applied: -{discount}. Total {total}.', { code: promoQuote.code, discount: price(promoQuote.discount_minor, types[0]?.currency ?? 'KZT'), total: price(promoQuote.total_minor, types[0]?.currency ?? 'KZT') })}</Label>}
+          {seatPreview.length > 0 && <Label tone="muted">{t('Seat preview: {seats}. The backend will reserve the ticket types, but does not hold or save seat numbers yet.', { seats: seatPreview.map((seat) => t('Row {row}, seat {seat}', { row: seat.split('-')[0], seat: seat.split('-')[1] })).join(' / ') })}</Label>}
+          <FormField
+            label={t('Promo code')}
             value={promoCode}
             onChangeText={(value) => { setPromoCode(value); setPromoQuote(null); setActiveCampaignToken(''); setPromoError(''); }}
             autoCapitalize="characters"
             editable={!busy && !promoBusy}
             maxLength={64}
-            className="flex-1 rounded border border-gray-500 p-3 text-white"
           />
-          <Pressable accessibilityRole="button" disabled={!promoCode.trim() || promoBusy || busy} onPress={() => void applyPromo()} className="rounded bg-orange-600 px-4 py-3">
-            <Label>{t(promoBusy ? 'Checking...' : promoQuote ? 'Applied' : 'Apply')}</Label>
-          </Pressable>
-        </View>
-        {!!promoError && <Label>{t(promoError)}</Label>}
-        {field(t('Contact name'), name, setName)}
-        {field(t('Contact email'), email, setEmail, true)}
-        {attendees.map((attendee) => (
-          <View key={attendee.key}>{field(attendee.label, names[attendee.key] ?? '', (value) => setNames((current) => ({ ...current, [attendee.key]: value })))}</View>
-        ))}
+          <Action secondary disabled={!promoCode.trim() || promoBusy || busy} onPress={() => void applyPromo()} label={t(promoBusy ? 'Checking...' : promoQuote ? 'Applied' : 'Apply')} />
+          {!!promoError && <Label tone="error">{t(promoError)}</Label>}
+        </Panel>
+        <Panel>
+          {field(t('Contact name'), name, setName)}
+          {field(t('Contact email'), email, setEmail, true)}
+          {attendees.map((attendee) => (
+            <View key={attendee.key}>{field(attendee.label, names[attendee.key] ?? '', (value) => setNames((current) => ({ ...current, [attendee.key]: value })))}</View>
+          ))}
+        </Panel>
       </>}
       <Button title={t(busy ? 'Reserving...' : 'Reserve tickets')} disabled={busy || loading || !!selectionError || !types.length} onPress={() => void reserve()} />
-      <Button title={t(seatPreview.length ? 'Choose seats again' : 'Choose tickets again')} disabled={busy} onPress={() => router.replace({ pathname: seatPreview.length ? '/seat-selection' : '/ticket-selection', params: { slug } })} />
+      <Button secondary title={t(seatPreview.length ? 'Choose seats again' : 'Choose tickets again')} disabled={busy}
+        onPress={() => router.replace({ pathname: seatPreview.length ? '/seat-selection' : '/ticket-selection', params: { slug, ...(campaignToken ? { campaignToken } : {}) } })} />
     </Screen>
   );
 }

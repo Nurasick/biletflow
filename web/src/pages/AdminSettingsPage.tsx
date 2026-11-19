@@ -52,7 +52,7 @@ const AdminSettingsForm = ({ userId }: { userId: number }) => {
 
   return <OperationsWorkspace admin>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-3xl font-bold tracking-tight">{t("adminSettings.title")}</h1>
+      <h1 className="page-title">{t("adminSettings.title")}</h1>
       <RefreshButton refresh={refresh} fetching={settings.isFetching} disabled={update.isPending} />
     </div>
     {settings.isPending && <OperationsLoading />}
@@ -63,7 +63,7 @@ const AdminSettingsForm = ({ userId }: { userId: number }) => {
       saving.current = true;
       update.mutate(changes);
     }}>
-      <p className="text-sm leading-6 text-[#475467]">{t("adminSettings.description")}</p>
+      <p className="text-sm leading-6 text-muted-strong">{t("adminSettings.description")}</p>
       <fieldset disabled={update.isPending} className="grid gap-4 sm:grid-cols-2">
         {fields.map(({ field, label }) => {
           const hasError = invalid.includes(field);
@@ -77,7 +77,7 @@ const AdminSettingsForm = ({ userId }: { userId: number }) => {
                 update.reset();
                 setDraft((current) => ({ ...current, [field]: value }));
               }} />
-            {hasError && <p id={`${id}-error`} className="mt-2 text-xs text-[#A93216]">
+            {hasError && <p id={`${id}-error`} className="mt-2 text-xs text-primary-hover">
               {t("adminSettings.range", {
                 max: field === "processing_fee_bps" ? maxRate : formatMinor(platformFeeLimits.activation_fee_minor, locale),
               })}
@@ -87,7 +87,7 @@ const AdminSettingsForm = ({ userId }: { userId: number }) => {
       </fieldset>
       {update.isSuccess && <Alert role="status" type="success" showIcon title={t("adminSettings.saved")} />}
       {update.isError && <OperationsError error={update.error} saving />}
-      <div className="flex flex-wrap justify-end gap-3 border-t border-[#D0D5DD] pt-4">
+      <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-4">
         <Button disabled={!dirty || update.isPending} onClick={() => { setDraft({}); update.reset(); }}>
           {t("accountEdit.discard")}
         </Button>

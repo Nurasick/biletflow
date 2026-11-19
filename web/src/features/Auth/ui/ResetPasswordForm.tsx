@@ -28,7 +28,7 @@ export const ResetPasswordForm = ({ token }: { token: string }) => {
         id="reset-password" label={t("auth.newPassword")} type="password" autoComplete="new-password"
         registration={register("password")} error={errors.password}
       />
-      <p className="text-xs text-[#667085]">{t("auth.passwordHint")}</p>
+      <p className="text-xs text-muted">{t("auth.passwordHint")}</p>
       <AuthField
         id="reset-confirm-password" label={t("auth.confirmNewPassword")} type="password"
         autoComplete="new-password"
@@ -37,7 +37,7 @@ export const ResetPasswordForm = ({ token }: { token: string }) => {
       {resetPassword.isError && (
         <div>
           <AuthAlert message={getAuthErrorMessage(resetPassword.error, t("errors.resetPassword"))} />
-          <Link to="/forgot-password" className="text-sm font-semibold text-[#D9431F]">
+          <Link to="/forgot-password" className="text-sm font-semibold text-primary-hover">
             {t("auth.newResetLink")}
           </Link>
         </div>

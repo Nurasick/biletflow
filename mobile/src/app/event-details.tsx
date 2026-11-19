@@ -1,36 +1,34 @@
-import { useEffect, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useColorScheme } from 'nativewind';
-import { ActivityIndicator, Pressable, ScrollView, StatusBar, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { useI18n } from '@/i18n';
 import { ticketLimit } from '@/api/public';
+import { AppText, Icon, type IconName } from '@/components/design';
+import { ScreenFrame } from '@/components/screen-frame';
+import { Action, Info, Panel, ScreenHeading } from '@/components/workspace';
+import { MaxContentWidth } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { useI18n } from '@/i18n';
 import { openEventCalendar } from '@/shared/api/documents';
-import { eventsApi, formatEventDate, formatEventPrice, resolveEventImage, type EventDetail, type PublicTicketType } from '@/shared/api/events';
+import { eventsApi, resolveEventImage, type EventCategory, type EventDetail, type PublicTicketType } from '@/shared/api/events';
 
-const palette = {
-  dark: { background: '#101828', surface: '#182230', raised: '#1D2939', border: '#344054', text: '#F5F5F0', muted: '#98A2B3', accent: '#FF5C35', paleAccent: '#FFA38B' },
-  light: { background: '#F5F5F0', surface: '#FFFFFF', raised: '#F9FAF7', border: '#D0D5DD', text: '#101828', muted: '#667085', accent: '#D9431F', paleAccent: '#A93216' },
-};
+const categories: Record<EventCategory, string> = { concert: 'Concerts', theater: 'Theatre', sport: 'Sports', conference: 'Conferences', other: 'Other' };
 
 export default function EventDetailsScreen() {
   const router = useRouter();
-  const { t, formatDate, formatNumber, locale } = useI18n();
-  const { slug: rawSlug, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug?: string | string[]; campaignToken?: string|string[] }>();
+  const { t, formatDate, formatNumber } = useI18n();
+  const { slug: rawSlug, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug?: string | string[]; campaignToken?: string | string[] }>();
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
   const campaignToken = Array.isArray(rawCampaignToken) ? rawCampaignToken[0] : rawCampaignToken;
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const colors = isDark ? palette.dark : palette.light;
+  const colors = useTheme();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [ticketTypes, setTicketTypes] = useState<PublicTicketType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [calendarBusy, setCalendarBusy] = useState(false);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     if (!slug) {
@@ -45,148 +43,160 @@ export default function EventDetailsScreen() {
       eventsApi.get(slug, controller.signal),
       eventsApi.ticketTypes(slug, controller.signal),
     ]).then(([eventInfo, types]) => {
+      if (controller.signal.aborted) return;
       setEvent(eventInfo);
       setTicketTypes(types);
     }).catch((requestError: unknown) => {
-      if (requestError instanceof Error && requestError.name === 'AbortError') return;
-      setError(requestError instanceof Error ? requestError.message : 'Could not load this event.');
+      if (!controller.signal.aborted) setError(requestError instanceof Error ? requestError.message : 'Could not load this event.');
     }).finally(() => {
       if (!controller.signal.aborted) setIsLoading(false);
     });
     return () => controller.abort();
-  }, [slug]);
+  }, [slug, revision]);
 
-  const imageUrl = useMemo(() => resolveEventImage(event?.cover_image_url), [event?.cover_image_url]);
-  const canBook = event?.status === 'published' && ticketTypes.some((ticket) => ticketLimit(ticket) > 0 && (ticket.price_minor === 0 || event.paid_sales_active));
-  const goBack = () => router.canGoBack() ? router.back() : router.replace('/');
-  const category = event?.category ? event.category.replace('_', ' ').toUpperCase() : 'EVENT';
+  const imageUrl = resolveEventImage(event?.cover_image_url);
+  const gallery = event?.images.filter((image) => image.url !== event.cover_image_url) ?? [];
+  const canBook = event?.status === 'published' && event.phase !== 'completed' && ticketTypes.some((ticket) => ticketLimit(ticket) > 0 && (ticket.price_minor === 0 || event.paid_sales_active));
   const addToCalendar = async () => {
     if (!event || calendarBusy) return;
     setCalendarBusy(true);
     setCalendarError(null);
     try {
       await openEventCalendar(event.slug);
-    } catch (calendarFailure) {
-      setCalendarError(calendarFailure instanceof Error ? calendarFailure.message : 'Could not open the calendar file.');
+    } catch (failure) {
+      setCalendarError(failure instanceof Error ? failure.message : 'Could not open the calendar file.');
     } finally {
       setCalendarBusy(false);
     }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right', 'bottom']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
-      <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <Pressable accessibilityLabel={t("Go back")} onPress={goBack} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
-          <ThemedText style={{ color: colors.text, fontSize: 19 }}>‹</ThemedText>
-        </Pressable>
-        <ThemedText style={{ flex: 1, color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '700' }}>{t("Event details")}</ThemedText>
-        <View style={{ width: 36 }} />
-      </View>
-
+    <ScreenFrame title={t('Event details')}>
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted }}>{t("Loading event…")}</ThemedText></View>
+        <View style={styles.feedback}><ActivityIndicator color={colors.accent} /><Info tone="muted">{t('Loading event…')}</Info></View>
       ) : error ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <ThemedText style={{ color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '700' }}>{t("Event unavailable")}</ThemedText>
-          <ThemedText style={{ marginTop: 8, color: colors.muted, textAlign: 'center', fontSize: 13 }}>{t(error)}</ThemedText>
-          <Pressable onPress={goBack} style={{ marginTop: 18, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '700' }}>{t("Back to events")}</ThemedText></Pressable>
+        <View style={styles.feedback}>
+          <Panel>
+            <ScreenHeading>{t('Event unavailable')}</ScreenHeading>
+            <Info tone="error">{t(error)}</Info>
+            {slug && <Action secondary label={t('Try again')} onPress={() => setRevision((value) => value + 1)} />}
+            <Action secondary label={t('Back to events')} onPress={() => router.dismissTo('/')} />
+          </Panel>
         </View>
       ) : event ? (
         <>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-            <View style={{ height: 230, justifyContent: 'flex-end', overflow: 'hidden', backgroundColor: '#3A2731', padding: 18 }}>
-              {imageUrl && <Image source={{ uri: imageUrl }} contentFit="cover" transition={180} style={{ position: 'absolute', width: '100%', height: '100%' }} />}
-              <View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: '#101828', opacity: imageUrl ? 0.48 : 1 }} />
-              {!imageUrl && <View style={{ position: 'absolute', right: -10, top: 6, width: 180, height: 180, borderRadius: 90, borderWidth: 25, borderColor: colors.accent, opacity: 0.22 }} />}
-              <ThemedText style={{ marginBottom: 5, color: colors.paleAccent, fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>{category}{event.phase === 'completed' ? ' · COMPLETED' : ''}</ThemedText>
-              <ThemedText style={{ color: '#FFFFFF', fontSize: 26, fontWeight: '900', lineHeight: 30 }}>{event.title}</ThemedText>
-              <ThemedText numberOfLines={1} style={{ marginTop: 6, color: '#EAECF0', fontSize: 13 }}>{t("Presented by")} {event.organizer_name}</ThemedText>
-            </View>
-
-            <View style={{ marginTop: -10, marginHorizontal: 14, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
-              <InfoRow icon="◷" title={formatDate(event.starts_at, event.timezone)} detail={t('Ends {date}', { date: formatDate(event.ends_at, event.timezone) })} colors={colors} />
-              <InfoRow icon="⌖" title={event.venue_name} detail={event.venue_address} colors={colors} />
-              <Pressable accessibilityRole="button" disabled={calendarBusy} onPress={() => void addToCalendar()} style={{ alignSelf: 'flex-start', marginTop: 2, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised, opacity: calendarBusy ? 0.6 : 1 }}>
-                <ThemedText style={{ color: colors.accent, fontSize: 12, fontWeight: '700' }}>{calendarBusy ? t("Preparing calendar file…") : t("Add to calendar (.ics)")}</ThemedText>
-              </Pressable>
-              {!!calendarError && <ThemedText style={{ marginTop: 7, color: colors.paleAccent, fontSize: 11 }}>{calendarError}</ThemedText>}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 10 }}>
-                <Chip label={event.seating_mode === 'assigned' ? t("Assigned seating") : t("General admission")} colors={colors} />
-                {event.capacity !== null && <Chip label={t('{count} capacity', { count: formatNumber(event.capacity) })} colors={colors} />}
-                {event.timezone && <Chip label={event.timezone} colors={colors} />}
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+            {imageUrl && (
+              <View style={[styles.cover, { backgroundColor: colors.raised }]}>
+                <Image source={{ uri: imageUrl }} contentFit="contain" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
               </View>
-            </View>
-
-            <View style={{ paddingHorizontal: 16, paddingTop: 21 }}>
-              {event.description ? <>
-                <ThemedText style={{ marginBottom: 8, color: colors.text, fontSize: 17, fontWeight: '800' }}>{t("About the event")}</ThemedText>
-                <ThemedText style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>{event.description}</ThemedText>
-              </> : null}
-
-              {event.refund_policy ? <>
-                <ThemedText style={{ marginTop: 20, marginBottom: 7, color: colors.text, fontSize: 17, fontWeight: '800' }}>{t("Refund policy")}</ThemedText>
-                <ThemedText style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>{event.refund_policy}</ThemedText>
-              </> : null}
-
-              <View style={{ marginTop: event.description || event.refund_policy ? 22 : 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <ThemedText style={{ color: colors.text, fontSize: 17, fontWeight: '800' }}>{t("Tickets")}</ThemedText>
-                <ThemedText style={{ color: colors.muted, fontSize: 11 }}>{ticketTypes.length} {ticketTypes.length === 1 ? t("option") : t("options")}</ThemedText>
+            )}
+            <View style={styles.intro}>
+              <View style={[styles.badge, { backgroundColor: colors.accentWash }]}>
+                <Icon name="ticket" color={colors.accent} size={17} />
+                <AppText style={{ color: colors.accent, fontSize: 13, fontWeight: '700' }}>{t(categories[event.category ?? 'other'])}</AppText>
               </View>
-
-              {ticketTypes.length === 0 ? (
-                <View style={{ marginTop: 10, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}><ThemedText style={{ color: colors.muted, fontSize: 13 }}>{t("Ticket information is not available yet.")}</ThemedText></View>
-              ) : ticketTypes.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} colors={colors} paidSalesActive={event.paid_sales_active} />)}
-
+              <ScreenHeading>{event.title}</ScreenHeading>
+              <Info tone="muted">{t('Presented by')} {event.organizer_name}</Info>
+              {event.phase === 'completed' && <Info tone="muted">{t('Completed')}</Info>}
+              {event.status === 'cancelled' && <Info tone="error">{t('Cancelled')}</Info>}
+              {event.status === 'suspended' && <Info tone="error">{t('Suspended')}</Info>}
+            </View>
+            <Panel>
+              <InfoRow icon="calendar" title={formatDate(event.starts_at, event.timezone)}
+                detail={t('Ends {date}', { date: formatDate(event.ends_at, event.timezone) })} />
+              <InfoRow icon="location" title={event.venue_name} detail={event.venue_address} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                <Chip label={t(event.seating_mode === 'assigned' ? 'Assigned seating' : 'General admission')} />
+                {event.capacity !== null && <Chip label={t('{count} capacity', { count: formatNumber(event.capacity) })} />}
+                <Chip label={event.timezone} />
+              </View>
+              <Action secondary icon="calendar" disabled={calendarBusy}
+                label={t(calendarBusy ? 'Preparing calendar file…' : 'Add to calendar (.ics)')} onPress={() => void addToCalendar()} />
+              {calendarError && <Info tone="error">{t(calendarError)}</Info>}
+            </Panel>
+            {!!event.description && <Panel><SectionTitle>{t('About the event')}</SectionTitle><Info tone="muted">{event.description}</Info></Panel>}
+            {gallery.length > 0 && <View style={styles.gallery}>
+              {gallery.map((image) => <Image key={image.id} source={{ uri: resolveEventImage(image.url) }} contentFit="cover"
+                accessibilityIgnoresInvertColors style={[styles.galleryImage, { backgroundColor: colors.raised }]} />)}
+            </View>}
+            <Panel>
+              <SectionTitle>{t('Tickets')}</SectionTitle>
+              {ticketTypes.length === 0
+                ? <Info tone="muted">{t('Ticket information is not available yet.')}</Info>
+                : ticketTypes.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)}
               {!event.paid_sales_active && ticketTypes.some((ticket) => ticket.price_minor > 0) && (
-                <ThemedText style={{ marginTop: 8, color: colors.paleAccent, fontSize: 12 }}>{t("Paid ticket sales are not open for this event yet.")}</ThemedText>
+                <Info tone="muted">{t('Paid ticket sales are not open for this event yet.')}</Info>
               )}
-            </View>
+            </Panel>
+            {!!event.refund_policy && <Panel><SectionTitle>{t('Refund policy')}</SectionTitle><Info tone="muted">{event.refund_policy}</Info></Panel>}
+            <Action secondary icon="help" label={t('Contact support')} onPress={() => router.push({ pathname: '/support-new', params: { eventId: String(event.id) } })} />
+            <Action secondary label={t('Report this event')} onPress={() => router.push({ pathname: '/report-event', params: { slug: event.slug } })} />
           </ScrollView>
-
-          <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface }}>
-            <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/support-new', params: { eventId: String(event.id) } })} style={{ padding: 12, alignItems: 'center' }}>
-              <ThemedText style={{ color: colors.accent, fontWeight: '700' }}>{t('Contact support')}</ThemedText>
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/report-event', params: { slug: event.slug } })} style={{ padding: 8, alignItems: 'center' }}>
-              <ThemedText style={{ color: colors.muted, fontSize: 12 }}>{t('Report this event')}</ThemedText>
-            </Pressable>
-            <Pressable accessibilityRole="button" disabled={!canBook} onPress={() => router.push({ pathname: event.seating_mode === 'assigned' ? '/seat-selection' : '/ticket-selection', params: { slug: event.slug, ...(campaignToken ? { campaignToken } : {}) } })} style={{ alignItems: 'center', paddingVertical: 13, borderRadius: 12, backgroundColor: colors.accent, opacity: canBook ? 1 : 0.5 }}>
-              <ThemedText style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>{canBook ? t("Choose tickets") : t("Booking unavailable")}</ThemedText>
-            </Pressable>
+          <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
+            <View style={styles.footerContent}>
+              <Action icon="ticket" disabled={!canBook} label={t(canBook ? 'Choose tickets' : 'Booking unavailable')}
+                onPress={() => router.push({ pathname: event.seating_mode === 'assigned' ? '/seat-selection' : '/ticket-selection', params: { slug: event.slug, ...(campaignToken ? { campaignToken } : {}) } })} />
+            </View>
           </View>
         </>
       ) : null}
-    </SafeAreaView>
+    </ScreenFrame>
   );
 }
 
-function InfoRow({ icon, title, detail, colors }: { icon: string; title: string; detail: string; colors: typeof palette.dark }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-      <View style={{ width: 34, height: 34, marginRight: 10, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: colors.raised }}><ThemedText style={{ color: colors.accent, fontSize: 17 }}>{icon}</ThemedText></View>
-      <View style={{ flex: 1 }}><ThemedText style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>{title}</ThemedText><ThemedText style={{ marginTop: 3, color: colors.muted, fontSize: 11 }}>{detail}</ThemedText></View>
-    </View>
-  );
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  const colors = useTheme();
+  return <AppText accessibilityRole="header" style={{ color: colors.text, fontSize: 19, fontWeight: '800', letterSpacing: -0.4 }}>{children}</AppText>;
 }
 
-function Chip({ label, colors }: { label: string; colors: typeof palette.dark }) {
-  const { t, formatDate } = useI18n();
-  return <View style={{ paddingHorizontal: 9, paddingVertical: 6, borderRadius: 16, backgroundColor: colors.raised }}><ThemedText style={{ color: colors.muted, fontSize: 10 }}>{t(label)}</ThemedText></View>;
-}
-
-function TicketCard({ ticket, colors, paidSalesActive }: { ticket: PublicTicketType; colors: typeof palette.dark; paidSalesActive: boolean }) {
-  const { t, formatNumber, locale } = useI18n();
-  const soldOut = ticket.available <= 0;
-  const unavailable = soldOut || (ticket.price_minor > 0 && !paidSalesActive);
+function InfoRow({ icon, title, detail }: { icon: IconName; title: string; detail: string }) {
+  const colors = useTheme();
   return (
-    <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: 13, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
-      <View style={{ flex: 1 }}>
-        <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{ticket.name}</ThemedText>
-        {!!ticket.description && <ThemedText style={{ marginTop: 4, color: colors.muted, fontSize: 11 }}>{ticket.description}</ThemedText>}
-        <ThemedText style={{ marginTop: 5, color: unavailable ? colors.paleAccent : colors.muted, fontSize: 11 }}>{soldOut ? t("Sold out") : t('{count} available', { count: formatNumber(ticket.available) })}</ThemedText>
+    <View style={styles.infoRow}>
+      <View style={[styles.infoIcon, { backgroundColor: colors.accentWash }]}><Icon name={icon} color={colors.accent} /></View>
+      <View style={{ flex: 1, gap: 3 }}>
+        <AppText style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{title}</AppText>
+        <AppText style={{ color: colors.muted, fontSize: 12 }}>{detail}</AppText>
       </View>
-      <ThemedText style={{ color: colors.accent, fontSize: 13, fontWeight: '800' }}>{ticket.price_minor === 0 ? t('Free') : new Intl.NumberFormat(locale, { style: 'currency', currency: ticket.currency }).format(ticket.price_minor / 100)}</ThemedText>
     </View>
   );
 }
+
+function Chip({ label }: { label: string }) {
+  const colors = useTheme();
+  return <View style={[styles.chip, { backgroundColor: colors.raised }]}><AppText style={{ color: colors.muted, fontSize: 11 }}>{label}</AppText></View>;
+}
+
+function TicketCard({ ticket }: { ticket: PublicTicketType }) {
+  const { t, formatNumber, locale } = useI18n();
+  const colors = useTheme();
+  const soldOut = ticket.available <= 0;
+  const price = ticket.price_minor === 0 ? t('Free') : new Intl.NumberFormat(locale, { style: 'currency', currency: ticket.currency }).format(ticket.price_minor / 100);
+  return (
+    <View style={[styles.ticket, { borderColor: colors.border, backgroundColor: colors.background }]}>
+      <View style={{ flex: 1, gap: 3 }}>
+        <AppText style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{ticket.name}</AppText>
+        {!!ticket.description && <AppText style={{ color: colors.muted, fontSize: 12 }}>{ticket.description}</AppText>}
+        <AppText style={{ color: soldOut ? colors.warning : colors.muted, fontSize: 12 }}>{soldOut ? t('Sold out') : t('{count} available', { count: formatNumber(ticket.available) })}</AppText>
+      </View>
+      <AppText style={{ color: colors.accent, fontSize: 14, fontWeight: '800' }}>{price}</AppText>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  feedback: { flex: 1, alignSelf: 'center', justifyContent: 'center', alignItems: 'center', padding: 20, gap: 10, maxWidth: MaxContentWidth },
+  content: { alignSelf: 'center', width: '100%', maxWidth: MaxContentWidth, padding: 18, paddingBottom: 24, gap: 14 },
+  cover: { aspectRatio: 1.68, overflow: 'hidden', borderRadius: 20 },
+  intro: { gap: 8, paddingVertical: 2 },
+  badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 16, paddingVertical: 6, paddingHorizontal: 10 },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  infoIcon: { width: 39, height: 39, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  chip: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12 },
+  gallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  galleryImage: { flexGrow: 1, flexBasis: '45%', aspectRatio: 1.5, borderRadius: 13 },
+  ticket: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderWidth: 1, borderRadius: 13, padding: 12 },
+  footer: { borderTopWidth: 1 },
+  footerContent: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', paddingHorizontal: 18, paddingVertical: 9 },
+});

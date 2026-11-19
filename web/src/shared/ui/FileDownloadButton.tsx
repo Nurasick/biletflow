@@ -38,7 +38,7 @@ export const FileDownloadButton = ({ label, accessibleLabel, filename, getFile }
       icon={<Download size={14} aria-hidden="true" />} onClick={() => download.mutate()}>
       {label}
     </Button>
-    {download.isError && <p role="alert" className="mt-2 break-words text-xs text-[#A93216]">
+    {download.isError && <p role="alert" className="mt-2 break-words text-xs text-primary-hover">
       {errorMessage(download.error, t("files.downloadError"))}
     </p>}
   </div>;

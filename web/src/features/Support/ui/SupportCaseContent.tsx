@@ -22,15 +22,15 @@ export const CaseRow = ({ summary, href, queueSearch, children }: {
   const locale = useLocale();
   return <li>
     <Link to={href} state={queueSearch ? { queueSearch } : undefined}
-      className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[#D0D5DD] bg-white p-4 hover:border-[#FF5C35] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF5C35] sm:p-5">
+      className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line bg-white p-4 hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:p-5">
       <div className="min-w-0 space-y-1">
         <h2 className="text-base font-semibold">{t(`support.category.${summary.category}`)}</h2>
-        <p className="text-xs text-[#667085]">
+        <p className="text-xs text-muted">
           <span className="font-mono">{summary.case_number}</span> · {t(`support.audience.${summary.audience}`)}
         </p>
         {children}
       </div>
-      <div className="space-y-1 text-xs text-[#667085]">
+      <div className="space-y-1 text-xs text-muted">
         <CaseStatusTag status={summary.status} />
         <time className="block" dateTime={summary.updated_at}>{new Intl.DateTimeFormat(locale, {
           dateStyle: "medium", timeStyle: "short",
@@ -50,9 +50,9 @@ export const CaseContextDetails = ({ context }: { context: CaseContext }) => {
   ].filter(({ value }) => Boolean(value));
   if (fields.length === 0) return null;
 
-  return <dl className="flex flex-wrap gap-x-8 gap-y-2 rounded-lg border border-[#EAECF0] bg-white p-3 text-sm">
+  return <dl className="flex flex-wrap gap-x-8 gap-y-2 rounded-lg border border-line-soft bg-white p-3 text-sm">
     {fields.map(({ label, value }) => <div key={label} className="min-w-0">
-      <dt className="text-xs text-[#667085]">{label}</dt>
+      <dt className="text-xs text-muted">{label}</dt>
       <dd className="mt-0.5 [overflow-wrap:anywhere] font-semibold">{value}</dd>
     </div>)}
   </dl>;
@@ -63,8 +63,8 @@ export const CaseHeading = ({ summary, context }: { summary: CaseSummary; contex
   return <div className="space-y-4">
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div>
-        <p className="font-mono text-xs text-[#475467]">{summary.case_number} · {t(`support.audience.${summary.audience}`)}</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">{t(`support.category.${summary.category}`)}</h1>
+        <p className="font-mono text-xs text-muted-strong">{summary.case_number} · {t(`support.audience.${summary.audience}`)}</p>
+        <h1 className="mt-1 page-title">{t(`support.category.${summary.category}`)}</h1>
       </div>
       <CaseStatusTag status={summary.status} />
     </div>
@@ -87,10 +87,10 @@ export const CaseThread = ({ messages, staff = false }: {
     <ol className="mt-3 space-y-3">
       {messages.filter((message) => staff || !internalNote(message)).map((message) => <li key={message.id}
         className={`rounded-xl border p-4 ${internalNote(message) ? "border-[#F5D787] bg-[#FFFAEB]"
-          : message.sender === "system" ? "border-[#EAECF0] bg-[#F5F5F0]" : "border-[#D0D5DD] bg-white"}`}>
+          : message.sender === "system" ? "border-line-soft bg-paper" : "border-line bg-white"}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-semibold text-[#344054]">{t(internalNote(message) ? "support.internalNote" : `support.sender.${message.sender}`)}</span>
-          <time className="text-[#667085]" dateTime={message.created_at}>{date.format(new Date(message.created_at))}</time>
+          <span className="font-semibold text-muted-strong">{t(internalNote(message) ? "support.internalNote" : `support.sender.${message.sender}`)}</span>
+          <time className="text-muted" dateTime={message.created_at}>{date.format(new Date(message.created_at))}</time>
         </div>
         <p className="mt-2 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm leading-6">{message.body}</p>
       </li>)}

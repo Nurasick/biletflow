@@ -34,7 +34,7 @@ export const SignupForm = ({ onSuccess }: { onSuccess: (email: string) => void }
         id="signup-password" label={t("common.password")} type="password" autoComplete="new-password"
         registration={register("password")} error={errors.password}
       />
-      <p className="text-xs text-[#667085]">{t("auth.passwordHint")}</p>
+      <p className="text-xs text-muted">{t("auth.passwordHint")}</p>
       <AuthField
         id="signup-confirm-password" label={t("auth.confirmPassword")} type="password"
         autoComplete="new-password" errorId="signup-confirm-error"

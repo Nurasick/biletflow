@@ -10,7 +10,7 @@ import { CaseRow } from "../features/Support/ui/SupportCaseContent";
 import { useAuth } from "../hooks/useAuth";
 import { caseCategories, caseStatuses, staffSupportApi } from "../shared/api/support";
 
-const selectClass = "mt-1.5 w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm";
+const selectClass = "mt-1.5 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm";
 
 export const StaffSupportPage = () => {
   const { me } = useAuth();
@@ -40,13 +40,13 @@ const SupportQueue = ({ userId }: { userId: number }) => {
   };
   const filterSearch = pageSearch(0).toString();
   const rows = queue.data?.slice(0, CASE_PAGE_SIZE) ?? [];
-  return <main className="min-h-[60vh] bg-[#F5F5F0] px-4 py-8 sm:px-7 sm:py-10">
+  return <main className="min-h-[60vh] bg-paper px-4 py-8 sm:px-7 sm:py-10">
     <div className="mx-auto max-w-4xl space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold tracking-tight">{t("support.queue")}</h1>
+        <h1 className="page-title">{t("support.queue")}</h1>
         <RefreshButton refresh={() => void queue.refetch()} fetching={queue.isFetching} />
       </div>
-      <form key={filterSearch} className="space-y-4 rounded-xl border border-[#D0D5DD] bg-white p-4 sm:p-5" onSubmit={(event) => {
+      <form key={filterSearch} className="space-y-4 rounded-xl border border-line bg-white p-4 sm:p-5" onSubmit={(event) => {
         event.preventDefault();
         const fields = new FormData(event.currentTarget);
         const eventId = fields.get("event_id")?.toString().trim();
@@ -80,7 +80,7 @@ const SupportQueue = ({ userId }: { userId: number }) => {
             <Input name="event_id" inputMode="numeric" pattern="[1-9][0-9]*" maxLength={16}
               defaultValue={filters.eventId} className="mt-1.5" onChange={() => setEventIdError(false)}
               aria-invalid={eventIdError} aria-describedby={eventIdError ? "support-event-id-error" : undefined} />
-            {eventIdError && <span id="support-event-id-error" role="alert" className="mt-1 block text-xs text-[#A93216]">
+            {eventIdError && <span id="support-event-id-error" role="alert" className="mt-1 block text-xs text-primary-hover">
               {t("support.invalidEventId")}
             </span>}
           </label>
@@ -95,12 +95,12 @@ const SupportQueue = ({ userId }: { userId: number }) => {
       </form>
       {queue.isPending ? <OperationsLoading /> : queue.isError
         ? <OperationsError error={queue.error} retry={() => void queue.refetch()} /> : rows.length === 0
-        ? <p className="rounded-xl border border-[#D0D5DD] bg-white p-5 text-sm text-[#667085]">{t("support.queueEmpty")}</p>
+        ? <p className="rounded-xl border border-line bg-white p-5 text-sm text-muted">{t("support.queueEmpty")}</p>
         : <ul className="space-y-3">
           {rows.map((summary) => <CaseRow key={summary.case_number} summary={summary}
             href={`/staff/support/${encodeURIComponent(summary.case_number)}`} queueSearch={pageSearch(page).toString()}>
-            <p className="break-all text-sm text-[#475467]">{summary.contact_email}</p>
-            {summary.event_id !== null && <p className="text-xs text-[#667085]">{t("ops.eventId", { id: summary.event_id })}</p>}
+            <p className="break-all text-sm text-muted-strong">{summary.contact_email}</p>
+            {summary.event_id !== null && <p className="text-xs text-muted">{t("ops.eventId", { id: summary.event_id })}</p>}
           </CaseRow>)}
         </ul>}
       {(page > 0 || (queue.isSuccess && queue.data.length > CASE_PAGE_SIZE)) && <OperationsPagination

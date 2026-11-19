@@ -24,7 +24,7 @@ export const AdminSalesPage = () => {
   if (userId === undefined) return null;
 
   return <OperationsWorkspace admin>
-    <h1 className="text-3xl font-bold tracking-tight">{t("adminSales.title")}</h1>
+    <h1 className="page-title">{t("adminSales.title")}</h1>
     <AdminRecordNavigation label={t("adminSales.title")} current={tab} links={[
       { id: "activations", to: "/admin/sales", label: t("adminSales.activations") },
       { id: "campaigns", to: "/admin/sales?view=campaigns", label: t("campaigns.title") },
@@ -46,7 +46,7 @@ const AdminActivations = ({ userId }: { userId: number }) => {
         {t(activationLabels[row.status])}</Tag> },
       { label: t("ops.activationFee"), cell: (row) => <>
         <span className="whitespace-nowrap font-semibold tabular-nums">{formatMinor(row.activation_fee_minor, locale)}</span>
-        <span className="mt-1 block text-xs text-[#667085]">{t(row.fee_paid ? "ops.checkFee" : "adminSales.feeUnpaid")}</span>
+        <span className="mt-1 block text-xs text-muted">{t(row.fee_paid ? "ops.checkFee" : "adminSales.feeUnpaid")}</span>
       </> },
       { label: t("ops.activatedAt"), cell: (row) => row.activated_at
         ? <AdminRecordTime value={row.activated_at} format={date} /> : t("ops.notYet") },
@@ -62,7 +62,7 @@ const AdminCampaigns = ({ userId }: { userId: number }) => {
   return <AdminRecords<AdminCampaign> title={t("campaigns.title")} empty={t("campaigns.empty")}
     queryKey={operationsKeys.adminRecords(userId, "campaigns")} load={adminApi.campaigns} rowKey={(row) => row.id}
     columns={[
-      { label: t("campaigns.name"), cell: (row) => <>{row.name}<span className="mt-1 block font-mono text-xs text-[#667085]">{row.code}</span></> },
+      { label: t("campaigns.name"), cell: (row) => <>{row.name}<span className="mt-1 block font-mono text-xs text-muted">{row.code}</span></> },
       { label: t("adminFinance.event"), cell: (row) => <AdminRecordEventLink id={row.event_id} title={row.event_title} /> },
       { label: t("support.statusLabel"), cell: (row) => <Tag color={row.is_active ? "green" : "default"}>
         {t(row.is_active ? "campaigns.enabled" : "campaigns.disabled")}</Tag> },

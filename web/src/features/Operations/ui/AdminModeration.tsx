@@ -63,7 +63,7 @@ export const AdminModeration = ({ eventId, userId, status, activationStatus, rea
       {activationAction && <Button disabled={!ready || !activationReady || mutation.isPending}
         onClick={() => open({ target: "activation", action: activationAction })}>{t(activationLabels[activationAction])}</Button>}
     </div>
-    {eventActions.length === 0 && <p className="mt-3 text-sm text-[#667085]">{t("ops.noActions")}</p>}
+    {eventActions.length === 0 && <p className="mt-3 text-sm text-muted">{t("ops.noActions")}</p>}
     {success && <div role="status" className="mt-4"><Alert type="success" showIcon title={t("ops.saved")} /></div>}
     {mutation.isError && !intent && <div className="mt-4"><OperationsError error={mutation.error} saving /></div>}
     <Modal open={Boolean(intent)} title={intent && t(intent.target === "event" ? eventConfirm[intent.action] : activationConfirm[intent.action])}
@@ -75,7 +75,7 @@ export const AdminModeration = ({ eventId, userId, status, activationStatus, rea
       {showsReason && <div className="mb-4 space-y-2"><label htmlFor="moderation-reason" className="block text-sm font-semibold">{t(needsReason ? "ops.reason" : "ops.reasonOptional")}</label>
         <Input.TextArea id="moderation-reason" rows={3} value={reason} maxLength={500} disabled={mutation.isPending}
           onChange={(event) => setReason(event.target.value)} aria-required={needsReason} aria-describedby={needsReason ? "moderation-reason-hint" : undefined} />
-        {needsReason && <p id="moderation-reason-hint" className="text-xs text-[#667085]">{t("ops.reasonRequired")}</p>}</div>}
+        {needsReason && <p id="moderation-reason-hint" className="text-xs text-muted">{t("ops.reasonRequired")}</p>}</div>}
       {mutation.isError && <OperationsError error={mutation.error} saving />}
     </Modal>
   </section>;

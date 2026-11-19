@@ -12,7 +12,7 @@ import { useAccountForm } from "../model/useAccountForm";
 
 export type AccountEditingState = { isDirty: boolean; isSubmitting: boolean };
 
-const inputClass = "h-11 w-full rounded-lg border border-[#D0D5DD] bg-[#F5F5F0] px-3 text-sm outline-none focus:border-[#FF5C35] focus:ring-2 focus:ring-[#FF5C35]/20 disabled:opacity-60";
+const inputClass = "h-11 w-full rounded-lg border border-line bg-paper px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60";
 
 const AccountField = ({ id, label, registration, error, type = "text", autoComplete, maxLength }: {
   id: string;
@@ -47,9 +47,9 @@ export const AccountForm = ({ user, onEditingChange }: {
   useEffect(() => { onEditingChange({ isDirty, isSubmitting }); }, [isDirty, isSubmitting, onEditingChange]);
   useEffect(() => () => { onEditingChange({ isDirty: false, isSubmitting: false }); }, [onEditingChange]);
 
-  return <section aria-labelledby="account-edit-heading" className="my-8 rounded-xl border border-[#D0D5DD] bg-white p-5 sm:p-7">
-    <h2 id="account-edit-heading" className="text-xl font-bold">{t("accountEdit.title")}</h2>
-    <p className="mt-2 text-sm text-[#667085]">{t("accountEdit.description")}</p>
+  return <section aria-labelledby="account-edit-heading" className="panel min-w-0 p-5 sm:p-7">
+    <h2 id="account-edit-heading" className="text-xl font-extrabold tracking-tight">{t("accountEdit.title")}</h2>
+    <p className="mt-2 text-sm text-muted">{t("accountEdit.description")}</p>
     <form noValidate onSubmit={(event) => { if (isSubmitting) event.preventDefault(); else void onSubmit(event); }}
       onChange={onChange} aria-busy={isSubmitting} className="mt-6">
       <fieldset disabled={isSubmitting} className="min-w-0 space-y-5">
@@ -62,8 +62,8 @@ export const AccountForm = ({ user, onEditingChange }: {
         <div>
           <label htmlFor="account-email" className="mb-1.5 block text-sm font-semibold">{t("accountEdit.email")}</label>
           <input id="account-email" type="email" value={user.email} readOnly autoComplete="email"
-            className={`${inputClass} text-[#667085]`} aria-describedby="account-email-hint" />
-          <p id="account-email-hint" className="mt-1.5 text-xs text-[#667085]">{t("accountEdit.emailHint")}</p>
+            className={`${inputClass} text-muted`} aria-describedby="account-email-hint" />
+          <p id="account-email-hint" className="mt-1.5 text-xs text-muted">{t("accountEdit.emailHint")}</p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
           <AccountField id="account-phone" label={t("accountEdit.phone")} type="tel" registration={register("phone")}
@@ -77,7 +77,7 @@ export const AccountForm = ({ user, onEditingChange }: {
             {errors.locale?.message && <p id="account-locale-error" className="mt-1.5 text-xs text-red-600">
               {errors.locale.type === "server" ? errors.locale.message : t("accountEdit.localeInvalid")}
             </p>}
-            <p id="account-locale-hint" className="mt-1.5 text-xs text-[#667085]">{t("accountEdit.localeHint")}</p>
+            <p id="account-locale-hint" className="mt-1.5 text-xs text-muted">{t("accountEdit.localeHint")}</p>
           </div>
         </div>
       </fieldset>
@@ -86,8 +86,8 @@ export const AccountForm = ({ user, onEditingChange }: {
         {errors.root && <Alert role="alert" type="error" showIcon
           title={validationMessage(t, errors.root)} className="mb-4" />}
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#D0D5DD] pt-5">
-        <p className="text-xs text-[#667085]">{isDirty ? t("accountEdit.unsaved") : t("accountEdit.noChanges")}</p>
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5">
+        <p className="text-xs text-muted">{isDirty ? t("accountEdit.unsaved") : t("accountEdit.noChanges")}</p>
         <div className="flex flex-wrap gap-3">
           <Button htmlType="button" onClick={onReset} disabled={!isDirty || isSubmitting}>{t("accountEdit.discard")}</Button>
           <Button htmlType="submit" type="primary" icon={<Save size={16} aria-hidden="true" />}

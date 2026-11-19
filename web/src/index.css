@@ -1,1 +1,208 @@
 @import "tailwindcss";
+
+@font-face {
+  font-family: Onest;
+  src: url("./shared/fonts/Onest-variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: Onest, "Segoe UI", system-ui, sans-serif;
+  --color-paper: #f7f7f2;
+  --color-surface: #ffffff;
+  --color-soft: #f0eff6;
+  --color-line: #dad8e3;
+  --color-line-soft: #eae8f0;
+  --color-ink: #1c1830;
+  --color-muted: #615d73;
+  --color-muted-strong: #49445d;
+  --color-primary: #593bc9;
+  --color-primary-hover: #4529aa;
+  --color-accent-wash: #eee9ff;
+  --color-stage: #21183c;
+  --color-lime: #e3fc76;
+}
+
+@layer base {
+  body {
+    min-width: 280px;
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+  }
+
+  ::selection {
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+}
+
+@utility site-container {
+  width: 100%;
+  max-width: 82rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 3rem);
+}
+
+@utility page-title {
+  font-size: clamp(1.9rem, 3.5vw, 2.85rem);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+@utility panel {
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px #21183c06;
+}
+
+@layer components {
+  .action-button {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+    padding: 0.625rem 1rem;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 650;
+    transition: background-color 160ms, border-color 160ms, color 160ms;
+  }
+
+  .action-button:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .action-button--primary {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .action-button--primary:hover {
+    border-color: var(--color-primary-hover);
+    background: var(--color-primary-hover);
+    color: white;
+  }
+
+  .action-button--lime {
+    border-color: var(--color-lime);
+    background: var(--color-lime);
+    color: var(--color-stage);
+  }
+
+  .action-button--lime:hover {
+    border-color: #f0ffad;
+    background: #f0ffad;
+    color: var(--color-stage);
+  }
+
+  .action-button:disabled {
+    opacity: 0.55;
+  }
+
+  .brand-link {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.625rem;
+    border-radius: 0.7rem;
+    font-size: 1.375rem;
+    font-weight: 800;
+    letter-spacing: -0.065em;
+    line-height: 1;
+  }
+
+  .brand-mark {
+    display: inline-grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 0.7rem;
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .brand-ticket {
+    position: relative;
+    display: flex;
+    width: min(100%, 20rem);
+    aspect-ratio: 1.95;
+    align-items: stretch;
+    border-radius: 0.9rem;
+    background: var(--color-lime);
+    color: var(--color-stage);
+    transform: rotate(-11deg);
+    box-shadow: 0 0 0 1px #21183c26, 0 18px 30px #100b2450;
+  }
+
+  .brand-ticket::before,
+  .brand-ticket::after {
+    position: absolute;
+    left: calc(69% - 0.55rem);
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    background: var(--color-stage);
+    content: "";
+  }
+
+  .brand-ticket::before { top: -0.55rem; }
+  .brand-ticket::after { bottom: -0.55rem; }
+
+  .brand-ticket__face {
+    display: flex;
+    width: 69%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: clamp(0.8rem, 2.2vw, 1.5rem);
+    font-size: clamp(0.9rem, 2.5vw, 1.65rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+  }
+
+  .brand-ticket__stub {
+    display: grid;
+    flex: 1;
+    place-items: center;
+    border-left: 1px dashed #21183c70;
+  }
+
+  .brand-art {
+    background-color: var(--color-stage);
+    background-image: repeating-radial-gradient(ellipse at 64% 46%, transparent 0 27px, #ab98ff22 28px 29px, transparent 30px 54px);
+  }
+
+  .stage-focus :focus-visible {
+    outline-color: var(--color-lime);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

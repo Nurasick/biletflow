@@ -1,8 +1,9 @@
-import { useTranslation } from "react-i18next";
-import { ConfigProvider } from "antd";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+
 import { LanguageSwitcher } from "../../../i18n/LanguageSwitcher";
+import { Brand, BrandTicket } from "../../../shared/ui/Brand";
 
 type AuthShellProps = {
   children: ReactNode;
@@ -12,38 +13,34 @@ type AuthShellProps = {
 export const AuthShell = ({ children, top }: AuthShellProps) => {
   const { t } = useTranslation();
   return (
-    <ConfigProvider
-      theme={{
-        token: {
-          colorPrimary: "#FF5C35",
-          colorText: "#101828",
-          colorBgContainer: "#F5F5F0",
-          colorBorder: "#D0D5DD",
-          borderRadius: 9,
-          controlHeight: 46,
-          fontSize: 13,
-        },
-      }}
-    >
-      <div className="flex min-h-screen flex-col bg-[#F5F5F0] text-[#101828]">
-        <header className="bg-[#101828] text-white">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-7 py-4">
-            <Link to="/" aria-label={t("common.home")} className="text-2xl font-bold tracking-tight">
-              Bilet<span className="text-[#FF5C35]">Flow</span>
-            </Link>
-            <div className="text-xs"><LanguageSwitcher /></div>
+    <div className="flex min-h-dvh flex-col">
+      <header className="border-b border-line bg-white">
+        <div className="site-container flex min-h-[72px] flex-wrap items-center justify-between gap-3 py-3">
+          <Brand />
+          <div className="flex items-center gap-4">
+            <Link to="/support" className="hidden text-sm font-semibold text-muted hover:text-primary sm:inline">{t("common.help")}</Link>
+            <LanguageSwitcher compact />
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="mx-auto flex w-full max-w-[438px] flex-1 flex-col justify-center px-6 py-10">
-          {top && <div className="mb-5 flex justify-end text-xs text-[#667085]">{top}</div>}
-          {children}
+      <div className="site-container grid flex-1 gap-8 py-6 sm:py-10 lg:grid-cols-[0.95fr_1fr] lg:gap-12">
+        <aside className="brand-art relative isolate hidden min-h-[35rem] flex-col justify-between overflow-hidden rounded-[1.75rem] p-10 text-white lg:flex">
+          <div className="mx-auto flex w-full flex-1 items-center justify-center px-8 py-10"><BrandTicket /></div>
+          <div className="relative rounded-xl bg-stage/85 px-4 py-3">
+            <p className="max-w-md text-4xl leading-[1.02] font-extrabold tracking-[-0.06em]">{t("auth.ticketTitle")}</p>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-[#e1d9f9]">{t("auth.ticketDescription")}</p>
+          </div>
+        </aside>
+
+        <main className="mx-auto flex w-full max-w-lg flex-col justify-center">
+          <div className="panel px-5 py-7 sm:px-9 sm:py-10">
+            {children}
+            {top && <div className="mt-7 border-t border-line-soft pt-5 text-sm text-muted">{top}</div>}
+          </div>
+          <Link to="/support" className="mx-auto mt-5 text-sm font-semibold text-muted hover:text-primary sm:hidden">{t("common.help")}</Link>
         </main>
-
-        <footer className="px-6 pb-7 text-center text-xs text-[#667085]">
-          <Link to="/support" className="hover:underline">{t("common.help")}</Link>
-        </footer>
       </div>
-    </ConfigProvider>
+    </div>
   );
 };

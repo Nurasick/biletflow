@@ -28,20 +28,20 @@ export const OrderCard = ({ order, showQr = true, detailHref, access }: Props) =
   };
 
   return (
-    <article className="rounded-2xl border border-[#D0D5DD] bg-white p-5">
+    <article className="panel p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link to={`/events/${order.event.slug}`} className="text-lg font-semibold hover:text-[#FF5C35]">{order.event.title}</Link>
-          <p className="mt-1 text-sm text-[#667085]">{when} · {order.event.venue_name}</p>
-          <p className="mt-1 font-mono text-xs text-[#667085]">{order.order_number}</p>
-          {detailHref && <Link to={detailHref} className="mt-2 inline-block text-sm font-semibold text-[#D9431F]">{t("orders.open")}</Link>}
+          <Link to={`/events/${order.event.slug}`} className="text-lg font-extrabold tracking-tight wrap-anywhere hover:text-primary">{order.event.title}</Link>
+          <p className="mt-1 text-sm text-muted">{when} · {order.event.venue_name}</p>
+          <p className="mt-1 font-mono text-xs text-muted">{order.order_number}</p>
+          {detailHref && <Link to={detailHref} className="mt-2 inline-block text-sm font-semibold text-primary-hover">{t("orders.open")}</Link>}
         </div>
         <div className="text-right">
-          <p className="rounded-full border border-[#D0D5DD] px-3 py-1 text-xs font-semibold">{t(`orderStatus.${order.status}`)}</p>
+          <p className={`rounded-full px-3 py-1.5 text-xs font-bold ${order.status === "confirmed" ? "bg-emerald-50 text-emerald-800" : order.status === "pending" ? "bg-amber-50 text-amber-800" : "bg-soft text-muted-strong"}`}>{t(`orderStatus.${order.status}`)}</p>
           <p className="mt-2 text-sm font-semibold">{order.total_minor === 0 ? t("eventWorkflow.free") : formatMinor(order.total_minor, locale)}</p>
         </div>
       </div>
-      {order.promo_code && <dl className="mt-4 max-w-xs space-y-1 border-t border-[#EAECF0] pt-3 text-sm text-[#475467]">
+      {order.promo_code && <dl className="mt-4 max-w-xs space-y-1 border-t border-line-soft pt-3 text-sm text-muted-strong">
         <div className="flex justify-between gap-3">
           <dt>{t("booking.subtotal")}</dt><dd>{formatMinor(order.subtotal_minor, locale)}</dd>
         </div>
@@ -59,13 +59,13 @@ export const OrderCard = ({ order, showQr = true, detailHref, access }: Props) =
         <SupportRequestButton target={supportTarget} eventTitle={order.event.title} label={t("support.orderHelp")} />
       </div>}
       {order.tickets.length > 0 && <ul className="mt-5 grid gap-4 sm:grid-cols-2">
-        {order.tickets.map((ticket) => <li key={ticket.public_code} className="flex flex-wrap gap-4 rounded-xl border border-[#EAECF0] p-4">
+        {order.tickets.map((ticket) => <li key={ticket.public_code} className="flex flex-wrap gap-4 rounded-xl border border-dashed border-line bg-paper p-4">
           {showQr && ticket.qr_payload
             ? <TicketQr payload={ticket.qr_payload} label={t("orders.qrLabel", { code: ticket.public_code })} />
             : null}
           <div className="min-w-0 text-sm">
             <p className="font-semibold">{ticket.attendee_name}</p>
-            <p className="text-[#667085]">{ticket.ticket_type_name}</p>
+            <p className="text-muted">{ticket.ticket_type_name}</p>
             <p className="mt-2 font-mono text-xs">{ticket.public_code}</p>
             <p className="mt-1 text-xs font-semibold">{t(`ticketStatus.${ticket.status}`)}</p>
             {access && <div className="mt-2 flex flex-wrap items-start gap-2">

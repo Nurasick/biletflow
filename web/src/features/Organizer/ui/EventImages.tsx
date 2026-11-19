@@ -54,11 +54,11 @@ export const EventImages = ({ images, onChange, onBusyChange, disabled }: EventI
           event.currentTarget.value = "";
           void addFiles(files);
         }} />
-      <div className="rounded-lg border border-dashed border-[#D0D5DD] bg-[#F5F5F0] px-5 py-6 text-center"
+      <div className="rounded-lg border border-dashed border-line bg-paper px-5 py-6 text-center"
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => { event.preventDefault(); void addFiles(Array.from(event.dataTransfer.files)); }}>
-        <ImagePlus size={24} aria-hidden="true" className="mx-auto text-[#667085]" />
-        <p id="event-images-hint" className="my-3 text-xs leading-5 text-[#667085]">{t("organizerEvent.imagesHint")}</p>
+        <ImagePlus size={24} aria-hidden="true" className="mx-auto text-muted" />
+        <p id="event-images-hint" className="my-3 text-xs leading-5 text-muted">{t("organizerEvent.imagesHint")}</p>
         <Button htmlType="button" onClick={() => inputRef.current?.click()}
           disabled={disabled || reading || images.length >= MAX_EVENT_IMAGES}
           icon={reading ? <LoaderCircle size={16} className="animate-spin" aria-hidden="true" /> : undefined}>
@@ -70,19 +70,19 @@ export const EventImages = ({ images, onChange, onBusyChange, disabled }: EventI
       </p>}
       {images.length > 0 && <ul aria-label={t("organizerEvent.images")} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {images.map((image, index) => (
-          <li key={image.id} className="overflow-hidden rounded-lg border border-[#D0D5DD]">
+          <li key={image.id} className="overflow-hidden rounded-lg border border-line">
             <div className="relative">
               <img src={eventImageSrc(image.dataUrl)} alt={image.name} className="aspect-video w-full object-cover" />
               <button type="button" onClick={() => { setError(null); onChange(images.filter((item) => item.id !== image.id)); }}
                 disabled={disabled || reading} aria-label={t("organizerEvent.removeImage", { name: image.name })}
-                className="absolute right-2 top-2 rounded-full border border-[#D0D5DD] bg-white p-2 text-[#101828] focus-visible:outline-2 focus-visible:outline-[#FF5C35] disabled:opacity-50">
+                className="absolute right-2 top-2 rounded-full border border-line bg-white p-2 text-ink focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50">
                 <X size={14} aria-hidden="true" />
               </button>
             </div>
             <div className="p-3">
-              <p title={image.name} className="truncate text-xs text-[#667085]">{image.name}</p>
-              {index === 0 ? <span className="mt-2 inline-block rounded bg-[#FFF0EA] px-2 py-1 text-[10px] font-semibold text-[#A93216]">{t("organizerEvent.coverImage")}</span> : (
-                <button type="button" disabled={disabled || reading} className="mt-2 text-xs font-semibold text-[#A93216] disabled:opacity-50"
+              <p title={image.name} className="truncate text-xs text-muted">{image.name}</p>
+              {index === 0 ? <span className="mt-2 inline-block rounded bg-accent-wash px-2 py-1 text-[10px] font-semibold text-primary-hover">{t("organizerEvent.coverImage")}</span> : (
+                <button type="button" disabled={disabled || reading} className="mt-2 text-xs font-semibold text-primary-hover disabled:opacity-50"
                   onClick={() => onChange([image, ...images.filter((item) => item.id !== image.id)])}>
                   {t("organizerEvent.makeCover")}
                 </button>

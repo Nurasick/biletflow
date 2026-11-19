@@ -13,8 +13,8 @@ import type { AdminOrder, AdminPayment, AdminPaymentStatus, AdminRefund } from "
 import { formatMinorCurrency } from "../shared/lib/formatPrice";
 import { FileDownloadButton } from "../shared/ui/FileDownloadButton";
 
-const statusClass = "block min-h-11 w-full rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm";
-const secondaryText = "mt-1 block text-xs leading-5 text-[#667085]";
+const statusClass = "block min-h-11 w-full rounded-lg border border-line bg-white px-3 text-sm";
+const secondaryText = "mt-1 block text-xs leading-5 text-muted";
 
 export const AdminTransactionsPage = () => {
   const { t } = useTranslation();
@@ -26,7 +26,7 @@ export const AdminTransactionsPage = () => {
   if (userId === undefined) return null;
 
   return <OperationsWorkspace admin>
-    <h1 className="text-3xl font-bold tracking-tight">{t("adminFinance.title")}</h1>
+    <h1 className="page-title">{t("adminFinance.title")}</h1>
     <AdminRecordNavigation label={t("adminFinance.title")} current={tab} links={[
       { id: "orders", to: "/admin/transactions", label: t("sales.orders") },
       { id: "payments", to: "/admin/transactions?view=payments", label: t("adminFinance.payments") },
@@ -44,7 +44,7 @@ const TransactionExport = ({ kind }: { kind: "orders" | "payments" }) => {
     <FileDownloadButton filename={`biletflow-${kind}.csv`}
       label={t(kind === "orders" ? "adminFinance.exportOrders" : "adminFinance.exportPayments")}
       getFile={kind === "orders" ? adminApi.ordersCsv : adminApi.paymentsCsv} />
-    <p className="mt-1 text-xs text-[#667085]">{t("adminFinance.exportScope")}</p>
+    <p className="mt-1 text-xs text-muted">{t("adminFinance.exportScope")}</p>
   </div>;
 };
 

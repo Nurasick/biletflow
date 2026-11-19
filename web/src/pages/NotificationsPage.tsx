@@ -36,10 +36,10 @@ const NotificationInbox = ({ userId }: { userId: number }) => {
   return <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-7 sm:py-10">
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
-          <Bell size={24} className="text-[#D9431F]" aria-hidden="true" />{t("notifications.title")}
+        <h1 className="flex items-center gap-3 page-title">
+          <Bell size={24} className="text-primary-hover" aria-hidden="true" />{t("notifications.title")}
         </h1>
-        {feed.isSuccess && <p role="status" className="mt-2 text-sm text-[#667085]">
+        {feed.isSuccess && <p role="status" className="mt-2 text-sm text-muted">
           {t("notifications.unreadCount", { unread: new Intl.NumberFormat(locale).format(unread) })}
         </p>}
       </div>
@@ -54,7 +54,7 @@ const NotificationInbox = ({ userId }: { userId: number }) => {
         title={errorMessage(markRead.error, t("notifications.markError"))} />}
       {feed.isPending ? <OperationsLoading /> : feed.isError
         ? <OperationsError error={feed.error} retry={() => void feed.refetch()} /> : feed.data.items.length === 0
-        ? <p className="rounded-xl border border-[#D0D5DD] p-6 text-sm text-[#667085]">{t("notifications.empty")}</p>
+        ? <p className="rounded-xl border border-line p-6 text-sm text-muted">{t("notifications.empty")}</p>
         : <ul className="space-y-3">
           {feed.data.items.map((item) => <NotificationItem key={item.id} item={item} date={date} />)}
         </ul>}
@@ -76,18 +76,18 @@ const NotificationItem = ({ item, date }: { item: Notification; date: Intl.DateT
   }
   if (item.template_key === "support.status" && typeof status === "string" && status.trim()) details.push(status);
 
-  return <li className={`rounded-xl border p-4 sm:p-5 ${item.read_at ? "border-[#D0D5DD] bg-white" : "border-[#FFD1C5] bg-[#FFF8F5]"}`}>
+  return <li className={`rounded-xl border p-4 sm:p-5 ${item.read_at ? "border-line bg-white" : "border-line bg-accent-wash"}`}>
     <div className="flex flex-wrap items-start justify-between gap-2">
       <h2 className="text-base font-semibold">{t(title)}</h2>
-      <div className="flex items-center gap-2 text-xs text-[#667085]">
-        {!item.read_at && <span className="rounded-full bg-[#FFEEE8] px-2 py-1 font-semibold text-[#A93216]">{t("notifications.unread")}</span>}
+      <div className="flex items-center gap-2 text-xs text-muted">
+        {!item.read_at && <span className="rounded-full bg-accent-wash px-2 py-1 font-semibold text-primary-hover">{t("notifications.unread")}</span>}
         <time dateTime={item.created_at}>{date.format(new Date(item.created_at))}</time>
       </div>
     </div>
-    {details.length > 0 && <p className="mt-2 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm leading-6 text-[#475467]">{details.join(" · ")}</p>}
+    {details.length > 0 && <p className="mt-2 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm leading-6 text-muted-strong">{details.join(" · ")}</p>}
     {destination && <div className="mt-3">
       {destination.kind === "calendar" ? <EventCalendarButton slug={destination.slug} cancelled />
-        : <Link to={destination.href} className="text-sm font-semibold text-[#A93216] hover:underline">{t(destination.label)}</Link>}
+        : <Link to={destination.href} className="text-sm font-semibold text-primary-hover hover:underline">{t(destination.label)}</Link>}
     </div>}
   </li>;
 };

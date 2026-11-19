@@ -22,16 +22,16 @@ export const StaffCaseActions = ({ supportCase, userId, busy, update }: {
   const transitions = staffTransitions[supportCase.status];
   const assign = (id: number | null) => update({ assigned_to_user_id: id });
 
-  return <section aria-labelledby="case-management" className="space-y-4 rounded-xl border border-[#D0D5DD] bg-white p-4 sm:p-5">
+  return <section aria-labelledby="case-management" className="space-y-4 rounded-xl border border-line bg-white p-4 sm:p-5">
     <h2 id="case-management" className="text-lg font-semibold">{t("support.manageCase")}</h2>
     <dl className="space-y-2 text-sm">
       <div>
         <dt className="font-semibold">{t("common.email")}</dt>
-        <dd className="break-all text-[#475467]">{supportCase.contact_email}</dd>
+        <dd className="break-all text-muted-strong">{supportCase.contact_email}</dd>
       </div>
       <div>
         <dt className="font-semibold">{t("support.assignee")}</dt>
-        <dd className="text-[#475467]">{assignee === null ? t("support.unassigned")
+        <dd className="text-muted-strong">{assignee === null ? t("support.unassigned")
           : assignee === userId ? t("support.assignedToYou") : t("support.assignedId", { id: assignee })}</dd>
       </div>
     </dl>
@@ -39,11 +39,11 @@ export const StaffCaseActions = ({ supportCase, userId, busy, update }: {
       {assignee !== userId && <Button size="small" disabled={busy} onClick={() => assign(userId)}>{t("support.assignMe")}</Button>}
       {assignee !== null && <Button size="small" disabled={busy} onClick={() => assign(null)}>{t("support.unassign")}</Button>}
     </div>
-    {supportCase.audience === "organizer" && <details className="rounded-lg border border-[#EAECF0] p-3">
+    {supportCase.audience === "organizer" && <details className="rounded-lg border border-line-soft p-3">
       <summary className="cursor-pointer text-sm font-semibold">{t("support.findAssignee")}</summary>
       <AssigneeSearch userId={userId} assignee={assignee} busy={busy} assign={assign} />
     </details>}
-    {transitions.length > 0 && <div className="flex flex-wrap gap-2 border-t border-[#EAECF0] pt-4">
+    {transitions.length > 0 && <div className="flex flex-wrap gap-2 border-t border-line-soft pt-4">
       {transitions.map((status) => <Button key={status} size="small" disabled={busy}
         onClick={() => update({ status })}>{t(transitionLabels[status])}</Button>)}
     </div>}
@@ -84,12 +84,12 @@ const AssigneeSearch = ({ userId, assignee, busy, assign }: {
     </form>
     {query && (results.isPending ? <OperationsLoading /> : results.isError
       ? <OperationsError error={results.error} retry={() => void results.refetch()} />
-      : admins.length === 0 ? <p className="text-sm text-[#667085]">{t("support.noAssignees")}</p>
-        : <ul className="divide-y divide-[#EAECF0]">
+      : admins.length === 0 ? <p className="text-sm text-muted">{t("support.noAssignees")}</p>
+        : <ul className="divide-y divide-line-soft">
           {admins.map((user) => <li key={user.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
             <div className="min-w-0">
               <p className="break-words font-semibold">{user.first_name} {user.last_name}</p>
-              <p className="break-all text-xs text-[#667085]">{user.email}</p>
+              <p className="break-all text-xs text-muted">{user.email}</p>
             </div>
             <Button size="small" disabled={busy || assignee === user.id} onClick={() => assign(user.id)}>
               {t(assignee === user.id ? "support.alreadyAssigned" : "staff.assign")}

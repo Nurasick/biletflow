@@ -53,7 +53,7 @@ const AdminUsers = ({ adminId }: { adminId: number }) => {
 
   return <OperationsWorkspace admin>
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-3xl font-bold tracking-tight">{t("adminUsers.title")}</h1>
+      <h1 className="page-title">{t("adminUsers.title")}</h1>
       <RefreshButton refresh={() => void users.refetch()} fetching={users.isFetching} />
     </div>
     <form className="my-6 max-w-xl space-y-2" onSubmit={(event) => {
@@ -84,8 +84,8 @@ const AdminUsers = ({ adminId }: { adminId: number }) => {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
                   <h2 className="break-words text-lg font-semibold">{name}</h2>
-                  <p className="mt-1 break-all text-sm text-[#475467]">{account.email}</p>
-                  <p className="mt-2 text-xs text-[#667085]">
+                  <p className="mt-1 break-all text-sm text-muted-strong">{account.email}</p>
+                  <p className="mt-2 text-xs text-muted">
                     {t("ops.created")} · <time dateTime={account.created_at}>{date.format(parseApiInstant(account.created_at))}</time>
                   </p>
                 </div>
@@ -117,8 +117,8 @@ const AdminUsers = ({ adminId }: { adminId: number }) => {
         saving.current = true;
         update.mutate({ account: selected, reason });
       }}>
-      <p className="mt-3 break-all text-sm text-[#475467]">{selected.email}</p>
-      <p className="my-4 text-sm text-[#475467]">{t(isSuspension ? "adminUsers.suspendDescription" : "adminUsers.reinstateDescription")}</p>
+      <p className="mt-3 break-all text-sm text-muted-strong">{selected.email}</p>
+      <p className="my-4 text-sm text-muted-strong">{t(isSuspension ? "adminUsers.suspendDescription" : "adminUsers.reinstateDescription")}</p>
       {isSuspension && <div className="mb-4 space-y-2">
         <label htmlFor="admin-suspension-reason" className="block text-sm font-semibold">{t("ops.reasonRequired")}</label>
         <Input.TextArea id="admin-suspension-reason" rows={3} maxLength={500} showCount value={reason}

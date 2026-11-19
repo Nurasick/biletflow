@@ -21,22 +21,22 @@ export const AdminActivation = ({ activation, timeZone }: { activation: Activati
   return <section className={operationsCard}>
     <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">{t("ops.activation")}</h2>
       {activation && <Tag color={activation.status === "active" ? "green" : activation.status === "suspended" ? "orange" : "default"}>{t(statusLabels[activation.status])}</Tag>}</div>
-    {!activation ? <p className="mt-4 text-sm text-[#667085]">{t("ops.noActivation")}</p> : <>
+    {!activation ? <p className="mt-4 text-sm text-muted">{t("ops.noActivation")}</p> : <>
       <dl className="mt-4 space-y-3 text-sm">
-        <div className="flex flex-wrap justify-between gap-2"><dt className="text-[#667085]">{t("ops.activationFee")}</dt><dd className="font-semibold">{new Intl.NumberFormat(locale, {
+        <div className="flex flex-wrap justify-between gap-2"><dt className="text-muted">{t("ops.activationFee")}</dt><dd className="font-semibold">{new Intl.NumberFormat(locale, {
           style: "currency", currency: activation.currency,
         }).format(activation.activation_fee_minor / 100)}</dd></div>
         {([['ops.termsAcceptedAt', activation.terms_accepted_at], ['ops.activatedAt', activation.activated_at], ['ops.suspendedAt', activation.suspended_at]] as const).map(([key, value]) => <div key={key} className="flex flex-wrap justify-between gap-2">
-          <dt className="text-[#667085]">{t(key)}</dt><dd>{date(value)}</dd>
+          <dt className="text-muted">{t(key)}</dt><dd>{date(value)}</dd>
         </div>)}
       </dl>
-      {activation.is_simulated && <p className="mt-3 rounded-lg bg-[#F5F5F0] p-3 text-xs font-semibold text-[#667085]">{t("ops.simulated")}</p>}
+      {activation.is_simulated && <p className="mt-3 rounded-lg bg-paper p-3 text-xs font-semibold text-muted">{t("ops.simulated")}</p>}
       {activation.status === "suspended" && activation.suspension_reason && <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm">
         <p className="font-semibold">{t("ops.suspensionReason")}</p><p className="mt-1 whitespace-pre-wrap break-words">{activation.suspension_reason}</p>
       </div>}
       <ul className="mt-5 space-y-3">
         {(Object.keys(checklistLabels) as Array<keyof typeof checklistLabels>).map((key) => <li key={key} className="flex items-center gap-3 text-sm">
-          {activation.checklist[key] ? <CheckCircle2 size={18} className="shrink-0 text-green-700" aria-hidden="true" /> : <Circle size={18} className="shrink-0 text-[#98A2B3]" aria-hidden="true" />}
+          {activation.checklist[key] ? <CheckCircle2 size={18} className="shrink-0 text-green-700" aria-hidden="true" /> : <Circle size={18} className="shrink-0 text-muted" aria-hidden="true" />}
           <span>{t(checklistLabels[key])}<span className="sr-only"> — {t(activation.checklist[key] ? "ops.met" : "ops.unmet")}</span></span>
         </li>)}
       </ul>

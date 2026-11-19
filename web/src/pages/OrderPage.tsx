@@ -53,9 +53,9 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-7 py-10">
-      <Link to="/" className="text-sm text-[#667085]">{t("common.backToEvents")}</Link>
-      <h1 className="mt-3 text-3xl font-bold">{t("orders.title")}</h1>
-      {order.isPending ? <div role="status" className="flex items-center gap-2 py-16 text-sm text-[#667085]">
+      <Link to="/" className="text-sm text-muted">{t("common.backToEvents")}</Link>
+      <h1 className="mt-3 page-title">{t("orders.title")}</h1>
+      {order.isPending ? <div role="status" className="flex items-center gap-2 py-16 text-sm text-muted">
         <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("common.loading")}
       </div> : order.isError ? <Alert className="mt-6" type="error" showIcon
         title={t(order.error instanceof ApiError && order.error.status === 404 ? "orders.notFound" : "errors.unavailable")}
@@ -72,7 +72,7 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
               <Button disabled={act.isPending} loading={act.isPending && act.variables === "cancel"}
                 onClick={() => act.mutate("cancel")}>{t("orders.cancel")}</Button>
             </div>
-            <p className="text-xs text-[#667085]">{t("checkout.simulatedNote")}</p>
+            <p className="text-xs text-muted">{t("checkout.simulatedNote")}</p>
           </div>}
           {act.isError && <Alert role="alert" type="error" showIcon
             title={errorMessage(act.error, t("eventWorkflow.networkError"))} />}

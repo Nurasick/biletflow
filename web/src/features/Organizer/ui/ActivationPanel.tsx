@@ -32,23 +32,23 @@ export const ActivationPanel = ({ eventId }: { eventId: number }) => {
   const complete = ITEMS.every((item) => checklist[item]);
 
   return (
-    <section aria-labelledby="activation" className="rounded-xl border border-[#D0D5DD] bg-white p-5">
+    <section aria-labelledby="activation" className="rounded-xl border border-line bg-white p-5">
       <h2 id="activation" className="flex items-center gap-2 font-semibold"><Wallet size={18} aria-hidden="true" />{t("activation.title")}</h2>
-      <p className="mt-1 text-xs text-[#667085]">{t("activation.description")}</p>
-      <p className="mt-3 inline-block rounded-full border border-[#D0D5DD] px-3 py-1 text-xs font-semibold">
+      <p className="mt-1 text-xs text-muted">{t("activation.description")}</p>
+      <p className="mt-3 inline-block rounded-full border border-line px-3 py-1 text-xs font-semibold">
         {t(`activation.status.${status}`)}
       </p>
       <ul className="mt-4 space-y-2">
         {ITEMS.map((item) => <li key={item} className="flex gap-2 text-sm">
           {checklist[item] ? <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-green-700" aria-hidden="true" />
-            : <CircleAlert size={16} className="mt-0.5 shrink-0 text-[#A93216]" aria-hidden="true" />}
+            : <CircleAlert size={16} className="mt-0.5 shrink-0 text-primary-hover" aria-hidden="true" />}
           <span><span className="sr-only">{t(checklist[item] ? "eventWorkflow.met" : "eventWorkflow.unmet")}: </span>
             {t(`activation.item.${item}`)}</span>
         </li>)}
       </ul>
       {status === "pending" && <div className="mt-4 flex flex-wrap gap-2">
         {(!checklist.organizer_verified || !checklist.payout_account_active) &&
-          <Link to="/organizer/profile" className="text-sm font-semibold text-[#A93216]">{t("activation.openProfile")}</Link>}
+          <Link to="/organizer/profile" className="text-sm font-semibold text-primary-hover">{t("activation.openProfile")}</Link>}
         {!checklist.terms_accepted && <Button loading={step.isPending}
           onClick={() => step.mutate(() => activationApi.acceptTerms(eventId))}>{t("activation.acceptTerms")}</Button>}
         {!checklist.fee_paid && <Button loading={step.isPending}
@@ -60,7 +60,7 @@ export const ActivationPanel = ({ eventId }: { eventId: number }) => {
       </div>}
       {status === "suspended" && <Alert type="warning" showIcon className="mt-4" title={t("activation.suspended")}
         description={activation.data.suspension_reason} />}
-      <p className="mt-4 text-xs text-[#667085]">{t("activation.simulated")}</p>
+      <p className="mt-4 text-xs text-muted">{t("activation.simulated")}</p>
       {step.error && <Alert role="alert" type="error" showIcon className="mt-3"
         title={step.error instanceof ApiError ? step.error.message : t("eventWorkflow.networkError")} />}
     </section>

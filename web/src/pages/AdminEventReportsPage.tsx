@@ -67,14 +67,14 @@ const AdminEventReports = ({ adminId }: { adminId: number }) => {
 
   return <OperationsWorkspace admin>
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-3xl font-bold tracking-tight">{t("eventReport.queue")}</h1>
+      <h1 className="page-title">{t("eventReport.queue")}</h1>
       <RefreshButton refresh={() => void reports.refetch()} fetching={reports.isFetching} />
     </div>
     <div className="my-6">
       <label htmlFor="event-report-status" className="block text-sm font-semibold">{t("support.statusLabel")}</label>
       <select id="event-report-status" value={status}
         onChange={(event) => { resolve.reset(); applyFilter(event.target.value as ReportFilter, 0); }}
-        className="mt-2 min-h-11 w-full max-w-60 rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm">
+        className="mt-2 min-h-11 w-full max-w-60 rounded-lg border border-line bg-white px-3 text-sm">
         <option value="all">{t("support.anyStatus")}</option>
         {eventReportStatuses.map((value) => <option key={value} value={value}>{t(`eventReport.status.${value}`)}</option>)}
       </select>
@@ -89,7 +89,7 @@ const AdminEventReports = ({ adminId }: { adminId: number }) => {
               <div className="min-w-0">
                 <h2 className="break-words text-lg font-semibold">
                   <Link to={`/admin/events/${report.event_id}?slug=${encodeURIComponent(report.event_slug)}`}
-                    className="text-[#A93216] underline underline-offset-4">{report.event_title}</Link>
+                    className="text-primary-hover underline underline-offset-4">{report.event_title}</Link>
                 </h2>
                 <p className="mt-2 text-sm font-semibold">{t(`eventReport.reason.${report.reason}`)}</p>
               </div>
@@ -100,8 +100,8 @@ const AdminEventReports = ({ adminId }: { adminId: number }) => {
                 </Tag>
               </div>
             </div>
-            {report.details && <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-[#475467]">{report.details}</p>}
-            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#667085]">
+            {report.details && <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-muted-strong">{report.details}</p>}
+            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
               <span>{t("eventReport.received")} · <time dateTime={report.created_at}>{date.format(parseApiInstant(report.created_at))}</time></span>
               {report.resolved_at && <span>{t("eventReport.reviewed")} · <time dateTime={report.resolved_at}>
                 {date.format(parseApiInstant(report.resolved_at))}
@@ -129,8 +129,8 @@ const AdminEventReports = ({ adminId }: { adminId: number }) => {
         resolve.mutate(action);
       }}>
       <p className="mt-3 break-words text-sm font-semibold">{action.report.event_title}</p>
-      <p className="mt-1 text-sm text-[#475467]">{t(`eventReport.reason.${action.report.reason}`)}</p>
-      <p className="my-4 text-sm text-[#475467]">{t(dismissing ? "eventReport.dismissDescription" : "eventReport.actionedDescription")}</p>
+      <p className="mt-1 text-sm text-muted-strong">{t(`eventReport.reason.${action.report.reason}`)}</p>
+      <p className="my-4 text-sm text-muted-strong">{t(dismissing ? "eventReport.dismissDescription" : "eventReport.actionedDescription")}</p>
       {resolve.isError && <OperationsError error={resolve.error} saving />}
       {!resolve.isPending && reports.isSuccess && !selectedIsOpen && <Alert type="warning" showIcon title={t("ops.conflict")} />}
     </Modal>}

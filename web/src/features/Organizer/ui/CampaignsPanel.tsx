@@ -52,7 +52,7 @@ export const CampaignsPanel = ({ eventId, userId, timeZone }: Props) => {
   const number = new Intl.NumberFormat(locale);
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone });
 
-  return <section id="event-campaigns" aria-labelledby="campaigns-title" className="scroll-mt-6 rounded-xl border border-[#D0D5DD] bg-white p-5">
+  return <section id="event-campaigns" aria-labelledby="campaigns-title" className="scroll-mt-6 rounded-xl border border-line bg-white p-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 id="campaigns-title" className="flex items-center gap-2 font-semibold">
         <Tag size={18} aria-hidden="true" />{t("campaigns.title")}
@@ -64,12 +64,12 @@ export const CampaignsPanel = ({ eventId, userId, timeZone }: Props) => {
         </Button>
       </div>
     </div>
-    {campaigns.isPending && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-[#667085]">
+    {campaigns.isPending && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-muted">
       <Spin size="small" />{t("campaigns.loading")}
     </p>}
     {campaigns.isError && <Alert role="alert" type="error" showIcon className="mt-4"
       title={errorMessage(campaigns.error, t("campaigns.loadError"))} />}
-    {campaigns.data?.length === 0 && <p className="mt-4 text-sm text-[#667085]">{t("campaigns.empty")}</p>}
+    {campaigns.data?.length === 0 && <p className="mt-4 text-sm text-muted">{t("campaigns.empty")}</p>}
     {campaigns.data && campaigns.data.length > 0 && <ul className="mt-4 space-y-3">
       {campaigns.data.map((campaign) => {
         const { stats } = campaign;
@@ -87,27 +87,27 @@ export const CampaignsPanel = ({ eventId, userId, timeZone }: Props) => {
           { label: t("campaigns.refunds"), value: formatMinor(stats.refunds_minor, locale) },
           { label: t("campaigns.net"), value: formatMinor(stats.net_minor, locale) },
         ];
-        return <li key={campaign.id} className="rounded-xl border border-[#EAECF0] p-4">
+        return <li key={campaign.id} className="rounded-xl border border-line-soft p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="break-words text-sm font-semibold">{campaign.name}</h3>
-              <p className="mt-1 break-all text-xs text-[#475467]">
+              <p className="mt-1 break-all text-xs text-muted-strong">
                 <code className="font-semibold">{campaign.code}</code> · {discount}
               </p>
-              {(campaign.starts_at || campaign.ends_at) && <p className="mt-1 text-xs text-[#667085]">
+              {(campaign.starts_at || campaign.ends_at) && <p className="mt-1 text-xs text-muted">
                 {campaign.starts_at && t("campaigns.starts", { date: date.format(new Date(campaign.starts_at)) })}
                 {campaign.starts_at && campaign.ends_at && " · "}
                 {campaign.ends_at && t("eventWorkflow.ends", { date: date.format(new Date(campaign.ends_at)) })}
               </p>}
             </div>
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${campaign.is_active
-              ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#475467]"}`}>
+              ? "bg-[#ECFDF3] text-[#027A48]" : "bg-soft text-muted-strong"}`}>
               {t(campaign.is_active ? "campaigns.enabled" : "campaigns.disabled")}
             </span>
           </div>
-          <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-[#F5F5F0] p-3 text-xs sm:grid-cols-4">
+          <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-paper p-3 text-xs sm:grid-cols-4">
             {metrics.map(({ label, value }) => <div key={label}>
-              <dt className="text-[#667085]">{label}</dt><dd className="mt-0.5 font-semibold">{value}</dd>
+              <dt className="text-muted">{label}</dt><dd className="mt-0.5 font-semibold">{value}</dd>
             </div>)}
           </dl>
           <p className="mt-4 text-xs font-semibold">{t("campaigns.link")}</p>

@@ -49,14 +49,14 @@ export const AdminRecords = <Row,>({
     <div className="mt-4" aria-busy={records.isFetching}>
       {records.isPending ? <OperationsLoading /> : records.isError
         ? <OperationsError error={records.error} retry={refresh} />
-        : records.data.length === 0 ? <p role="status" className="py-4 text-sm text-[#667085]">{empty}</p>
+        : records.data.length === 0 ? <p role="status" className="py-4 text-sm text-muted">{empty}</p>
           : <div role="region" aria-labelledby={headingId} tabIndex={0}
-            className="overflow-x-auto rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5C35]">
+            className="overflow-x-auto rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="border-b border-[#D0D5DD] text-xs text-[#475467]">
+              <thead className="border-b border-line text-xs text-muted-strong">
                 <tr>{columns.map(({ label }) => <th key={label} scope="col" className="px-3 py-3 first:pl-0">{label}</th>)}</tr>
               </thead>
-              <tbody className="divide-y divide-[#EAECF0]">
+              <tbody className="divide-y divide-line-soft">
                 {records.data.slice(0, PAGE_SIZE).map((row) => <tr key={rowKey(row)} className="align-top">
                   {columns.map(({ label, cell }, index) => index === 0
                     ? <th key={label} scope="row" className="max-w-64 py-3 pr-3 font-semibold [overflow-wrap:anywhere]">{cell(row)}</th>
@@ -81,14 +81,14 @@ export const AdminRecordNavigation = ({ label, current, links }: {
   <nav aria-label={label} className="my-5 flex flex-wrap gap-3">
     {links.map((link) => <Link key={link.id} to={link.to} aria-current={current === link.id ? "page" : undefined}
       className={`rounded-lg border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 ${
-        current === link.id ? "border-[#101828] bg-[#101828] text-white" : "border-[#D0D5DD] bg-white text-[#475467] hover:border-[#101828]"
+        current === link.id ? "border-ink bg-ink text-white" : "border-line bg-white text-muted-strong hover:border-ink"
       }`}>{link.label}</Link>)}
   </nav>
 );
 
 export const AdminRecordEventLink = ({ id, title }: { id: number; title?: string }) => {
   const { t } = useTranslation();
-  return <Link to={`/admin/events/${id}`} className="font-semibold text-[#A93216] underline underline-offset-2">
+  return <Link to={`/admin/events/${id}`} className="font-semibold text-primary-hover underline underline-offset-2">
     {title ?? t("ops.eventId", { id })}
   </Link>;
 };
