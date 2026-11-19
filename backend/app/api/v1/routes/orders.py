@@ -157,6 +157,21 @@ def pay_order(
         raise HTTPException(
             status.HTTP_409_CONFLICT, f"{exc.reason}. Nothing was charged; please order again."
         ) from None
+    except payment_service.SalesSuspended as exc:
+        # T13: an admin stopped sales between reservation and payment. Nothing
+        # was charged. Cancel the order so its holds return to inventory now
+        # rather than when the sweeper finds them in ten minutes.
+        db.rollback()
+        try:
+            order_lifecycle.cancel_pending(db, order, user)
+            db.commit()
+        except order_lifecycle.IllegalOrderTransition:
+            # A double-click: the first request already cancelled it. The
+            # buyer should still read "suspended", not a 500.
+            db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"{exc.reason}. Nothing was charged."
+        ) from None
     except (payment_service.ReservationExpired, order_service.HoldLapsed):
         db.rollback()
         raise HTTPException(

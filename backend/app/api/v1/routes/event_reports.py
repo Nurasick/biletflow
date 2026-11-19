@@ -19,7 +19,7 @@ from app.schemas.reporting import (
     RefundRequest,
     TimelineEntry,
 )
-from app.services import analytics, audit, order_lifecycle, reporting
+from app.services import analytics, audit, order_lifecycle, reporting, support
 from app.services.csv_export import csv_response
 
 router = APIRouter(tags=["organizer reports"])
@@ -101,6 +101,7 @@ def export_attendees(event: OwnedEvent, db: DbSession) -> Response:
 @router.get("/organizer/events/{event_id}/timeline", response_model=list[TimelineEntry])
 def event_timeline(
     event: OwnedEvent,
+    user: CurrentUser,
     db: DbSession,
     since: datetime | None = None,
     until: datetime | None = None,
@@ -111,7 +112,14 @@ def event_timeline(
     """§4.16: the event's history, newest first, filterable by date range and
     activity type. Read-only: no route edits or deletes an entry."""
     entries = audit.event_timeline(
-        db, event.id, since=since, until=until, actions=action or (), limit=limit, offset=offset
+        db,
+        event.id,
+        scope=support.timeline_scope(user),
+        since=since,
+        until=until,
+        actions=action or (),
+        limit=limit,
+        offset=offset,
     )
     return audit.with_actor_names(db, entries)
 
