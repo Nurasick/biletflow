@@ -37,7 +37,7 @@ const ReportEventDialog = ({ slug, title, onClose }: { slug: string; title: stri
   return <Modal open footer={null} title={t("eventReport.report")}
     closable={!report.isPending} keyboard={!report.isPending} mask={{ closable: false }}
     onCancel={() => { if (!submitting.current) onClose(); }}>
-    <p className="my-4 break-words text-sm font-semibold text-[#475467]">{title}</p>
+    <p className="my-4 break-words text-sm font-semibold text-muted-strong">{title}</p>
     {report.isSuccess ? <div className="space-y-4">
       <Alert type="success" showIcon role="status" title={t("eventReport.submitted")} />
       <div className="flex justify-end"><Button onClick={onClose}>{t("ops.close")}</Button></div>
@@ -51,7 +51,7 @@ const ReportEventDialog = ({ slug, title, onClose }: { slug: string; title: stri
         <label htmlFor={`${id}-reason`} className="mb-1.5 block text-sm font-semibold">{t("ops.reason")}</label>
         <select id={`${id}-reason`} required value={reason} disabled={report.isPending}
           onChange={(event) => setReason(event.target.value as EventReportReason | "")}
-          className="w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm disabled:opacity-60">
+          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm disabled:opacity-60">
           <option value="" disabled>{t("eventReport.chooseReason")}</option>
           {eventReportReasons.map((value) => <option key={value} value={value}>{t(`eventReport.reason.${value}`)}</option>)}
         </select>

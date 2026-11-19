@@ -14,7 +14,7 @@ export const SupportReplyForm = ({ staff = false, busy, sending, onSend }: {
   const submitting = useRef(false);
   const actionLabel = t(internal ? "support.addNote" : "support.sendReply");
 
-  return <form className="space-y-3 rounded-xl border border-[#D0D5DD] bg-white p-4 sm:p-5" onSubmit={async (event) => {
+  return <form className="space-y-3 rounded-xl border border-line bg-white p-4 sm:p-5" onSubmit={async (event) => {
     event.preventDefault();
     if (busy || submitting.current || !body.trim()) return;
     submitting.current = true;
@@ -34,7 +34,7 @@ export const SupportReplyForm = ({ staff = false, busy, sending, onSend }: {
         <Radio value="public">{t("support.publicReply")}</Radio>
         <Radio value="internal">{t("support.internalNote")}</Radio>
       </Radio.Group>
-      {internal && <p className="mt-2 text-xs text-[#667085]">{t("support.noteVisibility")}</p>}
+      {internal && <p className="mt-2 text-xs text-muted">{t("support.noteVisibility")}</p>}
     </fieldset>}
     <label htmlFor={id} className="block text-sm font-semibold">{t(internal ? "support.internalNote" : "support.message")}</label>
     <Input.TextArea id={id} value={body} onChange={(event) => setBody(event.target.value)}

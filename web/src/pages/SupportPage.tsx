@@ -14,16 +14,16 @@ export const SupportPage = () => {
   const { me } = useAuth();
   return <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-7 sm:py-10">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <h1 className="text-3xl font-bold tracking-tight">{t("common.help")}</h1>
+      <h1 className="page-title">{t("common.help")}</h1>
       {me.data?.is_organizer && <SupportRequestButton target={{ audience: "organizer" }} label={t("support.contactPlatform")} />}
     </div>
-    <p className="mt-3 text-sm leading-6 text-[#667085]">{t("support.startFromContext")}</p>
-    <Link to="/" className="mt-2 inline-block text-sm font-semibold text-[#A93216] hover:underline">{t("common.backToEvents")}</Link>
+    <p className="mt-3 text-sm leading-6 text-muted">{t("support.startFromContext")}</p>
+    <Link to="/" className="mt-2 inline-block text-sm font-semibold text-primary-hover hover:underline">{t("common.backToEvents")}</Link>
     <div className="mt-7">
       {me.isPending ? <OperationsLoading /> : me.isError ? <OperationsError error={me.error} retry={() => void me.refetch()} />
-        : me.data ? <MyCases key={me.data.id} userId={me.data.id} /> : <div className="rounded-xl border border-[#D0D5DD] p-5 text-sm">
-          <p className="text-[#475467]">{t("support.guestHelp")}</p>
-          <Link to="/login" state={{ from: "/support" }} className="mt-2 inline-block font-semibold text-[#A93216] hover:underline">
+        : me.data ? <MyCases key={me.data.id} userId={me.data.id} /> : <div className="rounded-xl border border-line p-5 text-sm">
+          <p className="text-muted-strong">{t("support.guestHelp")}</p>
+          <Link to="/login" state={{ from: "/support" }} className="mt-2 inline-block font-semibold text-primary-hover hover:underline">
             {t("common.signIn")}
           </Link>
         </div>}
@@ -44,7 +44,7 @@ const MyCases = ({ userId }: { userId: number }) => {
     </div>
     {cases.isPending ? <OperationsLoading /> : cases.isError
       ? <OperationsError error={cases.error} retry={() => void cases.refetch()} /> : cases.data.length === 0
-      ? <p className="rounded-xl border border-[#D0D5DD] p-5 text-sm text-[#667085]">{t("support.noCases")}</p>
+      ? <p className="rounded-xl border border-line p-5 text-sm text-muted">{t("support.noCases")}</p>
       : <ul className="space-y-3">
         {cases.data.map((summary) => <CaseRow key={summary.case_number} summary={summary}
           href={requesterCaseHref(summary.case_number, null)} />)}

@@ -13,7 +13,7 @@ export const TicketQr = ({ payload, label }: { payload: string; label: string })
       .catch(() => { if (live) setSvg(null); });
     return () => { live = false; };
   }, [payload]);
-  if (!svg) return <div className="aspect-square w-40 animate-pulse rounded bg-[#F5F5F0]" aria-hidden="true" />;
+  if (!svg) return <div className="aspect-square w-40 animate-pulse rounded bg-paper" aria-hidden="true" />;
   // The markup is generated locally by the qrcode library from our own
   // payload, so it carries no third-party HTML.
   return <div role="img" aria-label={label} className="w-40" dangerouslySetInnerHTML={{ __html: svg }} />;

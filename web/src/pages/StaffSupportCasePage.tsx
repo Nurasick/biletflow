@@ -23,10 +23,10 @@ export const StaffSupportCasePage = () => {
   const { caseNumber = "" } = useParams();
   const queueSearch = (useLocation().state as { queueSearch?: string } | null)?.queueSearch;
 
-  return <main className="min-h-[60vh] bg-[#F5F5F0] px-4 py-8 sm:px-7 sm:py-10">
+  return <main className="min-h-[60vh] bg-paper px-4 py-8 sm:px-7 sm:py-10">
     <div className="mx-auto max-w-5xl space-y-5">
       <Link to={{ pathname: "/staff/support", search: queueSearch ?? "" }}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-[#A93216] hover:underline">
+        className="inline-flex items-center gap-2 text-sm font-semibold text-primary-hover hover:underline">
         <ArrowLeft size={16} aria-hidden="true" />{t("support.queue")}
       </Link>
       {me.data && <StaffCaseView key={`${me.data.id}:${caseNumber}`} number={caseNumber} userId={me.data.id} />}

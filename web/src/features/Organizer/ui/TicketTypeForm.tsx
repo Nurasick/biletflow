@@ -87,7 +87,7 @@ export const TicketTypeForm = ({ eventId, timeZone, ticket, committed, onClose, 
           <Input id={`${id}-quantity`} inputMode="numeric" required value={draft.quantity}
             onChange={(event) => update("quantity", event.target.value)} {...fieldError("quantity")}
             aria-describedby={fieldError("quantity")["aria-describedby"] ?? quantityHint} />
-          {quantityHint && <span id={quantityHint} className="text-xs font-normal text-[#667085]">
+          {quantityHint && <span id={quantityHint} className="text-xs font-normal text-muted">
             {t("ticketTypes.committed", { tickets: committed })}
           </span>}
         </div>
@@ -100,10 +100,10 @@ export const TicketTypeForm = ({ eventId, timeZone, ticket, committed, onClose, 
           <Input id={`${id}-position`} inputMode="numeric" required value={draft.position}
             onChange={(event) => update("position", event.target.value)} {...fieldError("position")}
             aria-describedby={fieldError("position")["aria-describedby"] ?? `${id}-position-hint`} />
-          <span id={`${id}-position-hint`} className="text-xs font-normal text-[#667085]">{t("ticketTypes.positionHint")}</span>
+          <span id={`${id}-position-hint`} className="text-xs font-normal text-muted">{t("ticketTypes.positionHint")}</span>
         </div>
         <div className="grid min-w-0 gap-3 sm:col-span-2 sm:grid-cols-2">
-          <p className="text-xs text-[#667085] sm:col-span-2">{t("ticketTypes.salesZone", { zone: timeZone })}</p>
+          <p className="text-xs text-muted sm:col-span-2">{t("ticketTypes.salesZone", { zone: timeZone })}</p>
           <label className={labelClass}>{t("ticketTypes.salesStart")}
             <input type="datetime-local" name="starts" step={60} defaultValue={draft.starts} className={eventInputClass}
               onInput={() => { if (validation?.field === "starts") setValidation(undefined); }} {...fieldError("starts")} />

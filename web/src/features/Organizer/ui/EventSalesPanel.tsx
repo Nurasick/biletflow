@@ -32,7 +32,7 @@ export const EventSalesPanel = ({ eventId }: { eventId: number }) => {
   const money = (minor: number) => formatMinor(minor, locale);
 
   return (
-    <section aria-labelledby="sales" className="rounded-xl border border-[#D0D5DD] bg-white p-5">
+    <section aria-labelledby="sales" className="rounded-xl border border-line bg-white p-5">
       <h2 id="sales" className="flex items-center gap-2 font-semibold"><BarChart3 size={18} aria-hidden="true" />{t("sales.title")}</h2>
       {summary.data && <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
         {[
@@ -41,18 +41,18 @@ export const EventSalesPanel = ({ eventId }: { eventId: number }) => {
           ["sales.gross", money(summary.data.gross_minor)],
           ["sales.payout", money(summary.data.estimated_payout_minor)],
         ].map(([label, value]) => <div key={label}>
-          <dt className="text-xs text-[#667085]">{t(label as "sales.sold")}</dt>
+          <dt className="text-xs text-muted">{t(label as "sales.sold")}</dt>
           <dd className="mt-1 text-lg font-semibold">{value}</dd>
         </div>)}
       </dl>}
-      {summary.data?.is_simulated && <p className="mt-2 text-xs text-[#667085]">{t("sales.simulated")}</p>}
+      {summary.data?.is_simulated && <p className="mt-2 text-xs text-muted">{t("sales.simulated")}</p>}
       <h3 className="mt-6 text-sm font-semibold">{t("sales.orders")}</h3>
-      {orders.data?.length === 0 && <p className="mt-2 text-sm text-[#667085]">{t("sales.noOrders")}</p>}
-      <ul className="mt-2 divide-y divide-[#EAECF0]">
+      {orders.data?.length === 0 && <p className="mt-2 text-sm text-muted">{t("sales.noOrders")}</p>}
+      <ul className="mt-2 divide-y divide-line-soft">
         {orders.data?.map((order) => <li key={order.order_number} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
           <div className="min-w-0">
-            <p className="font-semibold">{order.contact_name} <span className="font-mono text-xs text-[#667085]">{order.order_number}</span></p>
-            <p className="text-xs text-[#667085]">{t("sales.orderLine", { count: order.ticket_count })} · {money(order.total_minor)} · {t(`orderStatus.${order.status}`)}</p>
+            <p className="font-semibold">{order.contact_name} <span className="font-mono text-xs text-muted">{order.order_number}</span></p>
+            <p className="text-xs text-muted">{t("sales.orderLine", { count: order.ticket_count })} · {money(order.total_minor)} · {t(`orderStatus.${order.status}`)}</p>
           </div>
           {order.status === "confirmed" && <Button size="small" danger onClick={() => { settle.reset(); setTarget(order); }}>
             {t(order.total_minor > 0 ? "sales.refund" : "sales.cancelRegistration")}

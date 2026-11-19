@@ -24,7 +24,7 @@ export const SupportCasePage = () => {
   const created = (location.state as { caseCreated?: boolean } | null)?.caseCreated === true;
 
   return <main className="mx-auto w-full max-w-3xl space-y-5 px-4 py-8 sm:px-7 sm:py-10">
-    <Link to="/support" className="inline-flex items-center gap-2 text-sm font-semibold text-[#A93216] hover:underline">
+    <Link to="/support" className="inline-flex items-center gap-2 text-sm font-semibold text-primary-hover hover:underline">
       <ArrowLeft size={16} aria-hidden="true" />{t("common.help")}
     </Link>
     {token || ownerId ? <RequesterCaseView key={JSON.stringify([caseNumber, ownerId, token])}
@@ -32,7 +32,7 @@ export const SupportCasePage = () => {
       : me.isPending ? <OperationsLoading />
         : me.isError ? <OperationsError error={me.error} retry={() => void me.refetch()} />
           : <Alert type="info" showIcon title={t("support.signInToView")} action={
-            <Link to="/login" state={{ from: requesterCaseHref(caseNumber, null) }} className="font-semibold text-[#A93216]">
+            <Link to="/login" state={{ from: requesterCaseHref(caseNumber, null) }} className="font-semibold text-primary-hover">
               {t("common.signIn")}
             </Link>
           } />}
@@ -73,7 +73,7 @@ const RequesterCaseView = ({ number, ownerId, token, created }: {
     {token && <Alert type="info" showIcon title={t("support.keepLink")} />}
     {detail.isError && <OperationsError error={detail.error} retry={() => void detail.refetch()} />}
     <CaseThread messages={supportCase.messages} />
-    {supportCase.status === "resolved" && <p className="text-sm text-[#475467]">{t("support.reopenHint")}</p>}
+    {supportCase.status === "resolved" && <p className="text-sm text-muted-strong">{t("support.reopenHint")}</p>}
     {reply.isError && <Alert type="error" showIcon role="alert" title={errorMessage(reply.error, t("support.replyError"))} />}
     <SupportReplyForm busy={reply.isPending} sending={reply.isPending} onSend={async (body) => { await reply.mutateAsync(body); }} />
   </>;

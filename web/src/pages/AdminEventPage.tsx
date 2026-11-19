@@ -38,8 +38,8 @@ const AdminEventContent = ({ eventId }: { eventId: number }) => {
 
   return <>
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div className="min-w-0"><p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#A93216]">{t("ops.eventId", { id: eventId })}</p>
-        <h1 className="break-words text-3xl font-bold tracking-tight">{record.title}</h1><p className="mt-2 break-all font-mono text-xs text-[#667085]">{record.slug}</p></div>
+      <div className="min-w-0"><p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary-hover">{t("ops.eventId", { id: eventId })}</p>
+        <h1 className="break-words page-title">{record.title}</h1><p className="mt-2 break-all font-mono text-xs text-muted">{record.slug}</p></div>
       <div className="flex flex-wrap items-center gap-3"><OperationsStatus status={record.status} />
         <RefreshButton refresh={refresh} fetching={event.isFetching || activation.isFetching} /></div>
     </div>
@@ -49,15 +49,15 @@ const AdminEventContent = ({ eventId }: { eventId: number }) => {
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <section className={operationsCard}>
           <h2 className="text-xl font-bold">{t("ops.eventDetails")}</h2>
-          <p className="mt-2 text-xs text-[#667085]">{t("ops.organizerProfile", { id: record.organizer_profile_id })}</p>
+          <p className="mt-2 text-xs text-muted">{t("ops.organizerProfile", { id: record.organizer_profile_id })}</p>
           <dl className="mt-5 space-y-4 text-sm">
-            <div><dt className="text-[#667085]">{t("ops.venue")}</dt><dd className="mt-1 break-words font-semibold">{record.venue_name}<span className="mt-1 block font-normal">{record.venue_address}</span></dd></div>
-            <div><dt className="text-[#667085]">{t("ops.schedule")}</dt><dd className="mt-1">{dates.format(new Date(record.starts_at))} – {dates.format(new Date(record.ends_at))}<span className="mt-1 block text-xs text-[#667085]">{record.timezone}</span></dd></div>
-            <div className="flex flex-wrap justify-between gap-2"><dt className="text-[#667085]">{t("ops.visibility")}</dt><dd>{t(visibilityLabels[record.visibility])}</dd></div>
-            <div className="flex flex-wrap justify-between gap-2"><dt className="text-[#667085]">{t("ops.capacity")}</dt><dd>{record.capacity === null ? t("ops.unlimited") : new Intl.NumberFormat(locale).format(record.capacity)}</dd></div>
-            <div className="flex flex-wrap justify-between gap-2"><dt className="text-[#667085]">{t("ops.created")}</dt><dd>{dates.format(new Date(record.created_at))}</dd></div>
-            <div className="flex flex-wrap justify-between gap-2"><dt className="text-[#667085]">{t("ops.updated")}</dt><dd>{dates.format(new Date(record.updated_at))}</dd></div>
-            <div><dt className="text-[#667085]">{t("ops.description")}</dt><dd className="mt-2 whitespace-pre-wrap break-words leading-6">{record.description || t("ops.noDescription")}</dd></div>
+            <div><dt className="text-muted">{t("ops.venue")}</dt><dd className="mt-1 break-words font-semibold">{record.venue_name}<span className="mt-1 block font-normal">{record.venue_address}</span></dd></div>
+            <div><dt className="text-muted">{t("ops.schedule")}</dt><dd className="mt-1">{dates.format(new Date(record.starts_at))} – {dates.format(new Date(record.ends_at))}<span className="mt-1 block text-xs text-muted">{record.timezone}</span></dd></div>
+            <div className="flex flex-wrap justify-between gap-2"><dt className="text-muted">{t("ops.visibility")}</dt><dd>{t(visibilityLabels[record.visibility])}</dd></div>
+            <div className="flex flex-wrap justify-between gap-2"><dt className="text-muted">{t("ops.capacity")}</dt><dd>{record.capacity === null ? t("ops.unlimited") : new Intl.NumberFormat(locale).format(record.capacity)}</dd></div>
+            <div className="flex flex-wrap justify-between gap-2"><dt className="text-muted">{t("ops.created")}</dt><dd>{dates.format(new Date(record.created_at))}</dd></div>
+            <div className="flex flex-wrap justify-between gap-2"><dt className="text-muted">{t("ops.updated")}</dt><dd>{dates.format(new Date(record.updated_at))}</dd></div>
+            <div><dt className="text-muted">{t("ops.description")}</dt><dd className="mt-2 whitespace-pre-wrap break-words leading-6">{record.description || t("ops.noDescription")}</dd></div>
           </dl>
         </section>
         {activation.isPending ? <div className={operationsCard}><OperationsLoading /></div> : activation.isError

@@ -36,8 +36,8 @@ export const AdminEventsPage = () => {
   };
   return <OperationsWorkspace admin>
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <div><h1 className="text-3xl font-bold tracking-tight">{t("ops.adminEvents")}</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#667085]">{t("ops.adminDescription")}</p></div>
+      <div><h1 className="page-title">{t("ops.adminEvents")}</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{t("ops.adminDescription")}</p></div>
       <RefreshButton refresh={() => void events.refetch()} fetching={events.isFetching} />
     </div>
     <form className="my-6 max-w-xl space-y-2" onSubmit={(event) => {
@@ -52,19 +52,19 @@ export const AdminEventsPage = () => {
         <Button htmlType="submit" type="primary" loading={events.isFetching}>{t("ops.search")}</Button></div>
     </form>
     {events.isPending ? <OperationsLoading /> : events.isError ? <OperationsError error={events.error} retry={() => void events.refetch()} />
-      : events.data.length === 0 ? <p className="rounded-2xl border border-[#D0D5DD] bg-white p-8 text-sm text-[#667085]">{t("ops.noEvents")}</p>
+      : events.data.length === 0 ? <p className="panel p-8 text-sm text-muted">{t("ops.noEvents")}</p>
         : <ul className="space-y-3">
           {events.data.slice(0, PAGE_SIZE).map((event) => <li key={event.id}>
             <Link to={`/admin/events/${event.id}?slug=${encodeURIComponent(event.slug)}`}
               onClick={() => client.setQueryData(operationsKeys.adminEvent(me.data?.id, event.id), event)}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#D0D5DD] bg-white p-5 transition-colors hover:border-[#FF5C35] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF5C35]">
-              <div className="min-w-0 flex-1"><p className="text-xs text-[#667085]">{t("ops.eventId", { id: event.id })}</p>
+              className="flex flex-wrap items-center justify-between gap-4 panel p-5 transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+              <div className="min-w-0 flex-1"><p className="text-xs text-muted">{t("ops.eventId", { id: event.id })}</p>
                 <h2 className="mt-1 break-words text-lg font-semibold">{event.title}</h2>
-                <p className="mt-2 text-xs leading-5 text-[#667085]">{event.venue_name} · {new Intl.DateTimeFormat(locale, {
+                <p className="mt-2 text-xs leading-5 text-muted">{event.venue_name} · {new Intl.DateTimeFormat(locale, {
                   dateStyle: "medium", timeStyle: "short", timeZone: event.timezone,
                 }).format(new Date(event.starts_at))} · {event.timezone}</p></div>
               <OperationsStatus status={event.status} />
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#A93216]">{t("ops.openModeration")}<ArrowRight size={16} aria-hidden="true" /></span>
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary-hover">{t("ops.openModeration")}<ArrowRight size={16} aria-hidden="true" /></span>
             </Link>
           </li>)}
         </ul>}

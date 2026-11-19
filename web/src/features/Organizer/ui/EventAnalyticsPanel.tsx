@@ -31,7 +31,7 @@ export const EventAnalyticsPanel = ({ eventId, userId, timeZone }: { eventId: nu
   });
 
   return <div className="mt-5 space-y-5">
-    <form className="space-y-4 rounded-xl border border-[#D0D5DD] bg-white p-4 sm:p-5"
+    <form className="space-y-4 rounded-xl border border-line bg-white p-4 sm:p-5"
       onReset={() => { setFilters({}); setFilterError(undefined); }} onSubmit={(event) => {
       event.preventDefault();
       const fields = new FormData(event.currentTarget);
@@ -40,7 +40,7 @@ export const EventAnalyticsPanel = ({ eventId, userId, timeZone }: { eventId: nu
       setFilterError(parsed.error);
       if (parsed.filters) setFilters(parsed.filters);
     }}>
-      <p id={`${id}-zone`} className="text-sm text-[#475467]">{t("analytics.timeZone", { zone: timeZone })}</p>
+      <p id={`${id}-zone`} className="text-sm text-muted-strong">{t("analytics.timeZone", { zone: timeZone })}</p>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {(["since", "until"] as const).map((key) => <label key={key} className="min-w-0 text-sm font-semibold">
           {t(`reports.${key}`)}
@@ -56,7 +56,7 @@ export const EventAnalyticsPanel = ({ eventId, userId, timeZone }: { eventId: nu
           </select>
         </label>
       </div>
-      {filterError && <p id={`${id}-error`} role="alert" className="text-sm text-[#A93216]">{t(filterError)}</p>}
+      {filterError && <p id={`${id}-error`} role="alert" className="text-sm text-primary-hover">{t(filterError)}</p>}
       {types.isError && <Alert role="alert" type="warning" showIcon title={t("campaigns.typesLoadError")}
         action={<Button size="small" onClick={() => void types.refetch()} loading={types.isFetching}>{t("common.retry")}</Button>} />}
       <div className="flex flex-wrap gap-2">

@@ -22,17 +22,17 @@ export const AdminTimeline = ({ eventId, userId, timeZone }: { eventId: number; 
     <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">{t("ops.timeline")}</h2>
       <RefreshButton refresh={() => void timeline.refetch()} fetching={timeline.isFetching} /></div>
     <div className="mt-4">{timeline.isPending ? <OperationsLoading /> : timeline.isError ? <OperationsError error={timeline.error} retry={() => void timeline.refetch()} />
-      : timeline.data.length === 0 ? <p className="text-sm text-[#667085]">{t("ops.timelineEmpty")}</p>
-        : <ol className="divide-y divide-[#EAECF0]">
+      : timeline.data.length === 0 ? <p className="text-sm text-muted">{t("ops.timelineEmpty")}</p>
+        : <ol className="divide-y divide-line-soft">
           {timeline.data.slice(0, PAGE_SIZE).map((entry) => <li key={entry.id} className="py-4 first:pt-0">
-            <div className="flex flex-wrap justify-between gap-2 text-xs text-[#667085]"><time dateTime={entry.created_at}>{new Intl.DateTimeFormat(locale, {
+            <div className="flex flex-wrap justify-between gap-2 text-xs text-muted"><time dateTime={entry.created_at}>{new Intl.DateTimeFormat(locale, {
               dateStyle: "medium", timeStyle: "medium", timeZone,
             }).format(new Date(entry.created_at))}</time><span>{entry.actor_user_id === null ? t("ops.system") : t("ops.actor", { id: entry.actor_user_id })}</span></div>
             <p className="mt-2 break-words text-sm font-semibold">{entry.summary}</p>
-            <p className="mt-1 break-words font-mono text-xs text-[#667085]">{entry.action} · {t("ops.entity", { type: entry.entity_type, id: entry.entity_id })}</p>
-            {entry.payload && Object.keys(entry.payload).length > 0 && <details className="mt-2 text-xs text-[#475467]">
+            <p className="mt-1 break-words font-mono text-xs text-muted">{entry.action} · {t("ops.entity", { type: entry.entity_type, id: entry.entity_id })}</p>
+            {entry.payload && Object.keys(entry.payload).length > 0 && <details className="mt-2 text-xs text-muted-strong">
               <summary className="cursor-pointer py-1">{t("ops.timelinePayload")}</summary>
-              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[#F5F5F0] p-3">{JSON.stringify(entry.payload, null, 2)}</pre>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-paper p-3">{JSON.stringify(entry.payload, null, 2)}</pre>
             </details>}
           </li>)}
         </ol>}</div>

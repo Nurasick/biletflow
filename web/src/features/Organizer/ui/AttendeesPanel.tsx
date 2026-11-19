@@ -23,7 +23,7 @@ export const AttendeesPanel = ({ eventId, userId, slug }: { eventId: number; use
     retry: false,
   });
   return <section id="event-attendees" aria-labelledby="event-attendees-title"
-    className="scroll-mt-6 rounded-xl border border-[#D0D5DD] bg-white p-5">
+    className="scroll-mt-6 rounded-xl border border-line bg-white p-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 id="event-attendees-title" className="flex items-center gap-2 font-semibold">
         <Users size={18} aria-hidden="true" />{t("reports.attendeesTitle")}
@@ -34,20 +34,20 @@ export const AttendeesPanel = ({ eventId, userId, slug }: { eventId: number; use
           getFile={() => eventReportsApi.attendeesCsv(eventId)} />
       </div>
     </div>
-    <p className="mt-2 text-sm leading-6 text-[#667085]">{t("reports.attendeesDescription")}</p>
+    <p className="mt-2 text-sm leading-6 text-muted">{t("reports.attendeesDescription")}</p>
     <div className="mt-4" aria-busy={attendees.isFetching}>
       {attendees.isPending ? <ReportLoading /> : attendees.isError
         ? <ReportError error={attendees.error} retry={() => void attendees.refetch()} fetching={attendees.isFetching} />
-        : attendees.data.length === 0 ? <p role="status" className="py-4 text-sm text-[#667085]">{t("reports.attendeesEmpty")}</p>
+        : attendees.data.length === 0 ? <p role="status" className="py-4 text-sm text-muted">{t("reports.attendeesEmpty")}</p>
           : <div role="region" aria-labelledby="event-attendees-title" tabIndex={0}
-            className="overflow-x-auto rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5C35]">
+            className="overflow-x-auto rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <table className="w-full min-w-[850px] text-left text-sm">
-              <thead className="border-b border-[#D0D5DD] text-xs text-[#667085]">
+              <thead className="border-b border-line text-xs text-muted">
                 <tr>{(["reports.attendee", "reports.ticket", "reports.ticketType", "reports.status", "reports.order", "reports.email", "reports.phone"] as const).map(
                   (key) => <th scope="col" key={key} className="px-3 py-3 first:pl-0">{t(key)}</th>,
                 )}</tr>
               </thead>
-              <tbody className="divide-y divide-[#EAECF0]">
+              <tbody className="divide-y divide-line-soft">
                 {attendees.data.slice(0, REPORT_PAGE_SIZE).map((row) => <tr key={row.public_code}>
                   <th scope="row" className="max-w-56 break-words py-3 pr-3 font-semibold">{row.full_name}</th>
                   <td className="px-3 py-3 font-mono text-xs">{row.public_code}</td>

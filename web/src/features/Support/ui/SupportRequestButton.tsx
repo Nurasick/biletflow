@@ -77,12 +77,12 @@ const SupportRequestDialog = ({ target, eventTitle, onClose }: {
             <label htmlFor={`${id}-category`} className="mb-1.5 block text-sm font-semibold">{t("support.categoryLabel")}</label>
             <select id={`${id}-category`} value={category} required disabled={create.isPending}
               onChange={(event) => setCategory(event.target.value as CaseCategory | "")}
-              className="w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm">
+              className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm">
               <option value="" disabled>{t("support.chooseCategory")}</option>
               {caseCategories.map((value) => <option key={value} value={value}>{t(`support.category.${value}`)}</option>)}
             </select>
           </div>
-          {user ? <p className="break-words text-sm text-[#667085]">{t("support.replyEmail", { email: user.email })}</p> : <div>
+          {user ? <p className="break-words text-sm text-muted">{t("support.replyEmail", { email: user.email })}</p> : <div>
             <label htmlFor={`${id}-email`} className="mb-1.5 block text-sm font-semibold">{t("common.email")}</label>
             <Input id={`${id}-email`} type="email" autoComplete="email" required maxLength={320} disabled={create.isPending}
               value={email} onChange={(event) => setEmail(event.target.value)} />

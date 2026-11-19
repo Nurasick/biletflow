@@ -1,5 +1,5 @@
-import { Alert, Button, ConfigProvider, Tag } from "antd";
-import { ArrowLeft, LoaderCircle, RefreshCw } from "lucide-react";
+import { Alert, Button, Tag } from "antd";
+import { ArrowLeft, CalendarDays, ChartColumn, CreditCard, Flag, LayoutDashboard, LoaderCircle, RefreshCw, ScanLine, Settings, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink } from "react-router-dom";
@@ -7,46 +7,53 @@ import { Link, NavLink } from "react-router-dom";
 import { ApiError } from "../../../shared/api/auth";
 
 const adminLinks = [
-  { to: "/admin", label: "adminOverview.title", end: true },
-  { to: "/admin/events", label: "ops.adminEvents", end: false },
-  { to: "/admin/users", label: "adminUsers.title", end: true },
-  { to: "/admin/reports", label: "eventReport.queue", end: true },
-  { to: "/admin/transactions", label: "adminFinance.title", end: true },
-  { to: "/admin/sales", label: "adminSales.title", end: true },
-  { to: "/admin/settings", label: "adminSettings.title", end: true },
+  { to: "/admin", label: "adminOverview.title", end: true, Icon: LayoutDashboard },
+  { to: "/admin/events", label: "ops.adminEvents", end: false, Icon: CalendarDays },
+  { to: "/admin/users", label: "adminUsers.title", end: true, Icon: Users },
+  { to: "/admin/reports", label: "eventReport.queue", end: true, Icon: Flag },
+  { to: "/admin/transactions", label: "adminFinance.title", end: true, Icon: CreditCard },
+  { to: "/admin/sales", label: "adminSales.title", end: true, Icon: ChartColumn },
+  { to: "/admin/settings", label: "adminSettings.title", end: true, Icon: Settings },
 ] as const;
 
 export const OperationsWorkspace = ({ children, admin = false, detail = false }: { children: ReactNode; admin?: boolean; detail?: boolean }) => {
   const { t } = useTranslation();
-  return <ConfigProvider theme={{ token: {
-    colorPrimary: "#FF5C35", colorText: "#101828", colorBorder: "#D0D5DD",
-    borderRadius: 9, controlHeight: 44, fontSize: 14,
-  }, components: { Button: { primaryColor: "#101828" } } }}>
-    <main className="min-h-[60vh] bg-[#F5F5F0] px-4 py-8 text-[#101828] sm:px-7 sm:py-10">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <Link to={detail ? admin ? "/admin/events" : "/staff/events" : "/account"}
-            className="inline-flex items-center gap-2 rounded text-sm text-[#475467] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF5C35]">
-            <ArrowLeft size={16} aria-hidden="true" />{t(detail ? "ops.back" : "ops.account")}
-          </Link>
-          {admin ? <nav aria-label={t("ops.adminWorkspace")} className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold">
-            {adminLinks.map(({ to, label, end }) => <NavLink key={to} to={to} end={end}
-              className={({ isActive }) => `rounded px-1 py-1 focus-visible:outline-2 focus-visible:outline-offset-2 ${
-                isActive ? "text-[#A93216] underline underline-offset-4" : "text-[#475467] hover:text-[#101828]"
-              }`}>{t(label)}</NavLink>)}
-          </nav> : <span className="rounded-full border border-[#D0D5DD] bg-white px-3 py-1.5 text-xs font-semibold text-[#475467]">
-            {t("ops.staffWorkspace")}
-          </span>}
+  const backLink = (
+    <Link to={detail ? admin ? "/admin/events" : "/staff/events" : "/account"}
+      className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-muted hover:text-primary">
+      <ArrowLeft size={16} aria-hidden="true" />{t(detail ? "ops.back" : "ops.account")}
+    </Link>
+  );
+
+  return (
+    <div className={`site-container grid min-h-[60vh] items-start gap-6 py-6 sm:py-9 ${admin ? "lg:grid-cols-[225px_minmax(0,1fr)] lg:gap-9" : ""}`}>
+      {admin ? (
+        <aside className="panel p-3 lg:sticky lg:top-6">
+          {backLink}
+          <p className="mx-2 mt-2 border-t border-line-soft pt-3 text-xs font-bold text-muted">{t("ops.adminWorkspace")}</p>
+          <nav aria-label={t("ops.adminWorkspace")} className="mt-2 flex flex-wrap gap-1 lg:flex-col">
+            {adminLinks.map(({ to, label, end, Icon }) => <NavLink key={to} to={to} end={end}
+              className={({ isActive }) => `flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-sm font-semibold ${
+                isActive ? "bg-accent-wash text-primary" : "text-muted-strong hover:bg-soft hover:text-ink"
+              }`}><Icon size={18} className="shrink-0" aria-hidden="true" />{t(label)}</NavLink>)}
+          </nav>
+        </aside>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {backLink}
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-wash px-3 py-2 text-xs font-bold text-primary">
+            <ScanLine size={16} aria-hidden="true" />{t("ops.staffWorkspace")}
+          </span>
         </div>
-        {children}
-      </div>
-    </main>
-  </ConfigProvider>;
+      )}
+      <main className="min-w-0">{children}</main>
+    </div>
+  );
 };
 
 export const OperationsLoading = () => {
   const { t } = useTranslation();
-  return <div role="status" className="flex items-center gap-2 py-10 text-sm text-[#667085]">
+  return <div role="status" className="flex items-center gap-2 py-10 text-sm text-muted">
     <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("ops.loading")}
   </div>;
 };
@@ -89,9 +96,9 @@ export const OperationsPagination = ({ page, next, busy, onPage }: { page: numbe
   const { t } = useTranslation();
   return <nav aria-label={t("ops.page", { page: page + 1 })} className="mt-5 flex flex-wrap items-center justify-between gap-3">
     <Button disabled={page === 0 || busy} onClick={() => onPage(page - 1)}>{t("ops.previous")}</Button>
-    <span className="text-sm text-[#667085]">{t("ops.page", { page: page + 1 })}</span>
+    <span className="text-sm text-muted">{t("ops.page", { page: page + 1 })}</span>
     <Button disabled={!next || busy} onClick={() => onPage(page + 1)}>{t("ops.next")}</Button>
   </nav>;
 };
 
-export const operationsCard = "rounded-2xl border border-[#D0D5DD] bg-white p-5 sm:p-6";
+export const operationsCard = "panel p-5 sm:p-6";

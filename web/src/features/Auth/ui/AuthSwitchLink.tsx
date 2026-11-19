@@ -9,7 +9,7 @@ type AuthSwitchLinkProps = {
 export const AuthSwitchLink = ({ prompt, to, label }: AuthSwitchLinkProps) => (
   <span className="flex items-center gap-2">
     {prompt}
-    <Link to={to} className="font-semibold text-[#FF5C35] hover:text-[#D9431F]">
+    <Link to={to} className="font-semibold text-primary hover:text-primary-hover">
       {label}
     </Link>
   </span>

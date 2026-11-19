@@ -1,36 +1,19 @@
-import { Text, View, StyleSheet, TextInput, ActivityIndicator } from "react-native";
-import {Image} from "expo-image";
+import { useRouter } from 'expo-router';
 
+import { Wordmark } from '@/components/design';
+import { Action, Info, Panel, WorkspaceScreen } from '@/components/workspace';
+import { useI18n } from '@/i18n';
 
 export default function About() {
+  const router = useRouter();
+  const { t } = useI18n();
   return (
-    <View style={styles.container}>
-      <Text style={styles.helloworld}>Hello world!</Text>
-      <Image 
-        source={{
-          uri:"https://avatars.fastly.steamstatic.com/ce0256658e8bed88194d0ecf4e8f11c6ea1f9269_full.jpg",
-          }}
-          style={styles.img}
-      />
-      <TextInput placeholder="Enter text here..." />
-      <ActivityIndicator size="large" color="#0000ff" />
-    </View>
+    <WorkspaceScreen title={t('About BiletFlow')}>
+      <Panel>
+        <Wordmark />
+        <Info>{t('Discover events, get tickets, and keep your orders together.')}</Info>
+      </Panel>
+      <Action label={t('Browse events')} onPress={() => router.dismissTo('/')} />
+    </WorkspaceScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  img: {
-    width : 200,
-    height: 300
-  },
-  helloworld: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "red"
-  },
-});

@@ -26,12 +26,12 @@ export const StaffPanel = ({ eventId }: { eventId: number }) => {
   const error = assign.error ?? remove.error;
 
   return (
-    <section aria-labelledby="staff" className="rounded-xl border border-[#D0D5DD] bg-white p-5">
+    <section aria-labelledby="staff" className="rounded-xl border border-line bg-white p-5">
       <h2 id="staff" className="flex items-center gap-2 font-semibold"><ScanLine size={18} aria-hidden="true" />{t("staff.title")}</h2>
-      <p className="mt-1 text-xs text-[#667085]">{t("staff.description")}</p>
-      <ul className="mt-3 divide-y divide-[#EAECF0]">
+      <p className="mt-1 text-xs text-muted">{t("staff.description")}</p>
+      <ul className="mt-3 divide-y divide-line-soft">
         {staff.data?.map((member) => <li key={member.user_id} className="flex items-center justify-between gap-3 py-2 text-sm">
-          <span className="min-w-0 break-words">{member.first_name} {member.last_name} <span className="text-[#667085]">{member.email}</span></span>
+          <span className="min-w-0 break-words">{member.first_name} {member.last_name} <span className="text-muted">{member.email}</span></span>
           <Button size="small" loading={remove.isPending && remove.variables === member.user_id}
             onClick={() => remove.mutate(member.user_id)}>{t("staff.remove")}</Button>
         </li>)}

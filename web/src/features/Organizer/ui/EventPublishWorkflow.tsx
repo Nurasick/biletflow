@@ -38,7 +38,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
     transition.mutate(action, { onSuccess: () => setConfirmation(null) });
   };
 
-  if (preview.isPending) return <div role="status" className="flex items-center justify-center gap-2 py-20 text-sm text-[#667085]">
+  if (preview.isPending) return <div role="status" className="flex items-center justify-center gap-2 py-20 text-sm text-muted">
     <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("common.loading")}
   </div>;
 
@@ -60,9 +60,9 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
   return <>
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
-        <p className="font-mono text-[10px] font-semibold tracking-[0.14em] text-[#667085]">{t("organizer.workspace")}</p>
+        <p className="font-mono text-[10px] font-semibold tracking-[0.14em] text-muted">{t("organizer.workspace")}</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">{t("eventWorkflow.preview")}</h1>
+          <h1 className="page-title">{t("eventWorkflow.preview")}</h1>
           <span aria-live="polite"><EventStatusBadge status={event.status} /></span>
         </div>
       </div>
@@ -76,11 +76,11 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
       </div>
     </div>
     {(snapshot.event.status === "draft" || snapshot.event.status === "published") && <Link to={`/organizer/events/${eventId}/edit`}
-      className="mt-4 inline-block text-sm font-semibold text-[#A93216]">
+      className="mt-4 inline-block text-sm font-semibold text-primary-hover">
       {t("eventWorkflow.editDetails")}
     </Link>}
-    <p className="mt-3 text-sm leading-6 text-[#667085]">{t("eventWorkflow.previewDescription")}</p>
-    {!preview.isError && <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-[#A93216]">
+    <p className="mt-3 text-sm leading-6 text-muted">{t("eventWorkflow.previewDescription")}</p>
+    {!preview.isError && <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary-hover">
       <a href="#event-ticket-types" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("ticketTypes.title")}</a>
       <Link to={`/organizer/events/${eventId}/analytics`} className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">
         {t("analytics.title")}
@@ -115,16 +115,16 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
         </>}
         <StaffPanel eventId={eventId} />
       </div>
-      <section aria-labelledby="event-publishing" className="rounded-xl border border-[#D0D5DD] bg-white p-5">
+      <section aria-labelledby="event-publishing" className="rounded-xl border border-line bg-white p-5">
         <h2 id="event-publishing" className="font-semibold">{t("eventWorkflow.publishing")}</h2>
         {event.status === "draft" && <>
-          <p id="publish-requirements" className="mt-2 text-sm leading-6 text-[#667085]">
+          <p id="publish-requirements" className="mt-2 text-sm leading-6 text-muted">
             {t(blocked ? "eventWorkflow.blocked" : "eventWorkflow.ready")}
           </p>
           <ul className="my-5 space-y-4" aria-label={t("eventWorkflow.requirements")}>
             {publish_requirements.map(({ code, met }) => <li key={code} className="flex gap-2 text-xs leading-5">
               {met ? <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-green-700" aria-hidden="true" />
-                : <CircleAlert size={16} className="mt-0.5 shrink-0 text-[#A93216]" aria-hidden="true" />}
+                : <CircleAlert size={16} className="mt-0.5 shrink-0 text-primary-hover" aria-hidden="true" />}
               <span><span className="font-semibold">{t(met ? "eventWorkflow.met" : "eventWorkflow.unmet")}: </span>
                 {t(`eventWorkflow.requirement.${code}`)}</span>
             </li>)}
@@ -137,7 +137,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
           onClick={() => { transition.reset(); setConfirmation("unpublish"); }}>{t("eventWorkflow.unpublish")}</Button>}
         {allowed_actions.includes("cancel") && <Button block danger className="mt-3" disabled={!canAct}
           onClick={() => { transition.reset(); setConfirmation("cancel"); }}>{t("eventWorkflow.cancel")}</Button>}
-        <p className="mt-4 text-xs leading-5 text-[#667085]">
+        <p className="mt-4 text-xs leading-5 text-muted">
           {t("eventWorkflow.updated", { date: new Intl.DateTimeFormat(locale, {
             dateStyle: "medium", timeStyle: "short", timeZone: event.timezone,
           }).format(new Date(preview.dataUpdatedAt)) })}

@@ -113,8 +113,8 @@ export const CameraScanner = ({ disabled, onQr }: { disabled: boolean; onQr: (qr
       {t(active ? "ops.cameraStop" : "ops.cameraStart")}
     </Button>
     <video ref={video} autoPlay playsInline muted aria-label={t("ops.cameraPreview")}
-      className={`${active ? "block" : "hidden"} max-h-72 w-full rounded-xl bg-[#101828] object-contain`} />
-    {active && <p role="status" className="text-sm text-[#667085]">{t("ops.cameraActive")}</p>}
+      className={`${active ? "block" : "hidden"} max-h-72 w-full rounded-xl bg-ink object-contain`} />
+    {active && <p role="status" className="text-sm text-muted">{t("ops.cameraActive")}</p>}
     {error && <Alert type="info" showIcon title={t(error)} />}
   </div>;
 };

@@ -5,7 +5,7 @@ import { useLocale } from "../../../i18n/useLocale";
 import type { EventAnalytics } from "../../../shared/api/eventReports";
 import { formatMinor } from "../../../shared/lib/formatPrice";
 
-const card = "min-w-0 rounded-xl border border-[#D0D5DD] bg-white p-4 sm:p-5";
+const card = "min-w-0 rounded-xl border border-line bg-white p-4 sm:p-5";
 
 export const EventAnalyticsResults = ({ report, filteredByType }: { report: EventAnalytics; filteredByType: boolean }) => {
   const { t } = useTranslation();
@@ -27,8 +27,8 @@ export const EventAnalyticsResults = ({ report, filteredByType }: { report: Even
         [t("campaigns.refunds"), money(report.refunds_minor)],
         [t("campaigns.net"), money(report.net_minor)],
       ]} />
-      {report.is_simulated && <p className="mt-3 text-xs text-[#667085]">{t("analytics.simulated")}</p>}
-      {filteredByType && report.refunds_minor > 0 && <p className="mt-2 text-xs text-[#667085]">{t("analytics.refundScope")}</p>}
+      {report.is_simulated && <p className="mt-3 text-xs text-muted">{t("analytics.simulated")}</p>}
+      {filteredByType && report.refunds_minor > 0 && <p className="mt-2 text-xs text-muted">{t("analytics.refundScope")}</p>}
     </section>
     <section className={card} aria-labelledby="analytics-daily-sales">
       <h2 id="analytics-daily-sales" className="font-semibold">{t("analytics.dailySales")}</h2>
@@ -38,8 +38,8 @@ export const EventAnalyticsResults = ({ report, filteredByType }: { report: Even
           title: <time dateTime={point.date}>{date.format(new Date(`${point.date}T00:00:00Z`))}</time>,
           cells: [
             <div key="volume" className="flex min-w-24 items-center gap-3">
-              <div aria-hidden="true" className="h-1.5 min-w-12 flex-1 rounded-full bg-[#F2F4F7]">
-                <div className="h-full rounded-full bg-[#D9431F]" style={{ width: `${(point.tickets / peak) * 100}%` }} />
+              <div aria-hidden="true" className="h-1.5 min-w-12 flex-1 rounded-full bg-soft">
+                <div className="h-full rounded-full bg-primary-hover" style={{ width: `${(point.tickets / peak) * 100}%` }} />
               </div>
               <span className="tabular-nums">{count(point.tickets)}</span>
             </div>,
@@ -81,13 +81,13 @@ export const EventAnalyticsResults = ({ report, filteredByType }: { report: Even
     </section>
     <section className={card} aria-labelledby="analytics-campaigns">
       <h2 id="analytics-campaigns" className="font-semibold">{t("analytics.campaignResults")}</h2>
-      {report.campaigns.length > 0 && <p className="mt-2 text-xs text-[#667085]">{t("analytics.campaignScope")}</p>}
+      {report.campaigns.length > 0 && <p className="mt-2 text-xs text-muted">{t("analytics.campaignScope")}</p>}
       <AnalyticsTable label={t("analytics.campaignResults")} empty={t("campaigns.empty")}
         headers={[t("campaigns.name"), t("campaigns.redemptions"), t("campaigns.orders"), t("campaigns.tickets"),
           t("campaigns.gross"), t("promo.discount"), t("campaigns.refunds"), t("campaigns.net")]}
         rows={report.campaigns.map((campaign) => ({
           key: campaign.id,
-          title: <>{campaign.name}<code className="block break-all text-xs font-normal text-[#667085]">{campaign.code}</code></>,
+          title: <>{campaign.name}<code className="block break-all text-xs font-normal text-muted">{campaign.code}</code></>,
           cells: [count(campaign.redemptions), count(campaign.orders), count(campaign.tickets_sold),
             money(campaign.gross_minor), money(campaign.discount_minor), money(campaign.refunds_minor), money(campaign.net_minor)],
         }))} />
@@ -97,8 +97,8 @@ export const EventAnalyticsResults = ({ report, filteredByType }: { report: Even
 
 const Metrics = ({ entries, wide = false }: { entries: [string, string][]; wide?: boolean }) => (
   <dl className={`mt-3 grid grid-cols-2 gap-3 ${wide ? "sm:grid-cols-4" : ""}`}>
-    {entries.map(([label, value]) => <div key={label} className="min-w-0 rounded-lg bg-[#F5F5F0] p-3">
-      <dt className="text-xs leading-5 text-[#475467]">{label}</dt>
+    {entries.map(([label, value]) => <div key={label} className="min-w-0 rounded-lg bg-paper p-3">
+      <dt className="text-xs leading-5 text-muted-strong">{label}</dt>
       <dd className="mt-1 break-words text-base font-semibold tabular-nums">{value}</dd>
     </div>)}
   </dl>
@@ -106,14 +106,14 @@ const Metrics = ({ entries, wide = false }: { entries: [string, string][]; wide?
 
 const AnalyticsTable = ({ label, headers, rows, empty }: {
   label: string; headers: string[]; rows: { key: number | string; title: ReactNode; cells: ReactNode[] }[]; empty: string;
-}) => rows.length === 0 ? <p className="mt-3 text-sm text-[#667085]">{empty}</p> : (
+}) => rows.length === 0 ? <p className="mt-3 text-sm text-muted">{empty}</p> : (
   <div role="region" aria-label={label} tabIndex={0}
-    className="mt-3 max-h-80 overflow-auto rounded focus-visible:outline-2 focus-visible:outline-[#FF5C35]">
+    className="mt-3 max-h-80 overflow-auto rounded focus-visible:outline-2 focus-visible:outline-primary">
     <table aria-label={label} className="w-full min-w-max text-left text-sm">
-      <thead className="sticky top-0 border-b border-[#D0D5DD] bg-white text-xs text-[#475467]">
+      <thead className="sticky top-0 border-b border-line bg-white text-xs text-muted-strong">
         <tr>{headers.map((header) => <th key={header} scope="col" className="px-3 py-2 first:pl-1">{header}</th>)}</tr>
       </thead>
-      <tbody className="divide-y divide-[#EAECF0]">
+      <tbody className="divide-y divide-line-soft">
         {rows.map(({ key, title, cells }) => <tr key={key}>
           <th scope="row" className="max-w-52 break-words py-2 pl-1 pr-3 font-semibold">{title}</th>
           {cells.map((cell, index) => <td key={headers[index + 1]} className="whitespace-nowrap px-3 py-2 tabular-nums">{cell}</td>)}

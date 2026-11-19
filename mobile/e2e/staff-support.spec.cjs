@@ -150,10 +150,10 @@ test('sign-in mounts authenticated navigation and opens the staff workspace', as
   await mockApi(page, { remembered: false });
   await page.goto('/login');
   await page.getByPlaceholder('you@example.com').fill('qa@example.test');
-  await page.getByPlaceholder('Password', { exact: true }).fill(`fixture-${Date.now()}`);
+  await page.getByLabel('Password', { exact: true }).fill(`fixture-${Date.now()}`);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByText('Find your next event', { exact: true })).toBeVisible();
-  await page.getByText('Event staff · Support · Language', { exact: true }).click();
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await page.getByRole('button', { name: 'Open assigned events', exact: true }).click();
   await expect(page.getByText('Assigned QA Event', { exact: true })).toBeVisible();
 });

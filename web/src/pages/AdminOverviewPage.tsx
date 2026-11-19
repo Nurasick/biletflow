@@ -52,7 +52,7 @@ export const AdminOverviewPage = () => {
 
   return <OperationsWorkspace admin>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-3xl font-bold tracking-tight">{t("adminOverview.title")}</h1>
+      <h1 className="page-title">{t("adminOverview.title")}</h1>
       <RefreshButton refresh={() => void overview.refetch()} fetching={overview.isFetching} />
     </div>
     {overview.isPending ? <OperationsLoading /> : overview.isError
@@ -61,16 +61,16 @@ export const AdminOverviewPage = () => {
         {groups.map(({ title, metrics }) => <section key={title} className={operationsCard} aria-labelledby={title}>
           <h2 id={title} className="text-lg font-bold">{t(title)}</h2>
           {title === "adminOverview.sales" && overview.data.is_simulated && (
-            <p className="mt-1 text-sm text-[#667085]">{t("analytics.simulated")}</p>
+            <p className="mt-1 text-sm text-muted">{t("analytics.simulated")}</p>
           )}
           <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {metrics.map((metric) => {
               const { field, label } = metric;
               const value = overview.data[field];
-              return <div key={field} className="rounded-lg bg-[#F5F5F0] px-4 py-3">
-                <dt className="text-sm text-[#475467]">
+              return <div key={field} className="rounded-lg bg-paper px-4 py-3">
+                <dt className="text-sm text-muted-strong">
                   {"to" in metric
-                    ? <Link to={metric.to} className="font-semibold text-[#A93216] underline underline-offset-2">{t(label)}</Link>
+                    ? <Link to={metric.to} className="font-semibold text-primary-hover underline underline-offset-2">{t(label)}</Link>
                     : t(label)}
                 </dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">

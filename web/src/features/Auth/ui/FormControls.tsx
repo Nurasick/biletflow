@@ -7,7 +7,7 @@ export const FieldError = ({ id, error }: { id: string; error?: FormFieldError }
   const { t } = useTranslation();
   const message = validationMessage(t, error);
   return message ? (
-    <p id={id} className="mt-1.5 text-[11px] text-red-600">
+    <p id={id} className="mt-1.5 text-sm text-red-700">
       {message}
     </p>
   ) : null;

@@ -1,6 +1,6 @@
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { Alert, Button, Input } from "antd";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, Ticket } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -113,10 +113,13 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
   const saleTime = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: event.timezone });
 
   return (
-    <aside aria-labelledby="buy" className="w-full shrink-0 self-start rounded-2xl border border-[#D0D5DD] bg-white p-5 lg:sticky lg:top-6 lg:w-[360px]">
-      <h2 id="buy" className="text-[15px] font-semibold">{t("booking.selectTickets")}</h2>
-      {loading && <p className="mt-4 text-sm text-[#667085]">{t("common.loading")}</p>}
-      {!loading && ticketTypes.length === 0 && <p className="mt-4 text-sm text-[#667085]">{t("eventWorkflow.noTickets")}</p>}
+    <aside id="ticket-booking" aria-labelledby="buy" className="panel scroll-mt-6 p-5 sm:p-6 lg:sticky lg:top-6">
+      <div className="flex items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-wash text-primary"><Ticket size={20} aria-hidden="true" /></span>
+        <h2 id="buy" className="text-xl font-extrabold tracking-[-0.035em]">{t("booking.selectTickets")}</h2>
+      </div>
+      {loading && <p className="mt-4 text-sm text-muted">{t("common.loading")}</p>}
+      {!loading && ticketTypes.length === 0 && <p className="mt-4 text-sm text-muted">{t("eventWorkflow.noTickets")}</p>}
       <ul className="mt-4 space-y-3">
         {tickets.map((type) => {
           const count = quantities[type.id] ?? 0;
@@ -125,28 +128,28 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
           const saleMessage = windowStatus === "upcoming" ? t("ticketTypes.opensAt", { date: saleTime.format(type.saleWindow.opens) })
             : windowStatus === "closed" ? t("checkout.salesClosed")
               : windowStatus === "unavailable" ? t("checkout.salesUnavailable") : null;
-          return <li key={type.id} className="rounded-xl border border-[#EAECF0] p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="break-words text-sm font-semibold">{type.name}</p>
-                {type.description && <p className="my-1 whitespace-pre-wrap break-words text-xs text-[#475467]">{type.description}</p>}
-                <p className="text-xs text-[#667085]">
+          return <li key={type.id} className="rounded-xl border border-line-soft bg-paper p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold wrap-anywhere">{type.name}</p>
+                {type.description && <p className="my-1 whitespace-pre-wrap break-words text-xs text-muted-strong">{type.description}</p>}
+                <p className="text-xs text-muted">
                   {type.price_minor === 0 ? t("eventWorkflow.free") : formatMinor(type.price_minor, locale)}
                   {onSale && windowStatus === "open" && <>
                     {" · "}{type.available > 0 ? t("eventWorkflow.available", { count: type.available }) : t("booking.soldOut")}
                   </>}
                 </p>
-                {onSale && saleMessage && <p className="mt-1 text-xs text-[#A93216]">{saleMessage}</p>}
-                {type.price_minor > 0 && !event.paid_sales_active && <p className="mt-1 text-xs text-[#A93216]">{t("checkout.paidInactive")}</p>}
+                {onSale && saleMessage && <p className="mt-1 text-xs text-primary-hover">{saleMessage}</p>}
+                {type.price_minor > 0 && !event.paid_sales_active && <p className="mt-1 text-xs text-primary-hover">{t("checkout.paidInactive")}</p>}
               </div>
               <div className="flex items-center gap-2">
                 <button type="button" aria-label={t("booking.removeTicket", { name: type.name })} disabled={!count || buy.isPending}
-                  onClick={() => change(type, -1)} className="grid h-8 w-8 place-items-center rounded-lg border border-[#D0D5DD] disabled:opacity-40">
+                  onClick={() => change(type, -1)} className="grid size-10 place-items-center rounded-lg border border-line bg-white text-primary hover:border-primary disabled:opacity-40">
                   <Minus size={14} aria-hidden="true" /></button>
                 <span aria-live="polite" className="w-5 text-center text-sm font-semibold">{count}</span>
                 <button type="button" aria-label={t("booking.addTicket", { name: type.name })}
                   disabled={buy.isPending || !open || count >= limitFor(type) || total >= MAX_TICKETS_PER_ORDER}
-                  onClick={() => change(type, 1)} className="grid h-8 w-8 place-items-center rounded-lg border border-[#D0D5DD] disabled:opacity-40">
+                  onClick={() => change(type, 1)} className="grid size-10 place-items-center rounded-lg border border-line bg-white text-primary hover:border-primary disabled:opacity-40">
                   <Plus size={14} aria-hidden="true" /></button>
               </div>
             </div>
@@ -156,11 +159,15 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
           </li>;
         })}
       </ul>
-      {total > 0 && <div className="mt-4 space-y-2">
-        <Input aria-label={t("checkout.contactName")} placeholder={t("checkout.contactName")} maxLength={200} disabled={buy.isPending}
-          value={contactName} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
-        <Input type="email" aria-label={t("common.email")} placeholder={t("common.email")} disabled={buy.isPending}
-          value={contactEmail} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+      {total > 0 && <div className="mt-4 space-y-3">
+        <label className="block text-sm font-semibold">{t("checkout.contactName")}
+          <Input className="mt-1.5" autoComplete="name" maxLength={200} disabled={buy.isPending}
+            value={contactName} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
+        </label>
+        <label className="block text-sm font-semibold">{t("common.email")}
+          <Input className="mt-1.5" type="email" autoComplete="email" disabled={buy.isPending}
+            value={contactEmail} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+        </label>
       </div>}
       {onSale && (promo || ticketTypes.some((type) => type.price_minor > 0)) && <div className="mt-4 space-y-2">
         <form onSubmit={(e) => {
@@ -182,7 +189,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
           </div>
         </form>
         {promo && <div className="flex flex-wrap items-center justify-between gap-2">
-          <div aria-live="polite" className="min-w-0 break-words text-xs text-[#475467]">
+          <div aria-live="polite" className="min-w-0 break-words text-xs text-muted-strong">
             {quote.isFetching ? t("promo.checking") : quoted && t("promo.applied", { code: quoted.code })}
           </div>
           <Button size="small" disabled={buy.isPending} onClick={() => {
@@ -197,9 +204,9 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
           action={!(quote.error instanceof ApiError && quote.error.status === 409) &&
             <Button size="small" onClick={() => void quote.refetch()}>{t("common.retry")}</Button>} />}
       </div>}
-      <dl className="mt-4 space-y-2 border-t border-[#EAECF0] pt-4 text-sm">
+      <dl className="mt-4 space-y-2 border-t border-line-soft pt-4 text-sm">
         {quoted && quoted.discount_minor > 0 && <>
-          <div className="flex justify-between gap-3 text-[#667085]">
+          <div className="flex justify-between gap-3 text-muted">
             <dt>{t("booking.subtotal")}</dt><dd>{formatMinor(quoted.subtotal_minor, locale)}</dd>
           </div>
           <div className="flex justify-between gap-3 text-[#027A48]">
@@ -210,8 +217,8 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
           <dt>{t("checkout.total")}</dt><dd className="text-lg font-bold">{formatMinor(totalMinor, locale)}</dd>
         </div>
       </dl>
-      {total >= MAX_TICKETS_PER_ORDER && <p className="mt-2 text-xs text-[#667085]">{t("booking.orderLimit", { limit: MAX_TICKETS_PER_ORDER })}</p>}
-      {selectionUnavailable && <p role="alert" className="mt-2 text-xs text-[#A93216]">{t("checkout.selectionUnavailable")}</p>}
+      {total >= MAX_TICKETS_PER_ORDER && <p className="mt-2 text-xs text-muted">{t("booking.orderLimit", { limit: MAX_TICKETS_PER_ORDER })}</p>}
+      {selectionUnavailable && <p role="alert" className="mt-2 text-xs text-primary-hover">{t("checkout.selectionUnavailable")}</p>}
       <Button type="primary" block className="mt-4" disabled={!canSubmit} loading={buy.isPending} onClick={() => {
         if (!canSubmit || submitting.current) return;
         const currentTime = Date.now();

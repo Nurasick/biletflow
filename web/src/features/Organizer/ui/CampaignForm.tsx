@@ -136,7 +136,7 @@ export const CampaignForm = ({ eventId, campaign, timeZone, ticketTypes, loading
             precision={discountType === "percent" ? 0 : 2} step={discountType === "percent" ? 1 : 0.01} onChange={setValue} />
         </label>
         <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
-          <p className="text-xs text-[#667085] sm:col-span-2">{t("campaigns.timeZone", { zone: timeZone })}</p>
+          <p className="text-xs text-muted sm:col-span-2">{t("campaigns.timeZone", { zone: timeZone })}</p>
           <label className={field}>{t("organizerEvent.startsAt")}
             <Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
           </label>

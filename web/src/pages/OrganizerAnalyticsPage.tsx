@@ -24,16 +24,16 @@ export const OrganizerAnalyticsPage = () => {
 
   return <OrganizerWorkspace>
     <Link to={validId ? `/organizer/events/${eventId}/preview` : "/organizer/events"}
-      className="mb-5 inline-flex items-center gap-2 text-sm text-[#667085] hover:underline">
+      className="mb-5 inline-flex items-center gap-2 text-sm text-muted hover:underline">
       <ArrowLeft size={16} aria-hidden="true" />{t(validId ? "eventWorkflow.preview" : "eventWorkflow.myEvents")}
     </Link>
-    <h1 className="text-3xl font-bold tracking-tight">{t("analytics.title")}</h1>
+    <h1 className="page-title">{t("analytics.title")}</h1>
     {!validId ? <Alert className="mt-5" role="alert" type="error" showIcon title={t("eventWorkflow.notFound")} />
       : event.isPending ? <ReportLoading />
         : event.isError ? <div className="mt-5"><ReportError error={event.error}
           retry={() => void event.refetch()} fetching={event.isFetching} /></div>
           : <>
-            <p className="mt-2 break-words text-sm text-[#667085]">{event.data.title}</p>
+            <p className="mt-2 break-words text-sm text-muted">{event.data.title}</p>
             <EventAnalyticsPanel key={`${userId}:${eventId}:${event.data.timezone}`}
               eventId={eventId} userId={userId} timeZone={event.data.timezone} />
           </>}

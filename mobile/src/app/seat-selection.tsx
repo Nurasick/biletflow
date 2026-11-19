@@ -1,25 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useColorScheme } from 'nativewind';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StatusBar, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 
 import { ticketLimit } from '@/api/public';
+import { ScreenFrame } from '@/components/screen-frame';
 import { ThemedText } from '@/components/themed-text';
+import { ScreenHeading } from '@/components/workspace';
 import { useI18n } from '@/i18n';
 import { EVENT, ROWS, SEAT_PRICE, SEATS_PER_ROW, SOLD_SEATS, type SeatType } from '@/constants/seating';
+import { MaxContentWidth, Stage, type AppColors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { eventsApi, type EventDetail, type PublicTicketType } from '@/shared/api/events';
-
-const PALETTE = {
-  dark: {
-    background: '#101828', surface: '#182230', raised: '#1D2939', border: '#344054', text: '#F5F5F0', muted: '#98A2B3', accent: '#FF5C35',
-    standard: '#FF5C35', premium: '#65C9AE', premiumBg: '#123D3A', vip: '#E7B547', vipBg: '#3A301D', sold: '#475467',
-  },
-  light: {
-    background: '#F5F5F0', surface: '#FFFFFF', raised: '#F9FAF7', border: '#D0D5DD', text: '#101828', muted: '#667085', accent: '#D9431F',
-    standard: '#D9431F', premium: '#087E6F', premiumBg: '#E5F5F1', vip: '#9A6700', vipBg: '#FBF1D1', sold: '#98A2B3',
-  },
-};
 
 type TicketMap = Record<SeatType, PublicTicketType | null>;
 
@@ -50,10 +41,8 @@ export default function SeatSelectionScreen() {
   const { slug: rawSlug, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug?: string | string[]; campaignToken?: string|string[] }>();
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
   const campaignToken = Array.isArray(rawCampaignToken) ? rawCampaignToken[0] : rawCampaignToken;
-  const { colorScheme } = useColorScheme();
   const { width } = useWindowDimensions();
-  const isDark = colorScheme === 'dark';
-  const colors = isDark ? PALETTE.dark : PALETTE.light;
+  const colors = useTheme();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [ticketTypes, setTicketTypes] = useState<PublicTicketType[]>([]);
   const [selectedSeats, setSelectedSeats] = useState<string[]>(slug ? [] : ['3-6', '3-7']);
@@ -82,7 +71,8 @@ export default function SeatSelectionScreen() {
   }, [slug]);
 
   const ticketMap = useMemo(() => mapTicketTypes(ticketTypes), [ticketTypes]);
-  const seatSize = Math.max(16, Math.min(23, Math.floor((width - 78) / SEATS_PER_ROW) - 3));
+  const sheetWidth = Math.min(width, MaxContentWidth);
+  const seatSize = Math.max(24, Math.min(34, Math.floor((sheetWidth - 76) / SEATS_PER_ROW) - 2));
   const selectedTotalMinor = selectedSeats.reduce((sum, seatId) => {
     const type = ticketMap[seatTier(seatId)];
     return sum + (type?.price_minor ?? SEAT_PRICE[seatTier(seatId)] * 100);
@@ -122,19 +112,10 @@ export default function SeatSelectionScreen() {
   const eventWhen = event ? `${formatDate(event.starts_at, event.timezone)} · ${event.venue_name}` : `${EVENT.date} · ${EVENT.time} · ${EVENT.hall}`;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right', 'bottom']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
-      <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <Pressable accessibilityLabel={t('Go back to event details')} onPress={() => router.back()} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
-          <ThemedText style={{ color: colors.text, fontSize: 19 }}>‹</ThemedText>
-        </Pressable>
-        <ThemedText style={{ flex: 1, color: colors.text, textAlign: 'center', fontSize: 15, fontWeight: '800' }}>{t('Select seats')}</ThemedText>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 16, paddingBottom: 22 }}>
-        <ThemedText style={{ color: colors.text, fontSize: 17, fontWeight: '900' }}>{title}</ThemedText>
-        <ThemedText style={{ marginTop: 4, color: colors.muted, fontSize: 11 }}>{eventWhen}</ThemedText>
+    <ScreenFrame title={t('Select seats')}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth: MaxContentWidth, padding: 18, paddingBottom: 24 }}>
+        <ScreenHeading>{title}</ScreenHeading>
+        <ThemedText style={{ marginTop: 4, color: colors.muted, fontSize: 13 }}>{eventWhen}</ThemedText>
 
         <View style={{ marginTop: 14, padding: 11, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
           <ThemedText style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>
@@ -145,11 +126,12 @@ export default function SeatSelectionScreen() {
         {loading ? <View style={{ alignItems: 'center', paddingVertical: 36 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 10, color: colors.muted }}>{t('Loading event and ticket types...')}</ThemedText></View> : error ? (
           <View style={{ alignItems: 'center', paddingVertical: 30 }}><ThemedText style={{ color: colors.text, textAlign: 'center' }}>{t(error)}</ThemedText></View>
         ) : <>
-          <View style={{ height: 36, marginTop: 23, alignItems: 'center', justifyContent: 'center', borderBottomLeftRadius: 28, borderBottomRightRadius: 28, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
-            <ThemedText style={{ color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 2 }}>{t('STAGE')}</ThemedText>
+          <View style={{ minHeight: 34, marginTop: 20, alignItems: 'center', justifyContent: 'center', borderBottomLeftRadius: 23, borderBottomRightRadius: 23, backgroundColor: Stage.background }}>
+            <ThemedText style={{ color: Stage.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.7 }}>{t('STAGE')}</ThemedText>
           </View>
 
-          <View style={{ marginTop: 17, gap: 5 }}>
+          <ScrollView horizontal style={{ marginTop: 16 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 6 }}>
+          <View style={{ minWidth: 36 + SEATS_PER_ROW * (seatSize + 2), gap: 5 }}>
             {ROWS.map((row) => <View key={row.name} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <ThemedText style={{ width: 14, color: colors.muted, fontSize: 9, textAlign: 'center' }}>{row.name}</ThemedText>
               {Array.from({ length: SEATS_PER_ROW }, (_, index) => {
@@ -159,7 +141,7 @@ export default function SeatSelectionScreen() {
                 const mappedType = ticketMap[row.type];
                 const atLimit = !!mappedType && selectedCountByType(mappedType.id) >= ticketLimit(mappedType);
                 const unavailable = !previewOnly && (!mappedType || atLimit || selectedSeats.length >= 20) && !selected;
-                const tierColor = row.type === 'standard' ? colors.standard : row.type === 'premium' ? colors.premium : colors.vip;
+                const tierColor = row.type === 'standard' ? colors.accent : row.type === 'premium' ? colors.success : colors.warning;
                 return <Pressable
                   key={seatId}
                   accessibilityRole="button"
@@ -167,20 +149,21 @@ export default function SeatSelectionScreen() {
                   accessibilityState={{ disabled: sold || unavailable, selected }}
                   disabled={sold || unavailable}
                   onPress={() => toggleSeat(seatId)}
-                  style={{ width: seatSize, height: seatSize, marginHorizontal: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 5, borderWidth: sold || selected ? 0 : 1, borderColor: tierColor, backgroundColor: sold ? colors.sold : selected ? colors.accent : row.type === 'standard' ? colors.surface : row.type === 'premium' ? colors.premiumBg : colors.vipBg, opacity: unavailable ? 0.4 : 1 }}>
-                  <ThemedText style={{ color: sold ? '#FFFFFF' : selected ? '#FFFFFF' : tierColor, fontSize: 9, fontWeight: '800' }}>{sold ? '×' : selected ? '✓' : ''}</ThemedText>
+                  style={{ width: seatSize, height: seatSize, marginHorizontal: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 6, borderWidth: sold || selected ? 0 : 1, borderColor: tierColor, backgroundColor: sold ? colors.raised : selected ? colors.button : row.type === 'standard' ? colors.surface : row.type === 'premium' ? colors.successWash : colors.warningWash, opacity: unavailable ? 0.4 : 1 }}>
+                  <ThemedText style={{ color: selected ? '#FFFFFF' : colors.muted, fontSize: 12, fontWeight: '800' }}>{sold ? '×' : selected ? '✓' : ''}</ThemedText>
                 </Pressable>;
               })}
               <ThemedText style={{ width: 14, color: colors.muted, fontSize: 9, textAlign: 'center' }}>{row.name}</ThemedText>
             </View>)}
           </View>
+          </ScrollView>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 11, marginTop: 17 }}>
-            <Legend color={colors.accent} label={t('Selected')} colors={colors} filled />
-            <Legend color={colors.standard} label={t('Standard')} colors={colors} />
-            <Legend color={colors.premium} label={t('Premium')} colors={colors} filled />
-            <Legend color={colors.vip} label={t('VIP')} colors={colors} filled />
-            <Legend color={colors.sold} label={t('Sold')} colors={colors} filled />
+            <Legend color={colors.button} label={t('Selected')} colors={colors} filled />
+            <Legend color={colors.accent} label={t('Standard')} colors={colors} />
+            <Legend color={colors.success} label={t('Premium')} colors={colors} filled />
+            <Legend color={colors.warning} label={t('VIP')} colors={colors} filled />
+            <Legend color={colors.muted} label={t('Sold')} colors={colors} filled />
           </View>
 
           <View style={{ marginTop: 16, overflow: 'hidden', borderRadius: 13, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
@@ -204,20 +187,22 @@ export default function SeatSelectionScreen() {
         </>}
       </ScrollView>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 15, paddingVertical: 11, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface }}>
+      <View style={{ borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface }}>
+      <View style={{ alignSelf: 'center', width: '100%', maxWidth: MaxContentWidth, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 18, paddingVertical: 11 }}>
         <View>
           <ThemedText style={{ color: colors.muted, fontSize: 10 }}>{t('Total')}</ThemedText>
           <ThemedText style={{ marginTop: 2, color: colors.text, fontSize: 14, fontWeight: '900' }}>{new Intl.NumberFormat(locale, { style: 'currency', currency: ticketTypes[0]?.currency ?? 'KZT', maximumFractionDigits: 0 }).format(selectedTotalMinor / 100)}</ThemedText>
         </View>
-        <Pressable accessibilityRole="button" disabled={!slug || !selectedSeats.length || loading || !!error} onPress={continueToCheckout} style={{ minWidth: 154, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, height: 46, borderRadius: 12, backgroundColor: slug && selectedSeats.length ? colors.accent : colors.sold, opacity: loading || error ? 0.5 : 1 }}>
-          <ThemedText style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>{t(previewOnly ? 'Preview only' : 'Continue')}</ThemedText>
+        <Pressable accessibilityRole="button" disabled={!slug || !selectedSeats.length || loading || !!error} onPress={continueToCheckout} style={{ minWidth: 130, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, minHeight: 48, borderRadius: 13, backgroundColor: colors.button, opacity: !slug || !selectedSeats.length || loading || error ? 0.55 : 1 }}>
+          <ThemedText style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>{t(previewOnly ? 'Preview only' : 'Continue')}</ThemedText>
         </Pressable>
       </View>
-    </SafeAreaView>
+      </View>
+    </ScreenFrame>
   );
 }
 
-function Legend({ color, label, colors, filled = false }: { color: string; label: string; colors: typeof PALETTE.dark; filled?: boolean }) {
+function Legend({ color, label, colors, filled = false }: { color: string; label: string; colors: AppColors; filled?: boolean }) {
   return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
     <View style={{ width: 11, height: 11, borderRadius: 3, backgroundColor: filled ? color : 'transparent', borderWidth: filled ? 0 : 1, borderColor: color }} />
     <ThemedText style={{ color: colors.muted, fontSize: 9 }}>{label}</ThemedText>

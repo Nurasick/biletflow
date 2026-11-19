@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Alert, Button } from "antd";
-import { LoaderCircle } from "lucide-react";
+import { ArrowLeft, LoaderCircle, Ticket } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 
@@ -21,24 +21,36 @@ export const EventPage = () => {
     enabled: event.isSuccess,
   });
 
-  if (event.isPending) return <div role="status" className="flex items-center justify-center gap-2 py-24 text-sm text-[#667085]">
+  if (event.isPending) return <div role="status" className="flex items-center justify-center gap-2 py-24 text-sm text-muted">
     <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("common.loading")}
   </div>;
   if (event.isError) {
     const missing = event.error instanceof ApiError && event.error.status === 404;
     return <main className="mx-auto max-w-3xl px-7 py-16 text-center">
-      <h1 className="text-2xl font-bold">{t(missing ? "eventWorkflow.notFound" : "errors.unavailable")}</h1>
-      <Link to="/" className="mt-6 inline-block font-semibold text-[#D9431F]">{t("common.backToEvents")}</Link>
+      <h1 className="page-title">{t(missing ? "eventWorkflow.notFound" : "errors.unavailable")}</h1>
+      <Link to="/" className="mt-6 inline-block font-semibold text-primary-hover">{t("common.backToEvents")}</Link>
     </main>;
   }
 
   return (
-    <main className="mx-auto flex max-w-6xl flex-col gap-7 px-7 py-6 lg:flex-row">
-      <div className="min-w-0 flex-[1.6]"><EventDetails event={event.data} /></div>
-      {types.isError && !types.data ? <aside className="w-full shrink-0 self-start lg:w-[360px]">
-        <Alert role="alert" type="error" showIcon title={t("checkout.ticketLoadError")}
-          action={<Button onClick={() => void types.refetch()} loading={types.isFetching}>{t("common.retry")}</Button>} />
-      </aside> : <CheckoutPanel key={slug} event={event.data} ticketTypes={types.data ?? []} loading={types.isPending} />}
+    <main className="site-container py-6 sm:py-8">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <Link to="/" className="inline-flex min-h-10 items-center gap-2 rounded-lg text-sm font-semibold text-muted-strong hover:text-primary">
+          <ArrowLeft size={17} aria-hidden="true" />{t("common.backToEvents")}
+        </Link>
+        {event.data.status === "published" && event.data.phase !== "completed" && (
+          <a href="#ticket-booking" className="action-button action-button--primary min-h-10 lg:hidden">
+            <Ticket size={16} aria-hidden="true" />{t("booking.selectTickets")}
+          </a>
+        )}
+      </div>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,390px)] lg:gap-8">
+        <EventDetails event={event.data} />
+        {types.isError && !types.data ? <aside id="ticket-booking" className="scroll-mt-6">
+          <Alert role="alert" type="error" showIcon title={t("checkout.ticketLoadError")}
+            action={<Button onClick={() => void types.refetch()} loading={types.isFetching}>{t("common.retry")}</Button>} />
+        </aside> : <CheckoutPanel key={slug} event={event.data} ticketTypes={types.data ?? []} loading={types.isPending} />}
+      </div>
     </main>
   );
 };
