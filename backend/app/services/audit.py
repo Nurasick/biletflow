@@ -8,7 +8,7 @@ interfaces." Not "we promise not to call it": the function does not exist.
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
 from app.models.audit import AuditLog
@@ -79,14 +79,21 @@ def event_timeline(
     db: Session,
     event_id: int,
     *,
+    scope: ColumnElement[bool],
     since: datetime | None = None,
     until: datetime | None = None,
     actions: Sequence[str] = (),
     limit: int = 100,
     offset: int = 0,
 ) -> Sequence[AuditLog]:
-    """Newest first. The caller has already checked the user may see this event."""
-    query = select(AuditLog).where(AuditLog.event_id == event_id)
+    """Newest first. The caller has already checked the user may see this event.
+
+    `scope` narrows that to the rows this user may see within it, today
+    support.timeline_scope(user). Required, not optional, so a new timeline
+    route cannot forget it: a row about a support case the viewer cannot open
+    must not leak through the event's history (T02).
+    """
+    query = select(AuditLog).where(AuditLog.event_id == event_id, scope)
     if since is not None:
         query = query.where(AuditLog.created_at >= since)
     if until is not None:

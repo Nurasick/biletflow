@@ -18,7 +18,7 @@ from app.schemas.activation import ActivationRead
 from app.schemas.event import CancelRequest, EventRead, SuspendRequest
 from app.schemas.reporting import TimelineEntry
 from app.services import activation as activation_service
-from app.services import audit
+from app.services import audit, support
 from app.services import event_lifecycle as lifecycle
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -123,9 +123,21 @@ def event_timeline(
     event_id: int,
     admin: CurrentAdmin,
     db: DbSession,
+    action: Annotated[list[str] | None, Query(description="Repeat to filter by several")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[dict]:
-    """§4.16: "Platform Admins may view history for moderation or support"."""
-    entries = audit.event_timeline(db, _event(db, event_id).id, limit=limit, offset=offset)
+    """§4.16: "Platform Admins may view history for moderation or support".
+
+    Every row except support cases the admin could not open themselves:
+    attendee cases are the organizer's to handle (support.timeline_scope).
+    """
+    entries = audit.event_timeline(
+        db,
+        _event(db, event_id).id,
+        scope=support.timeline_scope(admin),
+        actions=action or (),
+        limit=limit,
+        offset=offset,
+    )
     return audit.with_actor_names(db, entries)

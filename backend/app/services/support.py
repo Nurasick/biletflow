@@ -14,6 +14,7 @@ Who sees what:
 """
 
 from collections.abc import Sequence
+from typing import Literal
 
 from jwt import InvalidTokenError
 from sqlalchemy import ColumnElement, and_, case, false, or_, select
@@ -22,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.security import create_support_case_token, decode_token
+from app.models.audit import AuditLog
 from app.models.event import Event, EventStatus
 from app.models.order import Order
 from app.models.organizer import OrganizerProfile
@@ -36,7 +38,7 @@ from app.models.support import (
 from app.models.ticket import Ticket
 from app.models.user import User
 from app.schemas.support import CaseContext, CaseCreate, CaseUpdate
-from app.services import codes, notify
+from app.services import audit, codes, notify
 from app.services import order as order_service
 
 
@@ -82,6 +84,15 @@ STATUS_LABELS = {
     CaseStatus.WAITING_FOR_CUSTOMER: "Waiting for customer",
     CaseStatus.RESOLVED: "Resolved",
 }
+
+# T02 (§4.13, §4.16): the audit action for a status change on an event-linked
+# case, and the entity_type it is recorded under. The web timeline filters
+# and labels by this exact string, so changing it is a frontend change too.
+# Payload: {"case_number", "from", "to", "by": "staff" | "requester"}.
+STATUS_CHANGED = "support.status_changed"
+CASE_ENTITY = "support_case"
+
+ChangedBy = Literal["staff", "requester"]
 
 
 # --- opening ------------------------------------------------------------------
@@ -248,7 +259,7 @@ def add_requester_message(
         )
     )
     if support_case.status in (CaseStatus.WAITING_FOR_CUSTOMER, CaseStatus.RESOLVED):
-        _set_status(db, support_case, CaseStatus.IN_PROGRESS)
+        _set_status(db, support_case, CaseStatus.IN_PROGRESS, user, "requester")
     _touch(support_case)
     _notify_staff(
         db,
@@ -343,7 +354,7 @@ def add_staff_message(
     # A note is staff talking to staff: it neither claims the case nor
     # reaches the requester.
     if not internal and support_case.status == CaseStatus.OPEN:
-        _set_status(db, support_case, CaseStatus.IN_PROGRESS)
+        _set_status(db, support_case, CaseStatus.IN_PROGRESS, user, "staff")
     _touch(support_case)
     if not internal:
         _notify_requester(
@@ -375,7 +386,7 @@ def update_case(
         support_case.assigned_to_user_id = assignee_id
         # Being assigned is one of the two ways a case leaves `open` (§8).
         if assignee_id is not None and support_case.status == CaseStatus.OPEN:
-            _set_status(db, support_case, CaseStatus.IN_PROGRESS)
+            _set_status(db, support_case, CaseStatus.IN_PROGRESS, user, "staff")
 
     target = changes.get("status")
     if target is not None and target != support_case.status:
@@ -383,7 +394,7 @@ def update_case(
         if target not in STAFF_TRANSITIONS[support_case.status]:
             db.rollback()
             raise InvalidTransition(support_case.status, target)
-        _set_status(db, support_case, target)
+        _set_status(db, support_case, target, user, "staff")
 
     _touch(support_case)
 
@@ -422,9 +433,30 @@ def context(db: Session, support_case: SupportCase) -> CaseContext:
     )
 
 
-def _set_status(db: Session, support_case: SupportCase, status: CaseStatus) -> None:
-    """Change status and leave a system message, so the history shows when
-    and how it moved (§4.13 "retain the case history")."""
+def _set_status(
+    db: Session,
+    support_case: SupportCase,
+    status: CaseStatus,
+    actor: User | None,
+    by: ChangedBy,
+) -> None:
+    """Change status and record it twice, for two audiences.
+
+    - A system message in the thread (§4.13 "retain the case history"), for
+      whoever reads the case.
+    - An audit row on the event's timeline (§4.16, T02), when the case is
+      about an event, so the organizer sees support activity next to orders
+      and refunds. Cases with no event have no timeline to appear on.
+
+    Every status change in this module goes through here, the explicit staff
+    moves and the implicit ones (reply, assignment, requester reopening), so
+    each change writes exactly one row. Both land in the caller's transaction:
+    a change that rolls back leaves neither behind.
+
+    `actor` is None for a guest requester (signed link, no account); `by` still
+    says which side moved it.
+    """
+    previous = support_case.status
     support_case.status = status
     support_case.resolved_at = utcnow() if status == CaseStatus.RESOLVED else None
     db.add(
@@ -434,6 +466,41 @@ def _set_status(db: Session, support_case: SupportCase, status: CaseStatus) -> N
             body=f"Status changed to {STATUS_LABELS[status]}.",
         )
     )
+    if support_case.event_id is not None:
+        audit.record(
+            db,
+            action=STATUS_CHANGED,
+            entity_type=CASE_ENTITY,
+            entity_id=support_case.id,
+            event_id=support_case.event_id,
+            actor=actor,
+            summary=(
+                f"Support case {support_case.case_number} moved from "
+                f"{STATUS_LABELS[previous]} to {STATUS_LABELS[status]}"
+            ),
+            # Values, not labels: the frontend translates them (EN/KK/RU).
+            payload={
+                "case_number": support_case.case_number,
+                "from": previous.value,
+                "to": status.value,
+                "by": by,
+            },
+        )
+
+
+def timeline_scope(user: User) -> ColumnElement[bool]:
+    """Which event-timeline rows `user` may see, as a WHERE clause on AuditLog.
+
+    Seeing an event's timeline is not the same as seeing its support cases. A
+    Platform Admin may open any timeline (§4.16 "moderation or support"), yet
+    attendee cases belong to the event's organizer, not to the platform. So a
+    support row shows only to someone who could open that case: as staff
+    (staff_scope) or as the person who opened it. Every other row passes.
+    """
+    visible_cases = select(SupportCase.id).where(
+        or_(staff_scope(user), SupportCase.opened_by_user_id == user.id)
+    )
+    return or_(AuditLog.entity_type != CASE_ENTITY, AuditLog.entity_id.in_(visible_cases))
 
 
 def _touch(support_case: SupportCase) -> None:
