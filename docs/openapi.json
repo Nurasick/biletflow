@@ -6159,7 +6159,7 @@
     },
     "/api/v1/admin/events/{event_id}/timeline": {
       "get": {
-        "description": "\u00a74.16: \"Platform Admins may view history for moderation or support\".",
+        "description": "\u00a74.16: \"Platform Admins may view history for moderation or support\".\n\nEvery row except support cases the admin could not open themselves:\nattendee cases are the organizer's to handle (support.timeline_scope).",
         "operationId": "event_timeline_api_v1_admin_events__event_id__timeline_get",
         "parameters": [
           {
@@ -6169,6 +6169,27 @@
             "schema": {
               "title": "Event Id",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Repeat to filter by several",
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Repeat to filter by several",
+              "title": "Action"
             }
           },
           {
