@@ -140,6 +140,15 @@ def cancel(
     rolls back, rather than leaving an event that is half cancelled.
     """
     now = now or utcnow()
+    # Lock the event row *before* touching any order. A payment in flight
+    # holds FOR SHARE on this row and then updates its order
+    # (payment._ensure_still_on_sale). Settling orders first would take that
+    # order row and then wait on the event row: each side waiting on the
+    # other, and Postgres aborting one as a deadlock. Event first, like the
+    # payment, means this waits for the payment and then refunds it.
+    # Refreshing under the lock also re-reads a status another request may
+    # have just changed.
+    db.refresh(event, with_for_update=True)
     if event.status == EventStatus.CANCELLED:
         raise IllegalEventTransition("the event is already cancelled")
     previous = event.status
