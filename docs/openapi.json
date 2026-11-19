@@ -361,6 +361,130 @@
         "title": "AdminPayment",
         "type": "object"
       },
+      "AdminPaymentDetail": {
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "order": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaymentOrder"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Ref"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "refunds": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRefund"
+            },
+            "title": "Refunds",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "support_cases": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentCase"
+            },
+            "title": "Support Cases",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "purpose",
+          "status",
+          "amount_minor",
+          "currency",
+          "provider",
+          "provider_ref",
+          "is_simulated",
+          "failure_reason",
+          "order_number",
+          "event_id",
+          "created_at",
+          "order",
+          "refunds",
+          "support_cases"
+        ],
+        "title": "AdminPaymentDetail",
+        "type": "object"
+      },
       "AdminRefund": {
         "properties": {
           "amount_minor": {
@@ -3508,6 +3632,114 @@
         "title": "PasswordResetRequest",
         "type": "object"
       },
+      "PaymentCase": {
+        "description": "A support case about the payment's order: its existence and state only.\n\nAttendee cases are read by the attendee and the event's organizer\n(06-support.md, \"Authorization\"); an admin reviewing a payment learns that\na case exists and where it stands, never what was written in it.",
+        "properties": {
+          "audience": {
+            "title": "Audience",
+            "type": "string"
+          },
+          "case_number": {
+            "title": "Case Number",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_number",
+          "audience",
+          "category",
+          "status",
+          "created_at",
+          "updated_at",
+          "resolved_at"
+        ],
+        "title": "PaymentCase",
+        "type": "object"
+      },
+      "PaymentOrder": {
+        "properties": {
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "event_title": {
+            "title": "Event Title",
+            "type": "string"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order_number",
+          "status",
+          "event_id",
+          "event_title",
+          "contact_name",
+          "contact_email",
+          "total_minor",
+          "currency",
+          "created_at"
+        ],
+        "title": "PaymentOrder",
+        "type": "object"
+      },
       "PayoutAccountRead": {
         "properties": {
           "external_account_ref": {
@@ -6221,9 +6453,26 @@
     },
     "/api/v1/admin/payments": {
       "get": {
-        "description": "\u00a74.12 \"Monitor refunds, disputes, and payment failures\": filter by\n`status=failed` or `status=refunded`. Every row is a simulated payment\nand says so (\u00a74.6).",
+        "description": "\u00a74.12 \"Monitor refunds, disputes, and payment failures\": filter by\n`status=failed` or `status=refunded`, and find one payment with `q`: its\nid, its order's number, or its provider reference. Every row is a\nsimulated payment and says so (\u00a74.6).",
         "operationId": "search_payments_api_v1_admin_payments_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
           {
             "in": "query",
             "name": "status",
@@ -6302,6 +6551,54 @@
           }
         ],
         "summary": "Search Payments",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payments/{payment_id}": {
+      "get": {
+        "description": "\u00a74.12: one simulated payment with its order, its refunds and the\nsupport cases about that order, to judge a payment complaint. Activation\nfees have no order, so they come back with no order and no cases.",
+        "operationId": "read_payment_api_v1_admin_payments__payment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPaymentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Payment",
         "tags": [
           "admin"
         ]
