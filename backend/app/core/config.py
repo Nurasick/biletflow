@@ -36,11 +36,12 @@ class Settings(BaseSettings):
     # signed guest order link, campaign QR codes.
     PUBLIC_WEB_URL: str = "http://localhost:5173"
 
-    # Uploaded event images. Local disk for development and the demo; the
-    # storage module is the only code that knows, so S3 (§9) replaces it there.
+    # New event images use S3 when a bucket is configured.
     MEDIA_ROOT: str = "media"
     MEDIA_URL_PATH: str = "/media"
     PUBLIC_API_URL: str = "http://localhost:8000"
+    AWS_S3_BUCKET: str = ""
+    AWS_REGION: str = ""
     MAX_IMAGE_BYTES: int = 2 * 1024 * 1024
     MAX_EVENT_IMAGES: int = 5
 

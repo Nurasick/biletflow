@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
+from mimetypes import add_type
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 from app.api.v1.router import api_router
+from app.api.v1.routes.event_images import media_router
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.services import storage
@@ -88,8 +90,9 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
-    # Uploaded event images. In production a CDN or the object store serves
-    # these; mounting them here keeps the demo a single `docker compose up`.
+    # Register S3 image redirects before the local media mount.
+    app.include_router(media_router)
+    add_type("image/webp", ".webp")  # Some container images omit it.
     media = storage.media_root()
     media.mkdir(parents=True, exist_ok=True)
     app.mount(settings.MEDIA_URL_PATH, StaticFiles(directory=media), name="media")

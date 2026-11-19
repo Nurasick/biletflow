@@ -1,7 +1,10 @@
 services:
   db:
     image: postgres:17
-    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports: ["5433:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
@@ -46,6 +49,19 @@ services:
       API_PROXY_TARGET: http://api:8000
       VITE_USE_POLLING: "true"
     ports: ["5173:5173"]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://127.0.0.1:5173/api/v1/health').then(async response => {
+            if (!response.ok || (await response.json()).status !== 'ok') process.exit(1);
+          }).catch(() => process.exit(1))
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
     volumes:
       - ./web:/app
       - web_node_modules:/app/node_modules

@@ -27,9 +27,7 @@ class EventImage(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     event_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("events.id"), index=True)
-    # The key inside the storage backend, e.g. events/12/3f9c….webp. The public
-    # url is derived from it by the storage layer, so moving to S3 later means
-    # changing that layer, not rewriting rows.
+    # An s3/ prefix in the stored key identifies S3-backed images.
     storage_key: Mapped[str] = mapped_column(String(255), unique=True)
     url: Mapped[str] = mapped_column(String(512))
     content_type: Mapped[str] = mapped_column(String(32))
