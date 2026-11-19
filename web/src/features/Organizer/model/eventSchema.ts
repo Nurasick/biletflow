@@ -16,7 +16,7 @@ export const eventImageSchema = z.object({
   dataUrl: z.union([
     z.string().max(Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 32, "validation.eventImageSize")
       .regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, "validation.eventImageType"),
-    z.string().max(512).regex(/^https?:\/\/\S+$/, "validation.eventImageType"),
+    z.string().max(512).regex(/^(?:https?:\/\/|\/media\/)\S+$/, "validation.eventImageType"),
   ]),
 });
 export type EventImage = z.infer<typeof eventImageSchema>;

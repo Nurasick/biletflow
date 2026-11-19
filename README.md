@@ -47,6 +47,12 @@ Compose waits for PostgreSQL, applies Alembic migrations, and then starts the
 API. If a migration fails, the API does not start. The web app is available at
 http://localhost:5173 and the API docs at http://localhost:8000/docs.
 
+For web development alone, run `docker compose up -d --build web`. The web
+server forwards `/api/` and `/media/` to FastAPI. Open
+[the health endpoint](http://localhost:5173/api/v1/health) to check the
+connection through the web server. Registration, verification and password
+reset emails arrive in the [local development inbox](http://localhost:8025).
+
 ## Environment
 
 Copy `.env.example` to `.env` and fill it in. `.env` is gitignored and must

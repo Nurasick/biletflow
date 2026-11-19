@@ -5,12 +5,14 @@ import ts from 'typescript';
 import { moduleUrl } from './harness.mjs';
 
 const source = await readFile(new URL('../src/shared/api/auth.ts', import.meta.url), 'utf8');
+const randomIdUrl = await moduleUrl('../src/shared/lib/randomId.ts');
+const webOrigin = 'https://tickets.example.test';
 let moduleId = 0;
 const user = { id: 1, email: 'test@example.com', first_name: 'Test', last_name: 'User' };
 const tokens = { access_token: 'access-1', csrf_token: 'csrf-1' };
 const credentials = { email: user.email, password: 'password123' };
 
-async function setup(responses, storedCsrf) {
+async function setup(responses, storedCsrf, apiOverride) {
   const storage = new Map(storedCsrf ? [['biletflow.auth.csrf', storedCsrf]] : []);
   globalThis.localStorage = {
     getItem: (key) => storage.get(key) ?? null,
@@ -18,10 +20,11 @@ async function setup(responses, storedCsrf) {
     removeItem: (key) => storage.delete(key),
   };
   globalThis.window = new EventTarget();
+  window.location = new URL(webOrigin);
   Object.defineProperty(globalThis, "navigator", { value: {}, configurable: true });
   const calls = [];
   globalThis.fetch = async (url, init) => {
-    calls.push({ url, ...init });
+    calls.push({ url: new URL(url, webOrigin).href, ...init });
     assert.ok(responses.length, `Unexpected request to ${url}`);
     const next = responses.shift();
     if (next instanceof Error) throw next;
@@ -29,13 +32,31 @@ async function setup(responses, storedCsrf) {
     const [status, body] = next;
     return new Response(status === 204 ? null : JSON.stringify(body), { status });
   };
+  const urls = await moduleUrl('../src/shared/api/urls.ts', {
+    'import.meta.env.VITE_API_URL': JSON.stringify(apiOverride) ?? 'undefined',
+  });
   const { outputText } = ts.transpileModule(
-    source.replace('import.meta.env.VITE_API_URL', 'undefined'),
+    source.replace('"./urls"', JSON.stringify(urls)).replace('"../lib/randomId"', JSON.stringify(randomIdUrl)),
     { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } },
   );
   const authUrl = `data:text/javascript;base64,${Buffer.from(outputText + `\n//# sourceURL=auth-test-${moduleId++}.js`).toString('base64')}`;
-  return { ...await import(authUrl), authUrl, calls, storage };
+  return { ...await import(authUrl), ...await import(urls), authUrl, calls, storage };
 }
+
+test('API calls and locally stored uploads use the web origin or the explicit API origin', async () => {
+  for (const override of [undefined, 'https://api.example.test/api/v1/']) {
+    const { rawRequest, eventImageSrc, calls } = await setup([[200, []]], undefined, override);
+    const origin = override ? new URL(override).origin : webOrigin;
+    await rawRequest('/events');
+    assert.equal(calls[0].url, origin + '/api/v1/events');
+    for (const source of ['/media/events/1/a.png', 'http://localhost:8000/media/events/1/a.png']) {
+      assert.equal(eventImageSrc(source), origin + '/media/events/1/a.png');
+    }
+    const cdn = 'https://cdn.example.test/media/events/1/a.png';
+    assert.equal(eventImageSrc(cdn), cdn);
+    assert.equal(eventImageSrc('data:image/png;base64,AA=='), 'data:image/png;base64,AA==');
+  }
+});
 
 test('guests do not make unauthenticated profile requests', async () => {
   const { authApi, calls } = await setup([]);
@@ -43,14 +64,41 @@ test('guests do not make unauthenticated profile requests', async () => {
   assert.equal(calls.length, 0);
 });
 
-test('login sends JSON, authenticates the profile, and persists only CSRF', async () => {
+test('login sends JSON, authenticates the profile, and keeps the access token in memory', async () => {
   const { authApi, calls, storage } = await setup([[200, tokens], [200, user]]);
   assert.deepEqual(await authApi.login(credentials), user);
   assert.deepEqual(JSON.parse(calls[0].body), credentials);
   assert.equal(calls[0].headers.get('Content-Type'), 'application/json');
   assert.equal(calls[1].headers.get('Authorization'), 'Bearer access-1');
   assert.ok(calls.every(call => call.credentials === 'include'));
-  assert.deepEqual([...storage.values()], ['csrf-1']);
+  assert.equal(storage.get('biletflow.auth.csrf'), 'csrf-1');
+  assert.match(storage.get('biletflow.auth.session'), /^[0-9a-f]{32}$/);
+  assert.ok(![...storage.values()].includes(tokens.access_token));
+});
+
+test('a CSRF rotation in another tab keeps the access token, while account changes and logout invalidate it', async () => {
+  const { authApi, calls, storage } = await setup([[200, tokens], [200, user], [200, user],
+    [200, { access_token: 'other-access', csrf_token: 'other-csrf' }], [200, { ...user, id: 2 }]]);
+  await authApi.login(credentials);
+  const notifications = [];
+  for (const name of ['biletflow:session-changed', 'biletflow:session-ended']) {
+    window.addEventListener(name, () => notifications.push(name));
+  }
+  const changeKey = (key, newValue) => {
+    const oldValue = storage.get(key);
+    if (newValue === null) storage.delete(key); else storage.set(key, newValue);
+    window.dispatchEvent(Object.assign(new Event('storage'), { key, newValue, oldValue }));
+  };
+  changeKey('biletflow.auth.csrf', 'rotated');
+  assert.deepEqual(await authApi.currentUser(), user);
+  assert.equal(calls.at(-1).headers.get('Authorization'), 'Bearer access-1');
+  assert.deepEqual(notifications, []);
+  changeKey('biletflow.auth.session', 'another-login');
+  assert.equal((await authApi.currentUser()).id, 2);
+  assert.equal(calls.at(-2).headers.get('X-CSRF-Token'), 'rotated');
+  changeKey('biletflow.auth.csrf', null);
+  assert.equal(await authApi.currentUser(), null);
+  assert.deepEqual(notifications, ['biletflow:session-changed', 'biletflow:session-ended']);
 });
 
 test('restores a session using the persisted CSRF proof and rotates it', async () => {

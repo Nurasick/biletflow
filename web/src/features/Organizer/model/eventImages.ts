@@ -1,3 +1,4 @@
+import { randomId } from "../../../shared/lib/randomId";
 import { EVENT_IMAGE_TYPES, MAX_EVENT_IMAGES, MAX_IMAGE_BYTES } from "./eventSchema";
 import type { EventImage } from "./eventSchema";
 
@@ -23,5 +24,5 @@ export const readEventImage = async (file: File): Promise<EventImage> => {
     image.onerror = () => reject(new Error());
     image.src = dataUrl;
   });
-  return { id: crypto.randomUUID(), name: file.name, dataUrl };
+  return { id: randomId(), name: file.name, dataUrl };
 };

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { useLocale } from "../../../../i18n/useLocale";
 import type { EventDetail } from "../../../../shared/api/events";
+import { eventImageSrc } from "../../../../shared/api/urls";
 import { SupportRequestButton } from "../../../Support/ui/SupportRequestButton";
 import { EventCalendarButton } from "../EventCalendarButton";
 import { ReportEventButton } from "../ReportEventButton";
@@ -23,7 +24,7 @@ export const EventDetails = ({ event }: { event: EventDetail }) => {
       {event.phase === "completed" && <Alert type="info" showIcon className="mb-5" title={t("event.completed")} />}
       <div className="flex flex-col gap-6 sm:flex-row">
         <div className="aspect-[2/3] w-full shrink-0 overflow-hidden rounded-xl border border-[#D0D5DD] bg-[#F5F5F0] sm:w-[180px]">
-          {event.cover_image_url && <img src={event.cover_image_url} alt="" className="h-full w-full object-cover" />}
+          {event.cover_image_url && <img src={eventImageSrc(event.cover_image_url)} alt="" className="h-full w-full object-cover" />}
         </div>
         <div className="min-w-0 flex-1">
           <span className="rounded-md bg-[#F5F5F0] px-2 py-1 text-[11px] font-semibold text-[#667085]">
@@ -50,7 +51,7 @@ export const EventDetails = ({ event }: { event: EventDetail }) => {
         <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#475467]">{event.description}</p>
       </section>}
       {gallery.length > 0 && <div className="mt-6 grid grid-cols-2 gap-3">
-        {gallery.map((image) => <img key={image.id} src={image.url} alt="" loading="lazy" className="h-40 w-full rounded-lg object-cover" />)}
+        {gallery.map((image) => <img key={image.id} src={eventImageSrc(image.url)} alt="" loading="lazy" className="h-40 w-full rounded-lg object-cover" />)}
       </div>}
       {/* §4.9: the organizer's own words; the platform does not promise more (audit #20). */}
       <section className="mt-8 rounded-xl border border-[#D0D5DD] p-4" aria-labelledby="refunds">

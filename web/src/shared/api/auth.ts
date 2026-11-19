@@ -1,4 +1,5 @@
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1").replace(/\/$/, "");
+import { apiBaseUrl } from "./urls";
+import { randomId } from "../lib/randomId";
 
 export type User = {
   id: number;
@@ -84,7 +85,7 @@ const parseError = async (response: Response) => {
 const rawResponse = async (path: string, init?: RequestInit) => {
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     credentials: "include",
     headers,
@@ -113,49 +114,57 @@ type TokenResponse = {
   csrf_token: string;
 };
 
-// Access tokens stay in memory. Only the CSRF proof is persisted; the refresh
-// credential remains in the backend's HttpOnly cookie.
+// The session ID signals sign-in across tabs. A CSRF rotation belongs to the same login.
 const CSRF_KEY = "biletflow.auth.csrf";
+const SESSION_KEY = "biletflow.auth.session";
 let accessToken: string | null = null;
+let accessSession: string | null = null;
 let refreshPromise: Promise<void> | null = null;
 
 const clearSession = () => {
   accessToken = null;
   localStorage.removeItem(CSRF_KEY);
+  localStorage.removeItem(SESSION_KEY);
 };
 
-const saveTokens = (tokens: TokenResponse) => {
+const saveTokens = (tokens: TokenResponse, newLogin = false) => {
   localStorage.setItem(CSRF_KEY, tokens.csrf_token);
+  if (newLogin) localStorage.setItem(SESSION_KEY, randomId());
+  accessSession = localStorage.getItem(SESSION_KEY);
   accessToken = tokens.access_token;
 };
 
-const refreshSession = () => {
-  if (!refreshPromise) {
-    const refresh = async () => {
-      const csrf = localStorage.getItem(CSRF_KEY);
-      if (!csrf) throw new ApiError("Please sign in to continue.", 401);
-      try {
-        saveTokens(await rawRequest<TokenResponse>("/auth/refresh", {
-          method: "POST",
-          headers: { "X-CSRF-Token": csrf },
-        }));
-      } catch (error) {
-        if (error instanceof ApiError && [401, 403].includes(error.status)) {
-          clearSession();
-        }
-        throw error;
-      }
-    };
-    refreshPromise = (navigator.locks
-      ? navigator.locks.request("biletflow.auth.refresh", refresh)
-      : refresh()).finally(() => { refreshPromise = null; });
+const withSessionLock = <T>(operation: () => Promise<T>) =>
+  navigator.locks ? navigator.locks.request("biletflow.auth.refresh", operation) : operation();
+
+const refreshTokens = async () => {
+  const session = localStorage.getItem(SESSION_KEY);
+  const csrf = localStorage.getItem(CSRF_KEY);
+  if (!csrf) throw new ApiError("Please sign in to continue.", 401);
+  try {
+    const tokens = await rawRequest<TokenResponse>("/auth/refresh", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrf },
+    });
+    if (session !== localStorage.getItem(SESSION_KEY)) throw new DOMException("Session changed", "AbortError");
+    saveTokens(tokens);
+  } catch (error) {
+    if (error instanceof ApiError && [401, 403].includes(error.status) && csrf === localStorage.getItem(CSRF_KEY)) clearSession();
+    throw error;
   }
-  return refreshPromise;
 };
 
-const authenticatedResponse = async (path: string, init?: RequestInit) => {
-  if (!accessToken) await refreshSession();
+const refreshSession = () => refreshPromise ??= withSessionLock(refreshTokens)
+  .finally(() => { refreshPromise = null; });
+
+const authenticatedResponse = async (path: string, init?: RequestInit, refresh = refreshSession) => {
+  const session = localStorage.getItem(SESSION_KEY);
+  const checkSession = () => {
+    if (session !== localStorage.getItem(SESSION_KEY)) throw new DOMException("Session changed", "AbortError");
+  };
+  if (!accessToken || accessSession !== session) await refresh();
   const request = () => {
+    checkSession();
     const headers = new Headers(init?.headers);
     headers.set("Authorization", `Bearer ${accessToken}`);
     return rawResponse(path, { ...init, headers });
@@ -167,7 +176,8 @@ const authenticatedResponse = async (path: string, init?: RequestInit) => {
     if (!(error instanceof ApiError) || error.status !== 401 || init?.signal?.aborted) {
       throw error;
     }
-    if (accessToken === attemptedToken) await refreshSession();
+    checkSession();
+    if (accessToken === attemptedToken) await refresh();
     return request();
   }
 };
@@ -175,16 +185,12 @@ const authenticatedResponse = async (path: string, init?: RequestInit) => {
 export const authenticatedRequest = async <T>(path: string, init?: RequestInit) =>
   readJson<T>(await authenticatedResponse(path, init));
 
-// Another tab signing out removes the CSRF proof; another tab signing in as a
-// different account replaces it. Either way the access token held here belongs
-// to the old session, so drop it and tell the app to reload who is signed in
-// (audit #17: an A tab silently became B on its next refresh).
 window.addEventListener("storage", (event) => {
-  if (event.key !== CSRF_KEY && event.key !== null) return;
-  if (event.key === CSRF_KEY && event.newValue === event.oldValue) return;
+  const signedIn = event.key === SESSION_KEY && event.newValue && event.newValue !== event.oldValue;
+  const signedOut = event.key === null || (event.key === CSRF_KEY && event.newValue === null);
+  if (!signedIn && !signedOut) return;
   accessToken = null;
-  window.dispatchEvent(new Event(event.key === CSRF_KEY && event.newValue
-    ? "biletflow:session-changed" : "biletflow:session-ended"));
+  window.dispatchEvent(new Event(signedIn ? "biletflow:session-changed" : "biletflow:session-ended"));
 });
 
 const json = (method: string, body?: unknown): RequestInit => ({
@@ -200,8 +206,7 @@ const optionalAuthResponse = async (path: string, init?: RequestInit) => {
     try {
       return await authenticatedResponse(path, init);
     } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 401) throw error;
-      clearSession();
+      if (!(error instanceof ApiError) || error.status !== 401 || localStorage.getItem(CSRF_KEY)) throw error;
     }
   }
   return rawResponse(path, init);
@@ -264,12 +269,10 @@ export const authApi = {
 
   login: async ({ email, password }: LoginCredentials) => {
     if (refreshPromise) await refreshPromise.catch(() => undefined);
-    const tokens = await rawRequest<TokenResponse>("/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+    await withSessionLock(async () => {
+      const tokens = await rawRequest<TokenResponse>("/auth/login", json("POST", { email, password }));
+      saveTokens(tokens, true);
     });
-    saveTokens(tokens);
     return authenticatedRequest<User>("/users/me");
   },
 
@@ -282,12 +285,14 @@ export const authApi = {
 
   logout: async () => {
     if (refreshPromise) await refreshPromise.catch(() => undefined);
-    try {
-      await authenticatedRequest<null>("/auth/logout", { method: "POST" });
-    } catch (error) {
-      if (!(error instanceof ApiError) || ![401, 403].includes(error.status)) throw error;
-    }
-    clearSession();
+    await withSessionLock(async () => {
+      try {
+        await authenticatedResponse("/auth/logout", { method: "POST" }, refreshTokens);
+      } catch (error) {
+        if (!(error instanceof ApiError) || ![401, 403].includes(error.status)) throw error;
+      }
+      clearSession();
+    });
   },
 };
 
