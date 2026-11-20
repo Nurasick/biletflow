@@ -64,9 +64,9 @@ export const CampaignsPanel = ({ eventId, userId, timeZone }: Props) => {
         </Button>
       </div>
     </div>
-    {campaigns.isPending && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-muted">
+    {campaigns.isPending && <div role="status" className="mt-4 flex items-center gap-2 text-sm text-muted">
       <Spin size="small" />{t("campaigns.loading")}
-    </p>}
+    </div>}
     {campaigns.isError && <Alert role="alert" type="error" showIcon className="mt-4"
       title={errorMessage(campaigns.error, t("campaigns.loadError"))} />}
     {campaigns.data?.length === 0 && <p className="mt-4 text-sm text-muted">{t("campaigns.empty")}</p>}

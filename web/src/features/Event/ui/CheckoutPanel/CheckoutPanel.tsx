@@ -1,7 +1,7 @@
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { Alert, Button, Input } from "antd";
 import { Minus, Plus, Ticket } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -20,6 +20,7 @@ import { ticketSaleStatus, ticketSaleWindow } from "../../model/ticketSales";
 // Each type's own max_per_order applies on top (audit #19: one policy).
 export const MAX_TICKETS_PER_ORDER = 20;
 const MAX_TIMEOUT_MS = 2_147_483_647;
+const inputStyles = "border-muted! hover:border-primary! focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-primary! aria-invalid:border-red-700!";
 
 type Props = { event: EventDetail; ticketTypes: PublicTicketType[]; loading: boolean };
 type CheckoutTicket = PublicTicketType & { saleWindow: ReturnType<typeof ticketSaleWindow> };
@@ -35,13 +36,21 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
   const errorMessage = useAuthErrorMessage();
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [contact, setContact] = useState<{ name?: string; email?: string }>({});
+  const [contactValidated, setContactValidated] = useState(false);
   const [names, setNames] = useState<Record<string, string>>({});
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now);
   const submitting = useRef(false);
+  const formId = useId();
+  const nameId = `${formId}-name`;
+  const emailId = `${formId}-email`;
   const contactName = contact.name ?? (me.data ? `${me.data.first_name} ${me.data.last_name}` : "");
   const contactEmail = contact.email ?? me.data?.email ?? "";
+  const missingName = !contactName.trim();
+  const invalidEmail = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim());
+  const nameError = contactValidated && missingName;
+  const emailError = contactValidated && invalidEmail;
 
   const tickets = useMemo(() => ticketTypes.map((type) => ({ ...type, saleWindow: ticketSaleWindow(event, type) })), [event, ticketTypes]);
   useEffect(() => {
@@ -108,22 +117,24 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
     onSettled: () => { submitting.current = false; },
   });
 
-  const canSubmit = onSale && !selectionUnavailable && total > 0 && Boolean(contactName.trim())
-    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim()) && (!promo || Boolean(quoted)) && !buy.isPending;
+  const canSubmit = onSale && !selectionUnavailable && total > 0 && (!promo || Boolean(quoted)) && !buy.isPending;
   const saleTime = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: event.timezone });
 
   return (
-    <aside id="ticket-booking" aria-labelledby="buy" className="panel scroll-mt-6 p-5 sm:p-6 lg:sticky lg:top-6">
+    <aside id="ticket-booking" tabIndex={-1} aria-labelledby="buy" className="panel min-w-0 scroll-mt-6 p-5 sm:p-6 lg:sticky lg:top-6">
       <div className="flex items-center gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-wash text-primary"><Ticket size={20} aria-hidden="true" /></span>
         <h2 id="buy" className="text-xl font-extrabold tracking-[-0.035em]">{t("booking.selectTickets")}</h2>
       </div>
-      {loading && <p className="mt-4 text-sm text-muted">{t("common.loading")}</p>}
+      {loading && <p role="status" className="mt-4 text-sm text-muted">{t("common.loading")}</p>}
       {!loading && ticketTypes.length === 0 && <p className="mt-4 text-sm text-muted">{t("eventWorkflow.noTickets")}</p>}
       <ul className="mt-4 space-y-3">
         {tickets.map((type) => {
           const count = quantities[type.id] ?? 0;
           const open = purchasable(type);
+          const addDisabled = buy.isPending || !open || count >= limitFor(type) || total >= MAX_TICKETS_PER_ORDER;
+          const removeDisabled = !count || buy.isPending;
+          const typeId = `${formId}-ticket-${type.id}`;
           const windowStatus = ticketSaleStatus(type.saleWindow, now);
           const saleMessage = windowStatus === "upcoming" ? t("ticketTypes.opensAt", { date: saleTime.format(type.saleWindow.opens) })
             : windowStatus === "closed" ? t("checkout.salesClosed")
@@ -131,7 +142,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
           return <li key={type.id} className="rounded-xl border border-line-soft bg-paper p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold wrap-anywhere">{type.name}</p>
+                <p id={typeId} className="text-sm font-bold wrap-anywhere">{type.name}</p>
                 {type.description && <p className="my-1 whitespace-pre-wrap break-words text-xs text-muted-strong">{type.description}</p>}
                 <p className="text-xs text-muted">
                   {type.price_minor === 0 ? t("eventWorkflow.free") : formatMinor(type.price_minor, locale)}
@@ -143,32 +154,56 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
                 {type.price_minor > 0 && !event.paid_sales_active && <p className="mt-1 text-xs text-primary-hover">{t("checkout.paidInactive")}</p>}
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" aria-label={t("booking.removeTicket", { name: type.name })} disabled={!count || buy.isPending}
-                  onClick={() => change(type, -1)} className="grid size-10 place-items-center rounded-lg border border-line bg-white text-primary hover:border-primary disabled:opacity-40">
+                <button type="button" aria-label={t("booking.removeTicket", { name: type.name })} aria-disabled={removeDisabled}
+                  tabIndex={removeDisabled ? -1 : undefined} onClick={() => { if (!removeDisabled) change(type, -1); }}
+                  className="grid size-10 place-items-center rounded-lg border border-line bg-white text-primary hover:border-primary aria-disabled:cursor-default aria-disabled:opacity-40">
                   <Minus size={14} aria-hidden="true" /></button>
-                <span aria-live="polite" className="w-5 text-center text-sm font-semibold">{count}</span>
+                <span role="status" aria-labelledby={typeId} className="w-5 text-center text-sm font-semibold">{count}</span>
                 <button type="button" aria-label={t("booking.addTicket", { name: type.name })}
-                  disabled={buy.isPending || !open || count >= limitFor(type) || total >= MAX_TICKETS_PER_ORDER}
-                  onClick={() => change(type, 1)} className="grid size-10 place-items-center rounded-lg border border-line bg-white text-primary hover:border-primary disabled:opacity-40">
+                  aria-disabled={addDisabled} tabIndex={addDisabled && !count ? -1 : undefined}
+                  onClick={() => { if (!addDisabled) change(type, 1); }}
+                  className="grid size-10 place-items-center rounded-lg border border-line bg-white text-primary hover:border-primary aria-disabled:cursor-default aria-disabled:opacity-40">
                   <Plus size={14} aria-hidden="true" /></button>
               </div>
             </div>
-            {Array.from({ length: count }, (_, i) => <Input key={i} size="small" className="mt-2" maxLength={200} disabled={buy.isPending}
-              aria-label={t("checkout.attendeeName", { number: i + 1 })} placeholder={t("checkout.attendeeName", { number: i + 1 })}
-              value={names[`${type.id}-${i}`] ?? ""} onChange={(e) => setNames({ ...names, [`${type.id}-${i}`]: e.target.value })} />)}
+            {Array.from({ length: count }, (_, i) => <label key={i} className="mt-2 block text-sm font-semibold">
+              {t("checkout.attendeeName", { number: i + 1 })}
+              <Input className={`mt-1 ${inputStyles}`} maxLength={200} disabled={buy.isPending} aria-describedby={typeId}
+                value={names[`${type.id}-${i}`] ?? ""} onChange={(e) => setNames({ ...names, [`${type.id}-${i}`]: e.target.value })} />
+            </label>)}
           </li>;
         })}
       </ul>
-      {total > 0 && <div className="mt-4 space-y-3">
-        <label className="block text-sm font-semibold">{t("checkout.contactName")}
-          <Input className="mt-1.5" autoComplete="name" maxLength={200} disabled={buy.isPending}
-            value={contactName} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
-        </label>
-        <label className="block text-sm font-semibold">{t("common.email")}
-          <Input className="mt-1.5" type="email" autoComplete="email" disabled={buy.isPending}
-            value={contactEmail} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
-        </label>
-      </div>}
+      <form id={formId} noValidate onSubmit={(e) => {
+        e.preventDefault();
+        if (!canSubmit || submitting.current) return;
+        if (missingName || invalidEmail) {
+          setContactValidated(true);
+          window.requestAnimationFrame(() => document.getElementById(missingName ? nameId : emailId)?.focus());
+          return;
+        }
+        const currentTime = Date.now();
+        if (selected.some((type) => !purchasable(type, currentTime))) { setNow(currentTime); return; }
+        submitting.current = true;
+        buy.mutate();
+      }}>
+        {total > 0 && <div className="mt-4 space-y-3">
+          <div>
+            <label htmlFor={nameId} className="block text-sm font-semibold">{t("checkout.contactName")}</label>
+            <Input id={nameId} className={`mt-1.5 ${inputStyles}`} autoComplete="name" maxLength={200} required disabled={buy.isPending}
+              status={nameError ? "error" : undefined} aria-invalid={nameError} aria-describedby={nameError ? `${nameId}-error` : undefined}
+              value={contactName} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
+            {nameError && <p id={`${nameId}-error`} className="mt-1 text-xs text-red-700">{t("checkout.nameRequired")}</p>}
+          </div>
+          <div>
+            <label htmlFor={emailId} className="block text-sm font-semibold">{t("common.email")}</label>
+            <Input id={emailId} className={`mt-1.5 ${inputStyles}`} type="email" autoComplete="email" required disabled={buy.isPending}
+              status={emailError ? "error" : undefined} aria-invalid={emailError} aria-describedby={emailError ? `${emailId}-error` : undefined}
+              value={contactEmail} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+            {emailError && <p id={`${emailId}-error`} className="mt-1 text-xs text-red-700">{t("validation.email")}</p>}
+          </div>
+        </div>}
+      </form>
       {onSale && (promo || ticketTypes.some((type) => type.price_minor > 0)) && <div className="mt-4 space-y-2">
         <form onSubmit={(e) => {
           e.preventDefault();
@@ -180,9 +215,10 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
           else setAppliedCode(code);
         }}>
           <label htmlFor="promo-code" className="text-sm font-semibold">{t("promo.code")}</label>
-          <div className="mt-1 flex gap-2">
+          <div className="mt-1 flex flex-wrap gap-2">
             <Input id="promo-code" autoComplete="off" maxLength={64} value={codeInput} disabled={buy.isPending}
-              onChange={(e) => setCodeInput(e.target.value)} />
+              aria-invalid={Boolean(promo && quote.isError)} aria-describedby={promo && quote.isError ? "promo-error" : undefined}
+              className={`min-w-32 flex-1 ${inputStyles}`} onChange={(e) => setCodeInput(e.target.value)} />
             <Button htmlType="submit" disabled={!codeInput.trim() || buy.isPending} loading={quote.isFetching}>
               {t("promo.apply")}
             </Button>
@@ -199,7 +235,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
             buy.reset();
           }}>{t("promo.remove")}</Button>
         </div>}
-        {promo && quote.isError && <Alert role="alert" type="warning" showIcon
+        {promo && quote.isError && <Alert id="promo-error" role="alert" type="warning" showIcon
           title={errorMessage(quote.error, t("promo.quoteError"))}
           action={!(quote.error instanceof ApiError && quote.error.status === 409) &&
             <Button size="small" onClick={() => void quote.refetch()}>{t("common.retry")}</Button>} />}
@@ -219,13 +255,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
       </dl>
       {total >= MAX_TICKETS_PER_ORDER && <p className="mt-2 text-xs text-muted">{t("booking.orderLimit", { limit: MAX_TICKETS_PER_ORDER })}</p>}
       {selectionUnavailable && <p role="alert" className="mt-2 text-xs text-primary-hover">{t("checkout.selectionUnavailable")}</p>}
-      <Button type="primary" block className="mt-4" disabled={!canSubmit} loading={buy.isPending} onClick={() => {
-        if (!canSubmit || submitting.current) return;
-        const currentTime = Date.now();
-        if (selected.some((type) => !purchasable(type, currentTime))) { setNow(currentTime); return; }
-        submitting.current = true;
-        buy.mutate();
-      }}>
+      <Button type="primary" htmlType="submit" form={formId} block className="mt-4" disabled={!canSubmit} loading={buy.isPending}>
         {totalMinor > 0 ? t("checkout.continueToPayment") : t("checkout.register")}
       </Button>
       {buy.isError && buy.error.message !== quote.error?.message && <Alert role="alert" type="error" showIcon className="mt-3"
