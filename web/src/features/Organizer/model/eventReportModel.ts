@@ -4,6 +4,8 @@ export const REPORT_PAGE_SIZE = 25;
 export const reportPage = (page: number) => ({ limit: REPORT_PAGE_SIZE + 1, offset: page * REPORT_PAGE_SIZE });
 
 export const eventReportKeys = {
+  summary: (userId: number, eventId: number) => ["organizer", "summary", userId, eventId] as const,
+  orders: (userId: number, eventId: number) => ["organizer", "orders", userId, eventId] as const,
   attendees: (userId: number, eventId: number, page: number) => ["organizer", "attendees", userId, eventId, page] as const,
   timeline: (userId: number, eventId: number, filters: TimelineFilters, page: number) =>
     ["organizer", "timeline", userId, eventId, filters, page] as const,
@@ -19,6 +21,7 @@ export const EVENT_AUDIT_ACTIONS = [
   "refund.initiated", "payment.succeeded", "payment.failed", "staff.assigned", "staff.removed",
   "ticket.checked_in", "ticket.check_in_reversed",
   "campaign.created", "campaign.updated", "campaign.enabled", "campaign.disabled",
+  "support_case.status_changed",
 ] as const;
 
 // datetime-local has no offset. Round-trip the browser's local fields before

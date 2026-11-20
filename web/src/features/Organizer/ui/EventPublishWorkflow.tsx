@@ -1,14 +1,15 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Modal } from "antd";
 import { CheckCircle2, CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useLocale } from "../../../i18n/useLocale";
-import { EventWorkflowError } from "../../../shared/api/eventLifecycle";
+import { EventWorkflowError, eventLifecycleApi } from "../../../shared/api/eventLifecycle";
 import type { EventAction } from "../../../shared/api/eventLifecycle";
 import { SupportRequestButton } from "../../Support/ui/SupportRequestButton";
-import { useEventLifecycle } from "../model/useEventLifecycle";
+import { organizerEventKeys, useEventLifecycle } from "../model/useEventLifecycle";
 import { ActivationPanel } from "./ActivationPanel";
 import { AttendeesPanel } from "./AttendeesPanel";
 import { CampaignsPanel } from "./CampaignsPanel";
@@ -22,7 +23,16 @@ import { EventTimelinePanel } from "./EventTimelinePanel";
 export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; userId: number }) => {
   const { t } = useTranslation();
   const locale = useLocale();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { preview, transition } = useEventLifecycle(userId, eventId);
+  const duplicate = useMutation({
+    mutationFn: () => eventLifecycleApi.duplicate(eventId),
+    onSuccess: (copy) => {
+      void queryClient.invalidateQueries({ queryKey: organizerEventKeys.list(userId) });
+      void navigate(`/organizer/events/${copy.id}/edit`);
+    },
+  });
   const snapshot = preview.data;
   const [confirmationState, setConfirmationState] = useState<{
     action: Exclude<EventAction, "publish">; version: string;
@@ -63,7 +73,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
         <p className="font-mono text-[10px] font-semibold tracking-[0.14em] text-muted">{t("organizer.workspace")}</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="page-title">{t("eventWorkflow.preview")}</h1>
-          <span aria-live="polite"><EventStatusBadge status={event.status} /></span>
+          <span aria-live="polite"><EventStatusBadge status={event.status} phase={event.phase} /></span>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -86,6 +96,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
         {t("analytics.title")}
       </Link>
       <a href="#event-campaigns" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("campaigns.title")}</a>
+      <a href="#event-sales" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("sales.title")}</a>
       <a href="#event-attendees" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("reports.attendeesTitle")}</a>
       <a href="#event-timeline" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("reports.timelineTitle")}</a>
       <Link to={`/staff/support?event_id=${eventId}`} className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">
@@ -93,9 +104,10 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
       </Link>
     </nav>}
     <div aria-live="polite" className="my-6">
-      <Alert type={event.status === "cancelled" ? "error" : event.status === "published" ? "success" : "info"} showIcon
-        title={t(`eventWorkflow.state.${event.status}`)}
-        description={t(event.status === "published" ? `eventWorkflow.visibility.${event.visibility}` : `eventWorkflow.stateDescription.${event.status}`)} />
+      {event.phase === "completed" ? <Alert type="info" showIcon title={t("event.completed")} />
+        : <Alert type={event.status === "cancelled" ? "error" : event.status === "published" ? "success" : "info"} showIcon
+          title={t(`eventWorkflow.state.${event.status}`)}
+          description={t(event.status === "published" ? `eventWorkflow.visibility.${event.visibility}` : `eventWorkflow.stateDescription.${event.status}`)} />}
       {confirmedAction && <Alert role="status" type="success" showIcon className="mt-4"
         title={t(`eventWorkflow.success.${transition.variables}`)} />}
     </div>
@@ -108,7 +120,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
         <TicketTypesPanel event={event} userId={userId} editable={event.status === "draft" || event.status === "published"} />
         <ActivationPanel eventId={eventId} />
         <CampaignsPanel eventId={eventId} userId={userId} timeZone={event.timezone} />
-        <EventSalesPanel eventId={eventId} />
+        <EventSalesPanel eventId={eventId} userId={userId} />
         {!preview.isError && <>
           <AttendeesPanel key={`attendees:${userId}:${eventId}`} eventId={eventId} userId={userId} slug={event.slug} />
           <EventTimelinePanel key={`timeline:${userId}:${eventId}`} eventId={eventId} userId={userId} />
@@ -137,6 +149,12 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
           onClick={() => { transition.reset(); setConfirmation("unpublish"); }}>{t("eventWorkflow.unpublish")}</Button>}
         {allowed_actions.includes("cancel") && <Button block danger className="mt-3" disabled={!canAct}
           onClick={() => { transition.reset(); setConfirmation("cancel"); }}>{t("eventWorkflow.cancel")}</Button>}
+        {event.phase === "completed" && <>
+          <Button block className="mt-3" disabled={!canAct} loading={duplicate.isPending}
+            onClick={() => { if (!duplicate.isPending) duplicate.mutate(); }}>{t("eventWorkflow.duplicate")}</Button>
+          {duplicate.isError && <Alert role="alert" type="error" showIcon className="mt-3"
+            title={t("eventWorkflow.duplicateError")} />}
+        </>}
         <p className="mt-4 text-xs leading-5 text-muted">
           {t("eventWorkflow.updated", { date: new Intl.DateTimeFormat(locale, {
             dateStyle: "medium", timeStyle: "short", timeZone: event.timezone,
