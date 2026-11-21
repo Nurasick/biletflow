@@ -1,5 +1,35 @@
+import { adminMessages } from './admin-messages';
+import { organizerMessages } from './organizer-messages';
+
 // Source text remains the English fallback for server errors and future screens.
-const entries: readonly [string, string, string][] = [
+const entries: readonly (readonly [string, string, string])[] = [
+  ...adminMessages,
+  ...organizerMessages,
+  ["The request failed.", "Не удалось выполнить запрос.", "Сұрауды орындау мүмкін болмады."],
+  ["Event cancelled.", "Событие отменено.", "Іс-шара өткізілмейді."],
+  ["Could not submit this event report.", "Не удалось отправить жалобу на событие.", "Іс-шараға қатысты шағымды жіберу мүмкін болмады."],
+  ["active", "Активно", "Белсенді"],
+  ["upcoming", "Предстоит", "Алда"],
+  ["public", "Общедоступное", "Ашық"],
+  ["unlisted", "По ссылке", "Сілтеме арқылы"],
+  ["private", "Закрытое", "Жабық"],
+  ["Active", "Активно", "Белсенді"],
+  ["Cancel event", "Отменить событие", "Іс-шарадан бас тарту"],
+  ["Change", "Изменить", "Өзгерту"],
+  ["Demonstration data", "Демонстрационные данные", "Демо деректер"],
+  ["Details (optional)", "Подробности (необязательно)", "Мәліметтер (міндетті емес)"],
+  ["Disabled", "Отключено", "Өшірілген"],
+  ["Done", "Готово", "Дайын"],
+  ["Gross", "Валовая сумма", "Жалпы сома"],
+  ["Help us review this event", "Помогите нам проверить это событие", "Осы іс-шараны тексеруге көмектесіңіз"],
+  ["Net", "Чистая сумма", "Таза сома"],
+  ["Refunds", "Возвраты", "Қайтарымдар"],
+  ["Report event", "Пожаловаться на событие", "Іс-шараға шағымдану"],
+  ["Report this event", "Пожаловаться на это событие", "Осы іс-шараға шағымдану"],
+  ["Reports are reviewed by platform staff. Choose the closest reason and provide brief context.", "Жалобы рассматривают сотрудники платформы. Выберите подходящую причину и кратко опишите ситуацию.", "Шағымдарды платформа қызметкерлері қарайды. Сәйкес себепті таңдап, жағдайды қысқаша сипаттаңыз."],
+  ["Sending…", "Отправка…", "Жіберілуде…"],
+  ["Submit report", "Отправить жалобу", "Шағымды жіберу"],
+  ["Thank you. A platform administrator will review this event.", "Спасибо. Администратор платформы проверит это событие.", "Рақмет. Платформа әкімшісі осы іс-шараны тексереді."],
   ['Menu', 'Меню', 'Мәзір'],
   ['Keep', 'Оставить', 'Сақтау'],
   ['Events', 'События', 'Іс-шаралар'],

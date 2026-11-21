@@ -38,11 +38,20 @@ test('both dictionaries retain every interpolation token', () => {
   }
 });
 
-test('every explicit translation in mobile screens is available in both dictionaries', () => {
+test('mobile screen labels and operations feedback are available in both dictionaries', () => {
   const keys = new Set();
+  const operationsScreens = new Set(['admin.tsx', 'organizer.tsx', 'organizer-event.tsx', 'organizer-image.tsx', 'report-event.tsx', 'campaign-scan.tsx']);
+  const feedbackArguments = new Map([
+    ['confirm', [0, 1]],
+    ['run', [1]],
+    ['setError', [0]],
+    ['setMessage', [0]],
+    ['setNotice', [0]],
+  ]);
+
   function collect(argument) {
     if (!argument) return;
-    if (ts.isStringLiteral(argument) && argument.text) keys.add(argument.text);
+    if ((ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)) && argument.text) keys.add(argument.text);
     if (ts.isConditionalExpression(argument)) {
       collect(argument.whenTrue);
       collect(argument.whenFalse);
@@ -54,17 +63,27 @@ test('every explicit translation in mobile screens is available in both dictiona
       if (entry.isDirectory()) { readDirectory(filename); continue; }
       if (!entry.name.endsWith('.tsx')) continue;
       const source = ts.createSourceFile(filename, fs.readFileSync(filename, 'utf8'), ts.ScriptTarget.Latest, true);
+      const hasOperationsFeedback = operationsScreens.has(entry.name);
       function visit(node) {
-        if (ts.isCallExpression(node) && node.expression.getText(source) === 't') collect(node.arguments[0]);
+        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+          if (node.expression.text === 't') collect(node.arguments[0]);
+          // These screens translate their confirmations and feedback after the message is selected.
+          if (hasOperationsFeedback) {
+            for (const index of feedbackArguments.get(node.expression.text) ?? []) collect(node.arguments[index]);
+          }
+        }
+        if (hasOperationsFeedback && ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'Error') {
+          collect(node.arguments?.[0]);
+        }
         node.forEachChild(visit);
       }
       visit(source);
     }
   }
   readDirectory(path.resolve(__dirname, '../src'));
-  for (const locale of ['ru', 'kk']) {
-    for (const key of keys) assert.ok(Object.hasOwn(dictionaries[locale], key), `${locale} is missing: ${key}`);
-  }
+  const missing = Object.entries(dictionaries).flatMap(([locale, dictionary]) =>
+    [...keys].filter(key => !Object.hasOwn(dictionary, key)).map(key => `${locale}: ${key}`));
+  assert.deepEqual(missing, [], `Missing mobile translations:\n${missing.join('\n')}`);
 });
 
 test('restored locale only accepts a supported code, and persistence contains only the chosen code', async () => {
