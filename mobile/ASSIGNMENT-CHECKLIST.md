@@ -31,6 +31,8 @@ Browser artifacts and bundle output are ignored by Git. Never include credential
 
 ## Native-device acceptance
 
+See the [T07 and T08 QA record](ADMISSION-QA.md) for run results and the device acceptance status.
+
 These checks require supported iOS and Android devices. Browser mocks and JavaScript bundling cannot certify them.
 
 1. Configure a reachable development API. Sign in as assigned staff and confirm another event is unavailable.
