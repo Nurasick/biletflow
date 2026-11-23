@@ -28,7 +28,7 @@ Organizer and admin routes are API-backed and TypeScript-checked. Device behavio
 
 ## Additional checks
 
-- `npm run test:e2e`: browser smoke tests using intercepted API fixtures. Start Expo on port 8090 first; the default browser is locally installed Microsoft Edge. Override `MOBILE_WEB_URL` or `PLAYWRIGHT_CHANNEL` if needed.
+- `npm run test:e2e`: browser smoke tests using intercepted API fixtures. Run `npm run export:check` first (or `npm run test:e2e:fresh`); Playwright serves the export on port 8090 itself. The default browser is locally installed Microsoft Edge. Override `MOBILE_WEB_URL` or `PLAYWRIGHT_CHANNEL` if needed.
 - `npm run test:integration`: separately labelled disposable Docker API and tmpfs PostgreSQL database. It never uses Compose or the existing development database, and is separate from the default test suite. A healthy Docker engine is required.
 - `npm run export:check`: Android/iOS/web JavaScript bundles in ignored `.expo/qa-export`. This verifies bundling, not native installation or camera hardware.
 
