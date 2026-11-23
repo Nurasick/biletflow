@@ -1,4 +1,6 @@
 // Source text remains the English fallback for server errors and future screens.
+import { managementEntries } from './messages-management';
+
 const entries: readonly [string, string, string][] = [
   ['Menu', 'Меню', 'Мәзір'],
   ['Keep', 'Оставить', 'Сақтау'],
@@ -436,7 +438,9 @@ const entries: readonly [string, string, string][] = [
   ['completed', 'Завершено', 'Аяқталған'],
 ];
 
+const allEntries = [...entries, ...managementEntries];
+
 export const dictionaries: Record<'ru' | 'kk', Record<string, string>> = {
-  ru: Object.fromEntries(entries.map(([source, ru]) => [source, ru])),
-  kk: Object.fromEntries(entries.map(([source, , kk]) => [source, kk])),
+  ru: Object.fromEntries(allEntries.map(([source, ru]) => [source, ru])),
+  kk: Object.fromEntries(allEntries.map(([source, , kk]) => [source, kk])),
 };

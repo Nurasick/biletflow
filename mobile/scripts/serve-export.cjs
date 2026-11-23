@@ -3,7 +3,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '../.expo/qa-export');
-const port = Number(process.env.MOBILE_EXPORT_PORT || 8091);
+const port = Number(process.env.MOBILE_EXPORT_PORT || 8090);
 const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 http.createServer((request, response) => {
   let requested;

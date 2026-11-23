@@ -10,6 +10,12 @@ const englishEnumLabels: Record<string, string> = {
   refunded: 'Refunded', partially_refunded: 'Partially refunded', valid: 'Valid',
   checked_in: 'Checked in', published: 'Published', draft: 'Draft', suspended: 'Suspended',
   completed: 'Completed', event_admin: 'Event admin', organizer: 'Organizer',
+  upcoming: 'Upcoming', active: 'Active', public: 'Public', unlisted: 'Unlisted', private: 'Private',
+  general_admission: 'General admission', assigned: 'Assigned seating', concert: 'Concert', conference: 'Conference',
+  sport: 'Sport', theater: 'Theater', other: 'Other', unverified: 'Unverified', verified: 'Verified', rejected: 'Rejected',
+  ticket_order: 'Ticket order', activation_fee: 'Activation fee', succeeded: 'Succeeded', failed: 'Failed',
+  open: 'Open', dismissed: 'Dismissed', actioned: 'Actioned', percent: 'Percent', fixed: 'Fixed KZT',
+  fraud: 'Fraud', misleading: 'Misleading', illegal: 'Illegal', duplicate: 'Duplicate',
 };
 
 export function isLocale(value: unknown): value is Locale {

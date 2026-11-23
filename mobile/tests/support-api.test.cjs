@@ -59,3 +59,17 @@ test('authorized staff queue loads every page instead of hiding older cases',asy
  const urls=[];const result=await supportApi.list(async(path)=>{urls.push(path);return Response.json(urls.length===1?Array.from({length:100},()=>summary):[summary]);},'staff');
  assert.equal(result.length,101);assert.equal(urls[1],'/staff/support/cases?limit=100&offset=100');
 });
+
+test('staff queue filters are sent only when valid, and an unfiltered queue keeps the original query',()=>{
+ const {staffQueueQuery}=api.exports;
+ assert.equal(staffQueueQuery({},0),'?limit=100&offset=0');
+ assert.equal(staffQueueQuery({status:'in_progress',category:'refund',eventId:7},100),'?limit=100&offset=100&status=in_progress&category=refund&event_id=7');
+ assert.equal(staffQueueQuery({status:'bogus',category:'nope',eventId:-3},0),'?limit=100&offset=0');
+ assert.equal(staffQueueQuery({eventId:Number('abc')},0),'?limit=100&offset=0');
+});
+
+test('the staff queue request carries the selected filters',async()=>{
+ const calls=[];const fetcher=async(path)=>{calls.push(path);return Response.json([]);};
+ await supportApi.list(fetcher,'staff',undefined,{status:'open',eventId:12});
+ assert.deepEqual(calls,['/staff/support/cases?limit=100&offset=0&status=open&event_id=12']);
+});

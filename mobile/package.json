@@ -51,7 +51,8 @@
     "test:e2e": "playwright test",
     "test:integration": "node scripts/checkin-integration.cjs --isolated",
     "export:check": "expo export --platform all --output-dir .expo/qa-export --max-workers 2",
-    "serve:export": "node scripts/serve-export.cjs"
+    "serve:export": "node scripts/serve-export.cjs",
+    "test:e2e:fresh": "npm run export:check && playwright test"
   },
   "private": true
 }

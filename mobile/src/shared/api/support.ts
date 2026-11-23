@@ -70,12 +70,21 @@ export function validateNewCase(input: NewCase): NewCase {
   if ((input.order_number && input.order_number.length > 32) || (input.ticket_code && input.ticket_code.length > 32)) throw new Error('Invalid support context.');
   return {...input, body:messageBody(input.body)};
 }
+export type StaffCaseFilters = { status?: CaseStatus; category?: CaseCategory; eventId?: number };
+/** Query string for the staff queue; unknown or empty filters are left out rather than sent. */
+export function staffQueueQuery(filters: StaffCaseFilters, offset: number): string {
+  const params = new URLSearchParams({ limit: '100', offset: String(offset) });
+  if (filters.status && filters.status in caseTransitions) params.set('status', filters.status);
+  if (filters.category && caseCategories.some(item => item.value === filters.category)) params.set('category', filters.category);
+  if (filters.eventId !== undefined && Number.isSafeInteger(filters.eventId) && filters.eventId > 0) params.set('event_id', String(filters.eventId));
+  return `?${params}`;
+}
 export const supportApi = {
-  async list(fetcher: AuthenticatedFetch, mode: SupportMode, signal?: AbortSignal): Promise<CaseSummary[]> {
+  async list(fetcher: AuthenticatedFetch, mode: SupportMode, signal?: AbortSignal, filters: StaffCaseFilters = {}): Promise<CaseSummary[]> {
     if (mode === 'requester') return request<CaseSummary[]>(fetcher, base(mode), {signal});
     const all: CaseSummary[] = [];
     for (let offset=0;;offset+=100) {
-      const page = await request<CaseSummary[]>(fetcher, base(mode)+'?limit=100&offset='+offset, {signal});
+      const page = await request<CaseSummary[]>(fetcher, base(mode)+staffQueueQuery(filters, offset), {signal});
       all.push(...page); if (page.length < 100) return all;
     }
   },

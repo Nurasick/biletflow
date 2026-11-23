@@ -88,7 +88,7 @@ function RootLayoutContent() {
             {['index', 'about', 'home', 'explore', 'checkout', 'event-details', 'tickets',
               'ticket-selection', 'seat-selection', 'staff', 'staff-event', 'workspace',
               'support', 'support-new', 'support-case', 'notifications', 'account',
-              'organizer', 'organizer-event', 'organizer-image', 'admin', 'campaign-scan', 'report-event']
+              'organizer', 'organizer-event', 'organizer-preview', 'organizer-image', 'admin', 'campaign-scan', 'report-event']
               .map(name => <Stack.Screen key={name} name={name} />)}
           </Stack.Protected>
           <Stack.Protected guard={!isLoggedIn}>

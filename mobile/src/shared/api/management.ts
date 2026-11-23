@@ -1,11 +1,18 @@
 import type { AuthenticatedFetch } from './orders';
 
+export class ManagementApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'ManagementApiError';
+  }
+}
+
 async function request<T>(fetcher: AuthenticatedFetch, path: string, init?: RequestInit): Promise<T> {
   const response = await fetcher(path, init);
   const body = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
     const detail = body && typeof body === 'object' && 'detail' in body ? body.detail : null;
-    throw new Error(typeof detail === 'string' ? detail : `Request failed (${response.status}).`);
+    throw new ManagementApiError(typeof detail === 'string' ? detail : `Request failed (${response.status}).`, response.status);
   }
   return body as T;
 }
@@ -52,15 +59,27 @@ export type StaffMember = { user_id: number; email: string; first_name: string; 
 export type Campaign = { id: number; event_id: number; name: string; code: string; discount_type: 'percent'|'fixed'; discount_value: number; starts_at: string | null; ends_at: string | null; max_redemptions: number | null; redemption_count: number; is_active: boolean; ticket_type_ids: number[]; link: string; stats: { redemptions: number; orders: number; tickets_sold: number; gross_minor: number; discount_minor: number; refunds_minor: number; net_minor: number } };
 export type EventAnalytics = { is_simulated: boolean; capacity: number; tickets_sold: number; tickets_remaining: number; percent_sold: number; gross_minor: number; discounts_minor: number; refunds_minor: number; net_minor: number; sales_over_time: { date: string; tickets: number; revenue_minor: number }[]; by_ticket_type: OrganizerSummary['by_ticket_type']; campaigns: (Campaign['stats'] & { id: number; name: string; code: string; is_active: boolean })[]; attendance: OrganizerSummary['attendance'] };
 export type TimelineItem = { id: number; created_at: string; actor_user_id: number | null; actor_name?: string | null; action: string; entity_type: string; entity_id: number; summary: string; payload: Record<string, unknown> | null };
+export type PublishRequirementCode = 'title'|'venue'|'schedule'|'future_start'|'visible_ticket_type';
+export type EventPreview = {
+  event: ManagedEvent; images: ManagedImage[];
+  allowed_actions: ('publish'|'unpublish'|'cancel')[];
+  publish_requirements: { code: PublishRequirementCode; met: boolean }[];
+};
 const eventBase = (id: number) => `/organizer/events/${id}`;
 
 export const managementApi = {
   profile: (f: AuthenticatedFetch) => request<OrganizerProfile>(f, '/organizer/profile'),
+  /** A signed-in account without an organizer profile yet is the normal "become an organizer" state. */
+  profileOrNull: async (f: AuthenticatedFetch) => {
+    try { return await request<OrganizerProfile>(f, '/organizer/profile'); }
+    catch (failure) { if (failure instanceof ManagementApiError && failure.status === 404) return null; throw failure; }
+  },
   saveProfile: (f: AuthenticatedFetch, body: Record<string, unknown>) => request<OrganizerProfile>(f, '/organizer/profile', json('PUT', body)),
   verifyProfile: (f: AuthenticatedFetch) => request<OrganizerProfile>(f, '/organizer/profile/verify', json('POST')),
   events: (f: AuthenticatedFetch, signal?: AbortSignal) => request<ManagedEvent[]>(f, '/organizer/events', { signal }),
   createEvent: (f: AuthenticatedFetch, body: Record<string, unknown>) => request<ManagedEvent>(f, '/events', json('POST', body)),
   updateEvent: (f: AuthenticatedFetch, id: number, body: Record<string, unknown>) => request<ManagedEvent>(f, eventBase(id), json('PATCH', body)),
+  preview: (f: AuthenticatedFetch, id: number, signal?: AbortSignal) => request<EventPreview>(f, `${eventBase(id)}/preview`, { signal }),
   images: (f: AuthenticatedFetch, id: number, signal?: AbortSignal) => request<ManagedImage[]>(f, `${eventBase(id)}/images`, { signal }),
   uploadImage: (f: AuthenticatedFetch, id: number, dataUrl: string) => request<ManagedImage>(f, `${eventBase(id)}/images`, json('POST', { data_url: dataUrl })),
   removeImage: (f: AuthenticatedFetch, id: number, imageId: number) => request<null>(f, `${eventBase(id)}/images/${imageId}`, { method:'DELETE' }),
