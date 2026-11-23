@@ -63,7 +63,7 @@ export const EventTimelinePanel = ({ eventId, userId }: { eventId: number; userI
       <div>
         <label htmlFor="timeline-actions" className="mb-2 block text-sm font-medium">{t("reports.actions")}</label>
         <Select id="timeline-actions" mode="multiple" allowClear value={actions} onChange={setActions}
-          options={actionOptions} optionFilterProp="label" placeholder={t("reports.allActions")} className="w-full" />
+          options={actionOptions} optionFilterProp="label" virtual={false} placeholder={t("reports.allActions")} className="w-full" />
       </div>
       <div id="timeline-filter-error">{filterError && <Alert role="alert" type="error" showIcon title={t(`reports.${filterError}`)} />}</div>
       <div className="flex flex-wrap gap-3">

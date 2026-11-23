@@ -12,6 +12,7 @@ import type { OrganizerEventRecord } from "../../../shared/api/organizerEvents";
 import { formatMinor } from "../../../shared/lib/formatPrice";
 import { parseApiInstant } from "../../../shared/lib/parseApiInstant";
 import { useAuthErrorMessage } from "../../../shared/lib/useAuthErrorMessage";
+import { eventReportKeys } from "../model/eventReportModel";
 import { organizerEventKeys } from "../model/useEventLifecycle";
 import { ReportError, ReportLoading } from "./ReportControls";
 import { TicketTypeForm } from "./TicketTypeForm";
@@ -35,7 +36,7 @@ export const TicketTypesPanel = ({ event, userId, editable }: Props) => {
       client.invalidateQueries({ queryKey }),
       client.invalidateQueries({ queryKey: organizerEventKeys.preview(userId, eventId) }),
       client.invalidateQueries({ queryKey: ["organizer", "activation", eventId] }),
-      client.invalidateQueries({ queryKey: ["organizer", "summary", eventId] }),
+      client.invalidateQueries({ queryKey: eventReportKeys.summary(userId, eventId) }),
       client.invalidateQueries({ queryKey: ["organizer", "timeline", userId, eventId] }),
       client.invalidateQueries({ queryKey: ["events", "ticket-types", slug] }),
     ]);

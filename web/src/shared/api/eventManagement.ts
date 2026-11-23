@@ -1,5 +1,7 @@
 import { api } from "./auth";
 import type { OrganizerTicketType } from "./eventLifecycle";
+import { pageParams } from "./eventReports";
+import type { PageOptions } from "./eventReports";
 
 export type TicketTypeInput = {
   name: string;
@@ -81,8 +83,9 @@ export const activationApi = {
 };
 
 export const salesApi = {
-  summary: (eventId: number) => api.get<EventSummary>(`${base(eventId)}/summary`),
-  orders: (eventId: number) => api.get<OrganizerOrder[]>(`${base(eventId)}/orders`),
+  summary: (eventId: number, signal?: AbortSignal) => api.get<EventSummary>(`${base(eventId)}/summary`, { signal }),
+  orders: (eventId: number, options: PageOptions) =>
+    api.get<OrganizerOrder[]>(`${base(eventId)}/orders?${pageParams(options)}`, { signal: options.signal }),
   refund: (eventId: number, orderNumber: string, reason: string) =>
     api.post<OrganizerOrder>(`${base(eventId)}/orders/${orderNumber}/refund`, { reason }),
   cancel: (eventId: number, orderNumber: string) =>

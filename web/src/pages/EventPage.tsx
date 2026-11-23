@@ -46,7 +46,7 @@ export const EventPage = () => {
       </div>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,390px)] lg:gap-8">
         <EventDetails event={event.data} />
-        {types.isError && !types.data ? <aside id="ticket-booking" className="scroll-mt-6">
+        {types.isError && !types.data ? <aside id="ticket-booking" tabIndex={-1} className="scroll-mt-6">
           <Alert role="alert" type="error" showIcon title={t("checkout.ticketLoadError")}
             action={<Button onClick={() => void types.refetch()} loading={types.isFetching}>{t("common.retry")}</Button>} />
         </aside> : <CheckoutPanel key={slug} event={event.data} ticketTypes={types.data ?? []} loading={types.isPending} />}

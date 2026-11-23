@@ -1,23 +1,33 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Modal } from "antd";
 import { BarChart3 } from "lucide-react";
+import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useLocale } from "../../../i18n/useLocale";
 import { ApiError } from "../../../shared/api/auth";
 import { salesApi } from "../../../shared/api/eventManagement";
-import type { OrganizerOrder } from "../../../shared/api/eventManagement";
+import type { EventSummary, OrganizerOrder } from "../../../shared/api/eventManagement";
 import { formatMinor } from "../../../shared/lib/formatPrice";
+import { eventReportKeys, REPORT_PAGE_SIZE, reportPage } from "../model/eventReportModel";
+import { ReportError, ReportLoading, ReportPagination, ReportRefresh } from "./ReportControls";
 
 // §4.6 gross/refunds/payout, §4.15 capacity and attendance, §4.9 cancel and
 // refund. Every amount is simulated money, and the panel says so.
-export const EventSalesPanel = ({ eventId }: { eventId: number }) => {
+export const EventSalesPanel = ({ eventId, userId }: { eventId: number; userId: number }) => {
   const { t } = useTranslation();
   const locale = useLocale();
   const queryClient = useQueryClient();
-  const summary = useQuery({ queryKey: ["organizer", "summary", eventId], queryFn: () => salesApi.summary(eventId) });
-  const orders = useQuery({ queryKey: ["organizer", "orders", eventId], queryFn: () => salesApi.orders(eventId) });
+  const [page, setPage] = useState(0);
+  const summaryKey = eventReportKeys.summary(userId, eventId);
+  const ordersKey = eventReportKeys.orders(userId, eventId);
+  const summary = useQuery({
+    queryKey: summaryKey, queryFn: ({ signal }) => salesApi.summary(eventId, signal), retry: false,
+  });
+  const orders = useQuery({
+    queryKey: [...ordersKey, page], queryFn: ({ signal }) => salesApi.orders(eventId, { ...reportPage(page), signal }), retry: false,
+  });
   const [target, setTarget] = useState<OrganizerOrder | null>(null);
   const settle = useMutation({
     mutationFn: (order: OrganizerOrder) => order.total_minor > 0
@@ -25,40 +35,48 @@ export const EventSalesPanel = ({ eventId }: { eventId: number }) => {
       : salesApi.cancel(eventId, order.order_number),
     onSuccess: async () => {
       setTarget(null);
-      await queryClient.invalidateQueries({ queryKey: ["organizer", "summary", eventId] });
-      await queryClient.invalidateQueries({ queryKey: ["organizer", "orders", eventId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: summaryKey }),
+        queryClient.invalidateQueries({ queryKey: ordersKey }),
+        queryClient.invalidateQueries({ queryKey: ["organizer", "attendees", userId, eventId] }),
+        queryClient.invalidateQueries({ queryKey: ["organizer", "timeline", userId, eventId] }),
+      ]);
     },
   });
   const money = (minor: number) => formatMinor(minor, locale);
 
   return (
-    <section aria-labelledby="sales" className="rounded-xl border border-line bg-white p-5">
-      <h2 id="sales" className="flex items-center gap-2 font-semibold"><BarChart3 size={18} aria-hidden="true" />{t("sales.title")}</h2>
-      {summary.data && <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-        {[
-          ["sales.sold", `${summary.data.tickets_sold} / ${summary.data.capacity}`],
-          ["sales.checkedIn", `${summary.data.attendance.checked_in} / ${summary.data.attendance.registered}`],
-          ["sales.gross", money(summary.data.gross_minor)],
-          ["sales.payout", money(summary.data.estimated_payout_minor)],
-        ].map(([label, value]) => <div key={label}>
-          <dt className="text-xs text-muted">{t(label as "sales.sold")}</dt>
-          <dd className="mt-1 text-lg font-semibold">{value}</dd>
-        </div>)}
-      </dl>}
-      {summary.data?.is_simulated && <p className="mt-2 text-xs text-muted">{t("sales.simulated")}</p>}
+    <section id="event-sales" aria-labelledby="sales" className="scroll-mt-6 rounded-xl border border-line bg-white p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="sales" className="flex items-center gap-2 font-semibold"><BarChart3 size={18} aria-hidden="true" />{t("sales.title")}</h2>
+        <ReportRefresh refresh={() => { void summary.refetch(); void orders.refetch(); }} fetching={summary.isFetching || orders.isFetching} />
+      </div>
+      <div className="mt-4" aria-busy={summary.isFetching}>
+        {summary.isPending ? <ReportLoading /> : summary.isError
+          ? <ReportError error={summary.error} retry={() => void summary.refetch()} fetching={summary.isFetching} />
+          : <SalesBreakdown summary={summary.data} t={t} locale={locale} />}
+      </div>
       <h3 className="mt-6 text-sm font-semibold">{t("sales.orders")}</h3>
-      {orders.data?.length === 0 && <p className="mt-2 text-sm text-muted">{t("sales.noOrders")}</p>}
-      <ul className="mt-2 divide-y divide-line-soft">
-        {orders.data?.map((order) => <li key={order.order_number} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-          <div className="min-w-0">
-            <p className="font-semibold">{order.contact_name} <span className="font-mono text-xs text-muted">{order.order_number}</span></p>
-            <p className="text-xs text-muted">{t("sales.orderLine", { count: order.ticket_count })} · {money(order.total_minor)} · {t(`orderStatus.${order.status}`)}</p>
-          </div>
-          {order.status === "confirmed" && <Button size="small" danger onClick={() => { settle.reset(); setTarget(order); }}>
-            {t(order.total_minor > 0 ? "sales.refund" : "sales.cancelRegistration")}
-          </Button>}
-        </li>)}
-      </ul>
+      <div aria-busy={orders.isFetching}>
+        {orders.isPending ? <ReportLoading /> : orders.isError
+          ? <ReportError error={orders.error} retry={() => void orders.refetch()} fetching={orders.isFetching} />
+          : orders.data.length === 0 ? <p role="status" className="mt-2 text-sm text-muted">{t("sales.noOrders")}</p>
+            : <ul className="mt-2 divide-y divide-line-soft">
+              {orders.data.slice(0, REPORT_PAGE_SIZE).map((order) => <li key={order.order_number}
+                className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                <div className="min-w-0">
+                  <p className="break-words font-semibold">{order.contact_name} <span className="font-mono text-xs text-muted">{order.order_number}</span></p>
+                  <p className="text-xs text-muted">{t("sales.orderLine", { count: order.ticket_count })} · {money(order.total_minor)} · {t(`orderStatus.${order.status}`)}</p>
+                </div>
+                {order.status === "confirmed" && <Button size="small" danger onClick={() => { settle.reset(); setTarget(order); }}>
+                  {t(order.total_minor > 0 ? "sales.refund" : "sales.cancelRegistration")}
+                </Button>}
+              </li>)}
+            </ul>}
+      </div>
+      {(page > 0 || (orders.isSuccess && orders.data.length > REPORT_PAGE_SIZE)) && <ReportPagination page={page}
+        hasNext={orders.isSuccess && orders.data.length > REPORT_PAGE_SIZE} fetching={orders.isFetching}
+        label={t("sales.orders")} onPage={setPage} />}
       <Modal open={target !== null} title={target ? t(target.total_minor > 0 ? "sales.refund" : "sales.cancelRegistration") : ""}
         okText={t("sales.confirm")} okButtonProps={{ danger: true }} confirmLoading={settle.isPending}
         onCancel={() => setTarget(null)} onOk={() => { if (target) settle.mutate(target); }}>
@@ -68,4 +86,40 @@ export const EventSalesPanel = ({ eventId }: { eventId: number }) => {
       </Modal>
     </section>
   );
+};
+
+const SalesBreakdown = ({ summary, t, locale }: { summary: EventSummary; t: TFunction; locale: string }) => {
+  const count = new Intl.NumberFormat(locale);
+  const inventory = [
+    ["sales.available", summary.tickets_remaining],
+    ["sales.reserved", summary.tickets_reserved],
+    ["sales.sold", summary.tickets_sold, summary.capacity],
+    ["sales.refunded", summary.tickets_refunded],
+    ["sales.checkedIn", summary.attendance.checked_in, summary.attendance.registered],
+  ] as const;
+  const amounts = [
+    ["sales.gross", summary.gross_minor],
+    ["sales.fees", summary.fees_minor],
+    ["sales.refunds", summary.refunds_minor],
+    ["sales.payout", summary.estimated_payout_minor],
+  ] as const;
+
+  return <>
+    <h3 className="text-sm font-semibold">{t("sales.inventory")}</h3>
+    <dl className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      {inventory.map(([label, value, total]) => <div key={label}>
+        <dt className="text-xs text-muted">{t(label)}</dt>
+        <dd className="mt-1 text-lg font-semibold tabular-nums">{count.format(value)}{total !== undefined && ` / ${count.format(total)}`}</dd>
+      </div>)}
+    </dl>
+    <div className="mt-5 border-t border-line-soft pt-4">
+      <h3 className="text-sm font-semibold">{t(summary.is_simulated ? "sales.simulatedBreakdown" : "sales.breakdown")}</h3>
+      <dl className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {amounts.map(([label, value]) => <div key={label}>
+          <dt className="text-xs text-muted">{t(label)}</dt>
+          <dd className="mt-1 break-words text-lg font-semibold tabular-nums">{formatMinor(value, locale)}</dd>
+        </div>)}
+      </dl>
+    </div>
+  </>;
 };

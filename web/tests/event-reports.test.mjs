@@ -4,6 +4,9 @@ import test from 'node:test';
 import { fakeAuthUrl, moduleUrl, scriptApi } from './harness.mjs';
 
 const apiUrl = await moduleUrl('../src/shared/api/eventReports.ts', { '"./auth"': JSON.stringify(fakeAuthUrl) });
+const managementUrl = await moduleUrl('../src/shared/api/eventManagement.ts', {
+  '"./auth"': JSON.stringify(fakeAuthUrl), '"./eventReports"': JSON.stringify(apiUrl),
+});
 const modelUrl = await moduleUrl('../src/features/Organizer/model/eventReportModel.ts');
 const apiTimeUrl = await moduleUrl('../src/shared/lib/parseApiInstant.ts');
 const eventTimeUrl = await moduleUrl('../src/features/Organizer/model/eventDateTime.ts', {
@@ -13,7 +16,8 @@ const { analyticsFilters } = await import(await moduleUrl('../src/features/Organ
   '"./eventDateTime"': JSON.stringify(eventTimeUrl),
 }));
 const { eventReportsApi } = await import(apiUrl);
-const { eventReportKeys, reportPage, timelineFilters, REPORT_PAGE_SIZE } = await import(modelUrl);
+const { salesApi } = await import(managementUrl);
+const { EVENT_AUDIT_ACTIONS, eventReportKeys, reportPage, timelineFilters, REPORT_PAGE_SIZE } = await import(modelUrl);
 
 test('attendee reads preserve one row per ticket, null contacts, order and ticket status', async () => {
   const attendee = { public_code: 'BF-A', ticket_status: 'valid', ticket_type_name: 'General',
@@ -24,24 +28,28 @@ test('attendee reads preserve one row per ticket, null contacts, order and ticke
   assert.equal(fake.calls[0].path, '/organizer/events/7/attendees?limit=26&offset=0');
 });
 
-test('pagination probes one extra row while advancing by visible rows, including the sentinel next time', async () => {
-  const all = Array.from({ length: 51 }, (_, index) => ({ public_code: `BF-${index}` }));
-  scriptApi([[200, all.slice(0, 26)], [200, all.slice(25, 51)], [200, all.slice(50)]]);
-  const visible = [];
-  for (let page = 0; page < 3; page++) {
-    const rows = await eventReportsApi.attendees(7, reportPage(page));
-    assert.equal(rows.length > REPORT_PAGE_SIZE, page < 2);
-    visible.push(...rows.slice(0, REPORT_PAGE_SIZE));
-  }
-  assert.deepEqual(visible, all);
-});
+for (const [report, fetchPage] of [['attendees', eventReportsApi.attendees], ['orders', salesApi.orders]]) {
+  test(`${report} pagination advances by visible rows and includes the extra row on the next page`, async () => {
+    const all = Array.from({ length: 51 }, (_, index) => ({ id: index }));
+    const fake = scriptApi([[200, all.slice(0, 26)], [200, all.slice(25, 51)], [200, all.slice(50)]]);
+    const visible = [];
+    for (let page = 0; page < 3; page++) {
+      const rows = await fetchPage(7, reportPage(page));
+      assert.equal(rows.length > REPORT_PAGE_SIZE, page < 2);
+      assert.equal(fake.calls[page].path, `/organizer/events/7/${report}?limit=26&offset=${25 * page}`);
+      visible.push(...rows.slice(0, REPORT_PAGE_SIZE));
+    }
+    assert.deepEqual(visible, all);
+  });
+}
 
 test('timeline requests encode UTC bounds and repeat action params without losing literal characters', async () => {
   const entry = { id: 8, created_at: '2026-10-29T10:00:00Z', actor_user_id: null,
     action: 'event.published', entity_type: 'event', entity_id: 7, summary: 'Event published', payload: null };
   const fake = scriptApi([[200, [entry]]]);
   const filters = { since: '2026-10-01T10:00:00+05:00', until: '2026-11-01T00:00:00Z',
-    actions: ['event.published', 'ticket.checked_in', 'future.action & value'] };
+    actions: ['event.published', 'support_case.status_changed', 'future.action & value'] };
+  assert.ok(EVENT_AUDIT_ACTIONS.includes('support_case.status_changed'));
   assert.deepEqual(await eventReportsApi.timeline(7, filters, reportPage(2)), [entry]);
   const url = new URL(fake.calls[0].path, 'https://example.test');
   assert.equal(url.pathname, '/organizer/events/7/timeline');

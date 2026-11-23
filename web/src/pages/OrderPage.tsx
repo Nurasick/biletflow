@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button } from "antd";
 import { LoaderCircle } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
@@ -15,13 +15,22 @@ import { randomId } from "../shared/lib/randomId";
 import { useAuthErrorMessage } from "../shared/lib/useAuthErrorMessage";
 
 export const OrderPage = () => {
+  const { t } = useTranslation();
   const { orderNumber = "" } = useParams();
   const [params] = useSearchParams();
   const token = params.get("token");
   const { me } = useAuth();
   const ownerId = token ? null : me.data?.id ?? null;
-  return <OrderDetails key={JSON.stringify([orderNumber, token, ownerId])}
-    orderNumber={orderNumber} token={token} ownerId={ownerId} waitingForSession={!token && me.isPending} />;
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [orderNumber]);
+
+  return <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-7 sm:py-10">
+    <Link to="/" className="text-sm text-muted">{t("common.backToEvents")}</Link>
+    <h1 ref={heading} tabIndex={-1} className="mt-3 page-title">{t("orders.title")}</h1>
+    <OrderDetails key={JSON.stringify([orderNumber, token, ownerId])}
+      orderNumber={orderNumber} token={token} ownerId={ownerId} waitingForSession={!token && me.isPending} />
+  </main>;
 };
 
 const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
@@ -32,6 +41,7 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
   const queryClient = useQueryClient();
   const errorMessage = useAuthErrorMessage();
   const paymentKey = useRef<string | null>(null);
+  const confirmation = useRef<HTMLDivElement>(null);
   const queryKey = ["orders", "detail", orderNumber, token, ownerId];
   const order = useQuery({
     queryKey, queryFn: () => ordersApi.get(orderNumber, token), enabled: !waitingForSession, retry: false,
@@ -45,6 +55,8 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
     onError: () => queryClient.invalidateQueries({ queryKey }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["orders", "mine"] }),
   });
+  const paymentConfirmed = act.isSuccess && act.variables === "pay" && order.data?.status === "confirmed";
+  useEffect(() => { if (paymentConfirmed) confirmation.current?.focus(); }, [paymentConfirmed]);
 
   const expiresAt = order.data?.expires_at;
   const expiry = expiresAt && new Intl.DateTimeFormat(locale, {
@@ -52,17 +64,17 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
   }).format(new Date(expiresAt));
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-7 py-10">
-      <Link to="/" className="text-sm text-muted">{t("common.backToEvents")}</Link>
-      <h1 className="mt-3 page-title">{t("orders.title")}</h1>
+    <>
       {order.isPending ? <div role="status" className="flex items-center gap-2 py-16 text-sm text-muted">
         <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />{t("common.loading")}
       </div> : order.isError ? <Alert className="mt-6" type="error" showIcon
         title={t(order.error instanceof ApiError && order.error.status === 404 ? "orders.notFound" : "errors.unavailable")}
         action={<Button size="small" loading={order.isFetching} onClick={() => void order.refetch()}>{t("common.retry")}</Button>} />
         : <div className="mt-6 space-y-4">
-          {order.data.status === "confirmed" && <Alert type="success" showIcon title={t("orders.confirmed")}
-            description={token ? t("orders.keepLink") : undefined} />}
+          <div ref={confirmation} tabIndex={-1} role="status" className="empty:sr-only">
+            {order.data.status === "confirmed" && <Alert type="success" showIcon role="presentation" title={t("orders.confirmed")}
+              description={token ? t("orders.keepLink") : undefined} />}
+          </div>
           {order.data.status === "pending" && <div className="space-y-3">
             <Alert type="warning" showIcon title={t("orders.awaitingPayment")}
               description={expiry ? t("orders.heldUntil", { date: expiry, zone: order.data.event.timezone }) : undefined} />
@@ -78,6 +90,6 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
             title={errorMessage(act.error, t("eventWorkflow.networkError"))} />}
           <OrderCard order={order.data} access={{ token }} />
         </div>}
-    </main>
+    </>
   );
 };

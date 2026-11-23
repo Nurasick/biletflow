@@ -48,9 +48,9 @@ export type EventAnalytics = {
   campaigns: (CampaignStats & { id: number; name: string; code: string; is_active: boolean })[];
   attendance: Attendance;
 };
-type PageOptions = { limit: number; offset: number; signal?: AbortSignal };
+export type PageOptions = { limit: number; offset: number; signal?: AbortSignal };
 
-const pageParams = ({ limit, offset }: PageOptions) => new URLSearchParams({
+export const pageParams = ({ limit, offset }: PageOptions) => new URLSearchParams({
   limit: String(limit), offset: String(offset),
 });
 
