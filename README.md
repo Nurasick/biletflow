@@ -136,5 +136,7 @@ model is missing from that file, the generated migration will be silently empty.
 - [`docs/data-model/`](docs/data-model/) — data model, one file per slice
 - [`docs/state-machines.md`](docs/state-machines.md) — order and ticket lifecycles
 - [`docs/openapi.json`](docs/openapi.json) — generated API contract
+- [`docs/testing-guide.md`](docs/testing-guide.md) — automated checks and the manual test plan (web + mobile)
+- [`docs/demo-guide.md`](docs/demo-guide.md) — live demonstration script, preparation, and recovery
 
 > TODO: add team members and roles.
