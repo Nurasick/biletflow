@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, Platform, Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { Icon } from '@/components/design';
 import { ThemedText } from '@/components/themed-text';
@@ -13,6 +13,7 @@ import type { AppColors } from '@/constants/theme';
 import { downloadOrderTicketsPdf, openEventCalendar } from '@/shared/api/documents';
 import { formatEventDate } from '@/shared/api/events';
 import { formatOrderMoney, ordersApi, type Order, type OrderStatus } from '@/shared/api/orders';
+import { confirmAction } from '@/lib/confirm';
 
 export default function TicketsScreen() {
   const router = useRouter();
@@ -64,15 +65,14 @@ export default function TicketsScreen() {
   };
 
   const confirmCancel = (order: Order) => {
-    const message = 'Cancel this pending order and release its ticket reservation?';
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(message)) void runOrderAction(order, 'cancel');
-      return;
-    }
-    Alert.alert('Cancel order?', message, [
-      { text: 'Keep order', style: 'cancel' },
-      { text: 'Cancel order', style: 'destructive', onPress: () => void runOrderAction(order, 'cancel') },
-    ]);
+    confirmAction({
+      title: t('Cancel order?'),
+      message: t('Cancel this pending order and release its ticket reservation?'),
+      confirmLabel: t('Cancel order'),
+      cancelLabel: t('Keep order'),
+      destructive: true,
+      onConfirm: () => void runOrderAction(order, 'cancel'),
+    });
   };
 
   const refresh = () => void loadOrders();

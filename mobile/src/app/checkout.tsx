@@ -8,6 +8,7 @@ import { Action, FormField, Panel } from '@/components/workspace';
 import { useAuth } from '@/hooks/use-auth';
 import { useI18n } from '@/i18n';
 import { promotionsApi, type PromoQuote } from '@/shared/api/events';
+import { accountApi } from '@/shared/api/account';
 
 export default function Checkout() {
   const { slug, selection, seats, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug: string; selection: string; seats?: string; campaignToken?: string|string[] }>();
@@ -30,6 +31,17 @@ export default function Checkout() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState(user?.email ?? '');
   const [names, setNames] = useState<Record<string, string>>({});
+
+  // Prefill the contact with the signed-in account; the attendee can still change it.
+  useEffect(() => {
+    const controller = new AbortController();
+    void accountApi.get(authenticatedFetch, controller.signal).then((account) => {
+      if (controller.signal.aborted) return;
+      setName((current) => current || `${account.first_name} ${account.last_name}`.trim());
+      setEmail((current) => current || account.email);
+    }).catch(() => { /* Prefill is a convenience; the fields stay editable. */ });
+    return () => controller.abort();
+  }, [authenticatedFetch]);
 
   useFocusEffect(useCallback(() => {
     let active = true;
