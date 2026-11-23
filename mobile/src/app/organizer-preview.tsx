@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
-import { Action, Info, Panel, WorkspaceScreen, useWorkspaceColors } from '@/components/workspace';
+import { Action, Info, Panel, StatusLine, WorkspaceScreen, useWorkspaceColors } from '@/components/workspace';
 import { useAuth } from '@/hooks/use-auth';
 import { useI18n } from '@/i18n';
 import { resolveEventImage } from '@/shared/api/events';
@@ -101,7 +101,7 @@ export default function OrganizerPreviewScreen() {
         <Panel>
           <Info>{t('Ready to publish?')}</Info>
           {preview.publish_requirements.map((item) => (
-            <Info key={item.code} tone={item.met ? undefined : 'error'}>{item.met ? '✓' : '✗'} {t(requirementLabels[item.code])}</Info>
+            <StatusLine key={item.code} done={item.met} failed={!item.met}>{t(requirementLabels[item.code])}</StatusLine>
           ))}
           {preview.allowed_actions.includes('publish') && (
             <Action label={t(busy ? 'Publishing…' : 'Publish event')} disabled={busy || blocked} onPress={() => void publish()} />

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AuthLink, AuthScreen } from '@/components/auth-screen';
+import { PasswordField } from '@/components/password-field';
 import { Action, FormField, Info } from '@/components/workspace';
 import { useI18n } from '@/i18n';
 import { accountApi } from '@/shared/api/account';
@@ -27,17 +28,16 @@ export function ConfirmAccount({ reset = false }: { reset?: boolean }) {
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'The account request failed. Please try again.'); }
     finally { lock.current = false; setBusy(false); }
   };
-  return <AuthScreen title={t(reset ? 'Reset password' : 'Verify email')} busy={busy}>
+  return <AuthScreen title={t(reset ? 'Reset password' : 'Verify email')} subtitle={done ? undefined : t('Paste the token from your email link. The token is not saved on this device.')} busy={busy}>
     {!!(error) && <Info tone="error">{t(error)}</Info>}
     {done ? <>
       <Info tone="success">{t(reset ? 'Password updated. Sign in with your new password.' : 'Email verified successfully.')}</Info>
       <Action label={t('Continue')} onPress={() => router.replace('/')} />
     </> : <>
-      <Info>{t('Paste the token from your email link. The token is not saved on this device.')}</Info>
       <FormField label={t('Email token')} value={token} onChangeText={setToken} maxLength={200} autoCapitalize="none" secureTextEntry editable={!busy} />
       {!!(reset) && <>
-        <FormField label={t('New password')} value={password} onChangeText={setPassword} maxLength={50} secureTextEntry autoCapitalize="none" editable={!busy} />
-        <FormField label={t('Repeat password')} value={repeat} onChangeText={setRepeat} maxLength={50} secureTextEntry autoCapitalize="none" editable={!busy} />
+        <PasswordField label={t('New password')} hint={t('Use 8–50 characters.')} value={password} onChangeText={setPassword} maxLength={50} autoComplete="new-password" textContentType="newPassword" editable={!busy} />
+        <PasswordField label={t('Repeat password')} value={repeat} onChangeText={setRepeat} maxLength={50} autoComplete="new-password" textContentType="newPassword" editable={!busy} />
       </>}
       <Action label={t(busy ? 'Working…' : 'Confirm')} disabled={busy || !token.trim()} onPress={() => void submit()} />
       <AuthLink label={t('Back')} disabled={busy} onPress={() => router.canGoBack() ? router.back() : router.replace('/')} />

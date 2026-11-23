@@ -109,11 +109,11 @@ test('language selection updates and persists the staff interface', async ({ pag
   await mockApi(page);
   await page.goto('/workspace');
   await page.getByRole('button', { name: 'Русский', exact: true }).click();
-  await expect(page.getByText('Рабочая область', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Меню', exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByText('Рабочая область', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Меню', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Қазақша', exact: true }).click();
-  await expect(page.getByText('Жұмыс кеңістігі', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Мәзір', exact: true })).toBeVisible();
 });
 
 test('unassigned events do not expose camera or admission actions', async ({ page }) => {
@@ -153,7 +153,7 @@ test('sign-in mounts authenticated navigation and opens the staff workspace', as
   await page.getByLabel('Password', { exact: true }).fill(`fixture-${Date.now()}`);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByText('Find your next event', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('tab', { name: 'Menu', exact: true }).click();
   await page.getByRole('button', { name: 'Open assigned events', exact: true }).click();
   await expect(page.getByText('Assigned QA Event', { exact: true })).toBeVisible();
 });

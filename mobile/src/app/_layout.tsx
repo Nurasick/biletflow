@@ -85,8 +85,8 @@ function RootLayoutContent() {
       ) : (
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={isLoggedIn}>
-            {['index', 'about', 'home', 'explore', 'checkout', 'event-details', 'tickets',
-              'ticket-selection', 'seat-selection', 'staff', 'staff-event', 'workspace',
+            {['(tabs)', 'about', 'home', 'explore', 'checkout', 'event-details',
+              'ticket-selection', 'seat-selection', 'staff', 'staff-event',
               'support', 'support-new', 'support-case', 'notifications', 'account',
               'organizer', 'organizer-event', 'organizer-preview', 'organizer-image', 'admin', 'campaign-scan', 'report-event']
               .map(name => <Stack.Screen key={name} name={name} />)}
