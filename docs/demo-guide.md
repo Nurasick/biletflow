@@ -79,7 +79,7 @@ all in Docker Compose. One OpenAPI contract (`docs/openapi.json`) shared by both
 
 1. Laptop: open seeded **Almaty Jazz Night** → Campaigns → show the campaign QR on screen.
    **"A campaign QR is a marketing link with an opaque token. It carries no price and never admits anyone."**
-2. Phone 1 (attendee): Menu → *Workspace* → *Scan campaign QR* → scan the laptop screen.
+2. Phone 1 (attendee): Menu tab → *Scan campaign QR* → scan the laptop screen.
    The event opens with the code already applied.
 3. *Choose tickets* → 1 Standard → *Continue* → note the **discount and new total before paying** → *Reserve tickets*.
 4. *Open my tickets* → order → *Pay (demo)* → **"Tickets are issued only after the simulated payment succeeds."**
@@ -121,7 +121,7 @@ Phone 2 (staff): *Event tools* → *Open assigned events* → **Almaty Jazz Nigh
 
 **"Everything you just saw on the web, the app also does."** Phone 1: sign out → `organizer@example.com`.
 
-1. Menu → *Workspace* → *Organizer tools* → *Your events* → *Show: Upcoming/Active/Completed/Cancelled*.
+1. Menu tab → *Organizer tools* → *Your events* → *Show: Upcoming/Active/Completed/Cancelled*.
 2. Open **Nauryz Spring Concert** (draft, paid) → *Activation*: the 5-item checklist (UC2, SC2) →
    *Accept paid-event terms* → *Simulate activation fee payment* (confirm) → *Activate paid sales*.
 3. *Overview* → *Preview event* → *Publish event* from the preview.

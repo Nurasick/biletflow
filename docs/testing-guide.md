@@ -188,8 +188,8 @@ All of these must be green on the commit you demo:
 
 ## 3. Manual test plan
 
-Every row is one check. **W** is the web route and **M** is the mobile screen (menu →
-*Workspace* is the mobile hub for organizer, admin and support tools). Run each
+Every row is one check. **W** is the web route and **M** is the mobile screen (the *Menu*
+tab is the mobile hub for organizer, admin and support tools). Run each
 check on both clients unless marked otherwise.
 
 Use two browsers or profiles (or one browser + the phone) so the organizer and the
@@ -203,14 +203,14 @@ attendee are signed in at the same time.
 | A2 | Click the verification link / enter token | `/verify-email` | Login → *Verify email* | account shows *Email verified* |
 | A3 | Sign out, sign in | header menu | Menu → *Sign out* | session ends / restores |
 | A4 | Forgot password → reset via Mailpit token | `/forgot-password` | Login → *Forgot password?* → *I have a reset token* | new password works, old one fails |
-| A5 | Edit name/phone | `/account` | Workspace → account row | saved |
+| A5 | Edit name/phone | `/account` | Menu tab → account row | saved |
 | A6 | Non-admin opens admin | `/admin` | `/admin` | blocked: "not a platform administrator" |
 
 ### 3.2 Organizer profile and events (SRS 4.1, 4.2, UC1)
 
 | # | Do | W | M | Expect |
 |---|---|---|---|---|
-| O1 | New account opens organizer tools | `/organizer/profile` | Workspace → *Organizer tools* | empty "Become an organizer" form, contact email prefilled, **no red error** |
+| O1 | New account opens organizer tools | `/organizer/profile` | Menu tab → *Organizer tools* | empty "Become an organizer" form, contact email prefilled, **no red error** |
 | O2 | Save profile with sandbox payout `demo_account` | same | same | "Organizer profile saved." |
 | O3 | Run simulated identity verification | `/organizer/events/:id/edit` (activation) | *Run simulated identity verification* | status *verified* |
 | O4 | Create a draft: title, venue, address, start/end, capacity, registration window, category, visibility | `/organizer/events/new` | *Create a draft event*: date `YYYY-MM-DD` + time `HH:MM` fields | draft created; times stored in Asia/Almaty (19:00 → 14:00Z) |
@@ -252,7 +252,7 @@ attendee are signed in at the same time.
 | C3 | Paid order, then abandon it | checkout | checkout, don't pay | order *pending* with a hold; expires and releases stock |
 | C4 | Pay (demo) | order page | *My tickets* → order → *Pay (demo)* | confirmed; QR shown |
 | C5 | Promo code typed by hand | checkout | checkout → *Promo code* → *Apply* | discount and new total shown **before** paying |
-| C6 | Campaign QR | campaign tab shows QR | Workspace → *Scan campaign QR* (or open the link) | event opens with the code pre-applied |
+| C6 | Campaign QR | campaign tab shows QR | Menu tab → *Scan campaign QR* (or open the link) | event opens with the code pre-applied |
 | C7 | Expired / disabled / exhausted / wrong-type code | checkout | checkout | clear rejection message |
 | C8 | Promo QR at the door | staff scanner | staff scanner | **rejected**, no admission (see S5) |
 
@@ -300,7 +300,7 @@ has no usable camera on most laptops; use manual search there.
 |---|---|---|---|---|
 | H1 | Attendee opens support from an order / ticket / event | order page → support | order → *Order support* / ticket → *Ticket support* / event → *Contact support* | category picker; case keeps event/order/ticket context |
 | H2 | Organizer platform request | `/support` | *Support* → *Organizer platform support* | case with event context only |
-| H3 | Staff queue with filters | `/staff/support` | Workspace → *Support queue*: *Status*, *Category*, *Event ID* | only authorized cases; filters narrow the list |
+| H3 | Staff queue with filters | `/staff/support` | Menu tab → *Support queue*: *Status*, *Category*, *Event ID* | only authorized cases; filters narrow the list |
 | H4 | Reply, internal note, assign, status Open → In progress → Waiting → Resolved | case page | *Open conversation* | requester never sees internal notes |
 | H5 | Notification on reply / status change | `/notifications` + Mailpit | bell icon | new item |
 | H6 | Another attendee opens the case URL | — | — | access denied |
@@ -321,7 +321,7 @@ has no usable camera on most laptops; use manual search there.
 
 | # | Do | W | M | Expect |
 |---|---|---|---|---|
-| M1 | Overview numbers | `/admin` | Workspace → *Platform administration* | users, events, orders, failed payments, open reports/cases |
+| M1 | Overview numbers | `/admin` | Menu tab → *Platform administration* | users, events, orders, failed payments, open reports/cases |
 | M2 | Search users / events / orders / payments | `/admin/users`, `/admin/events`, `/admin/transactions` | *Users*, *Events*, *Transactions* tabs | results |
 | M3 | Suspend + reinstate a user | `/admin/users` | *Users* | suspended user cannot sign in |
 | M4 | Review the reported *FREE iPhone…* event → suspend | `/admin/reports` (resolve) + `/admin/events/:id` (suspend) | *Reports* → *Suspend event and mark actioned* | removed from discovery; checkout blocked |
