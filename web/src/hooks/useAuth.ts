@@ -14,6 +14,7 @@ export const useAuth = () => {
     queryFn: authApi.currentUser,
     retry: false,
     staleTime: 60_000,
+    refetchOnWindowFocus: (query) => query.state.data?.is_email_verified === false ? "always" : true,
   });
 
   const login = useMutation({
@@ -32,6 +33,7 @@ export const useAuth = () => {
   const verifyEmail = useMutation({ mutationFn: authApi.verifyEmail });
   const resendVerification = useMutation({
     mutationFn: authApi.resendVerification,
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: authKeys.me }); },
   });
   const forgotPassword = useMutation({ mutationFn: authApi.forgotPassword });
   const resetPassword = useMutation({

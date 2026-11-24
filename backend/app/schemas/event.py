@@ -277,6 +277,7 @@ class EventDetail(EventRead):
     """GET /events/{slug}: what an attendee's event page needs in one request."""
 
     organizer_name: str
+    processing_fee_bps: int
     images: list[EventImageRead]
     # False while the paid types of this event cannot be bought yet (§4.5), so
     # the page can say so instead of letting checkout fail.

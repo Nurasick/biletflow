@@ -6,21 +6,22 @@ import { AuthShell } from "../features/Auth/ui/AuthShell";
 import { AuthSwitchLink } from "../features/Auth/ui/AuthSwitchLink";
 import { SignupForm } from "../features/Auth/ui/SignupForm";
 import { SignupSuccess } from "../features/Auth/ui/SignupSuccess";
+import type { User } from "../shared/api/auth";
 
 export const SignupPage = () => {
   const { t } = useTranslation();
-  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [registeredUser, setRegisteredUser] = useState<User | null>(null);
 
   return (
     <AuthShell
       top={<AuthSwitchLink prompt={t("auth.existingAccount")} to="/login" label={t("common.signIn")} />}
     >
-      {registeredEmail ? (
-        <SignupSuccess email={registeredEmail} />
+      {registeredUser ? (
+        <SignupSuccess user={registeredUser} />
       ) : (
         <>
           <AuthHeading title={t("auth.signupTitle")} />
-          <SignupForm onSuccess={setRegisteredEmail} />
+          <SignupForm onSuccess={setRegisteredUser} />
         </>
       )}
     </AuthShell>

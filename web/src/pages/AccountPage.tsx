@@ -7,7 +7,9 @@ import { useAuthErrorMessage } from "../shared/lib/useAuthErrorMessage";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { OrderCard } from "../features/Orders/ui/OrderCard";
+import { EmailVerificationBanner } from "../features/Auth/ui/EmailVerificationBanner";
 import { ordersApi } from "../shared/api/events";
+import { useStaffAccess } from "../shared/auth/useStaffAccess";
 import { AccountForm } from "../features/Account";
 import type { AccountEditingState } from "../features/Account";
 
@@ -17,8 +19,7 @@ export const AccountPage = () => {
   const { me, logout } = useAuth();
   const [accountEditing, setAccountEditing] = useState<AccountEditingState>({ isDirty: false, isSubmitting: false });
   const user = me.data;
-  // Order history and tickets (audit #13). Cancellation of confirmed orders
-  // is the organizer's (§4.9); a pending one can be dropped on its order page.
+  const { canCheckIn, canHandleSupport } = useStaffAccess(user);
   const orders = useQuery({ queryKey: ["orders", "mine", user?.id], queryFn: ordersApi.mine, enabled: Boolean(user) });
   if (!user) return null;
 
@@ -33,14 +34,17 @@ export const AccountPage = () => {
           <p className="mt-2 font-medium text-[#e2d9fb] wrap-anywhere">{user.first_name} {user.last_name} · {user.email}</p>
         </div>
       </div>
+      <div className="mt-5">
+        <EmailVerificationBanner user={user} signedIn />
+      </div>
       <nav aria-label={t("account.title")} className="mt-5 flex flex-wrap gap-2.5">
         <Link to={user.is_organizer ? "/organizer/events" : "/organizer/profile"} className="action-button action-button--primary">
           <CalendarPlus size={17} aria-hidden="true" />{t(user.is_organizer ? "account.organizerWorkspace" : "account.becomeOrganizer")}
         </Link>
         <Link to="/notifications" className="action-button"><Bell size={17} aria-hidden="true" />{t("notifications.title")}</Link>
         <Link to="/support" className="action-button"><LifeBuoy size={17} aria-hidden="true" />{t("common.help")}</Link>
-        <Link to="/staff/events" className="action-button"><ScanLine size={17} aria-hidden="true" />{t("nav.checkIn")}</Link>
-        {(user.is_organizer || user.is_platform_admin) && <Link to="/staff/support" className="action-button"><MessageCircle size={17} aria-hidden="true" />{t("support.queue")}</Link>}
+        {canCheckIn && <Link to="/staff/events" className="action-button"><ScanLine size={17} aria-hidden="true" />{t("nav.checkIn")}</Link>}
+        {canHandleSupport && <Link to="/staff/support" className="action-button"><MessageCircle size={17} aria-hidden="true" />{t("support.queue")}</Link>}
         {user.is_platform_admin && <Link to="/admin" className="action-button"><Shield size={17} aria-hidden="true" />{t("nav.admin")}</Link>}
       </nav>
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
@@ -59,7 +63,7 @@ export const AccountPage = () => {
                 <Link to="/" className="action-button mt-4">{t("catalogue.browse")}</Link>
               </div>
             ) : <div className="mt-4 space-y-4">{orders.data.map((order) => <OrderCard key={order.order_number}
-                order={order} showQr={false} detailHref={`/orders/${order.order_number}`} />)}</div>}
+                order={order} showQr={false} showCalendar detailHref={`/orders/${order.order_number}`} />)}</div>}
         </section>
       </div>
       {logout.isError && <p role="alert" className="mt-4 text-red-700">{getAuthErrorMessage(logout.error, t("errors.signOut"))}</p>}

@@ -2593,6 +2593,10 @@
             "title": "Phase",
             "type": "string"
           },
+          "processing_fee_bps": {
+            "title": "Processing Fee Bps",
+            "type": "integer"
+          },
           "published_at": {
             "anyOf": [
               {
@@ -2761,6 +2765,7 @@
           "created_at",
           "updated_at",
           "organizer_name",
+          "processing_fee_bps",
           "images",
           "paid_sales_active",
           "phase"
@@ -11674,6 +11679,68 @@
           }
         ],
         "summary": "Read Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{order_number}/calendar.ics": {
+      "get": {
+        "description": "Download the same event calendar as an order owner or signed-link holder.",
+        "operationId": "order_calendar_api_v1_orders__order_number__calendar_ics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_number",
+            "required": true,
+            "schema": {
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/calendar": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Order Calendar",
         "tags": [
           "orders"
         ]

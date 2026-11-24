@@ -257,6 +257,9 @@ def test_an_unknown_template_renders_instead_of_raising():
 def test_the_processing_fee_is_recorded_and_deducted_from_the_payout(api, db, organizer, event):
     vip = add_ticket_type(db, event.id, price_minor=1_000_000)
 
+    detail = api.get(f"/api/v1/events/{event.slug}")
+    assert detail.status_code == 200
+    assert detail.json()["processing_fee_bps"] == 250
     order = buy(api, event, vip)
     summary = api.get(
         f"/api/v1/organizer/events/{event.id}/summary", headers=auth(organizer[0])

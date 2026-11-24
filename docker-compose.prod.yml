@@ -118,6 +118,7 @@ services:
       target: runtime
       args:
         VITE_API_URL: ${VITE_API_URL:-/api/v1}
+        VITE_GA4_MEASUREMENT_ID: ${VITE_GA4_MEASUREMENT_ID:-}
     restart: unless-stopped
     init: true
     environment:

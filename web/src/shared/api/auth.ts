@@ -36,29 +36,39 @@ type ErrorDetail = {
   loc?: Array<string | number>;
 };
 
+type StructuredErrorDetail = {
+  code?: string;
+  message?: string;
+  [key: string]: unknown;
+};
+
 export class ApiError extends Error {
   status: number;
   fieldErrors: Record<string, string>;
+  details: StructuredErrorDetail | null;
 
   constructor(
     message: string,
     status: number,
     fieldErrors: Record<string, string> = {},
+    details: StructuredErrorDetail | null = null,
   ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.fieldErrors = fieldErrors;
+    this.details = details;
   }
 }
 
 const parseError = async (response: Response) => {
   let message = `Request failed with status ${response.status}`;
   const fieldErrors: Record<string, string> = {};
+  let details: StructuredErrorDetail | null = null;
 
   try {
     const payload = (await response.json()) as {
-      detail?: string | ErrorDetail[];
+      detail?: string | ErrorDetail[] | StructuredErrorDetail;
       message?: string;
     };
 
@@ -72,6 +82,9 @@ const parseError = async (response: Response) => {
         }
       }
       message = payload.detail[0]?.msg ?? message;
+    } else if (payload.detail && typeof payload.detail === "object") {
+      details = payload.detail;
+      message = typeof details.message === "string" ? details.message : message;
     } else if (payload.message) {
       message = payload.message;
     }
@@ -79,7 +92,7 @@ const parseError = async (response: Response) => {
     // add soon
   }
 
-  return new ApiError(message, response.status, fieldErrors);
+  return new ApiError(message, response.status, fieldErrors, details);
 };
 
 const rawResponse = async (path: string, init?: RequestInit) => {
@@ -215,8 +228,10 @@ const optionalAuthResponse = async (path: string, init?: RequestInit) => {
 export const optionalAuthRequest = async <T>(path: string, init?: RequestInit) =>
   readJson<T>(await optionalAuthResponse(path, init));
 
-const fileRequest = async (request: typeof rawResponse, path: string, mediaType: string) => {
-  const response = await request(path, { headers: { Accept: mediaType } });
+const fileRequest = async (request: typeof rawResponse, path: string, mediaType: string, init?: RequestInit) => {
+  const headers = new Headers(init?.headers);
+  headers.set("Accept", mediaType);
+  const response = await request(path, { ...init, headers });
   if (response.headers.get("Content-Type")?.split(";")[0]?.trim().toLowerCase() !== mediaType) {
     throw new ApiError("Unexpected download format", 502);
   }
@@ -224,7 +239,8 @@ const fileRequest = async (request: typeof rawResponse, path: string, mediaType:
 };
 
 export const publicFile = (path: string, mediaType: string) => fileRequest(rawResponse, path, mediaType);
-export const optionalAuthFile = (path: string, mediaType: string) => fileRequest(optionalAuthResponse, path, mediaType);
+export const optionalAuthFile = (path: string, mediaType: string, init?: RequestInit) =>
+  fileRequest(optionalAuthResponse, path, mediaType, init);
 
 export const api = {
   get: <T>(path: string, init?: RequestInit) => authenticatedRequest<T>(path, init),
@@ -241,7 +257,7 @@ export const authApi = {
     await rawRequest<null>("/auth/verify-email", json("POST", { token }));
     return { message: "verified" };
   },
-  resendVerification: async (_email: string) => {
+  resendVerification: async () => {
     await authenticatedRequest<unknown>("/users/me/verify-email", { method: "POST" });
     return { message: "sent" };
   },

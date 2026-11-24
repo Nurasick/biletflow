@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next";
 
-import { ApiError } from "../../../shared/api/auth";
+import { ApiError, type User } from "../../../shared/api/auth";
 import { useAuthErrorMessage } from "../../../shared/lib/useAuthErrorMessage";
 import { useSignupForm } from "../model/useSignupForm";
 import { AuthField } from "./AuthField";
 import { AuthAlert, SubmitButton } from "./FormControls";
 
-export const SignupForm = ({ onSuccess }: { onSuccess: (email: string) => void }) => {
+export const SignupForm = ({ onSuccess }: { onSuccess: (user: User) => void }) => {
   const { t } = useTranslation();
   const getAuthErrorMessage = useAuthErrorMessage();
   const { register, errors, onSubmit, registration } = useSignupForm(onSuccess);

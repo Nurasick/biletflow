@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException, Query, status
+from fastapi import APIRouter, Header, HTTPException, Query, Response, status
 from sqlalchemy import select
 
 from app.api.deps import (
@@ -13,6 +13,7 @@ from app.api.deps import (
     require_event_access,
 )
 from app.core import qr
+from app.core.clock import as_utc, utcnow
 from app.core.security import create_order_token
 from app.models.campaign import Campaign
 from app.models.event import Event
@@ -78,6 +79,12 @@ def _read(db: DbSession, order: Order) -> dict:
         for ticket, name, type_name in order_service.order_tickets(db, order)
     ]
     event = db.get(Event, order.event_id)
+    # Report the lapsed hold immediately. The sweeper still releases stock and
+    # persists the transition, so order reads do not mutate inventory.
+    order_status = order.status
+    if order_status == OrderStatus.PENDING and order.expires_at is not None:
+        if as_utc(order.expires_at) <= utcnow():
+            order_status = OrderStatus.EXPIRED
     body = OrderRead.model_validate(
         {
             # There are no relationship() attributes on the models, so the
@@ -86,8 +93,10 @@ def _read(db: DbSession, order: Order) -> dict:
             **{
                 field: getattr(order, field)
                 for field in OrderRead.model_fields
-                if field not in ("items", "tickets", "event", "promo_code", "is_simulated")
+                if field
+                not in ("status", "items", "tickets", "event", "promo_code", "is_simulated")
             },
+            "status": order_status,
             "event": _order_event_dict(event),
             "promo_code": db.scalar(select(Campaign.code).where(Campaign.id == order.campaign_id))
             if order.campaign_id
@@ -166,6 +175,29 @@ def checkout(
 @router.get("/orders/{order_number}", response_model=OrderRead)
 def read_order(order_number: str, db: DbSession, user: OptionalUser, token: OrderToken = None):
     return _read(db, _viewable(db, order_number, user, token))
+
+
+@router.get(
+    "/orders/{order_number}/calendar.ics",
+    response_class=Response,
+    responses={200: {"content": {"text/calendar": {}}}},
+)
+def order_calendar(
+    order_number: str, db: DbSession, user: OptionalUser, token: OrderToken = None
+) -> Response:
+    """Download the same event calendar as an order owner or signed-link holder."""
+    order = _viewable(db, order_number, user, token)
+    event = db.get(Event, order.event_id)
+    if event is None:
+        raise ORDER_NOT_FOUND
+    return Response(
+        calendar_service.build(event),
+        media_type="text/calendar; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{event.slug}.ics"',
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.post("/orders/{order_number}/pay", response_model=OrderRead)
