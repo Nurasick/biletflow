@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { useLocale } from "../../../i18n/useLocale";
 import type { AdminActivation as Activation } from "../../../shared/api/admin";
+import { formatMinorCurrency } from "../../../shared/lib/formatPrice";
 import { operationsCard } from "./OperationsWorkspace";
 
 const checklistLabels = {
@@ -23,9 +24,7 @@ export const AdminActivation = ({ activation, timeZone }: { activation: Activati
       {activation && <Tag color={activation.status === "active" ? "green" : activation.status === "suspended" ? "orange" : "default"}>{t(statusLabels[activation.status])}</Tag>}</div>
     {!activation ? <p className="mt-4 text-sm text-muted">{t("ops.noActivation")}</p> : <>
       <dl className="mt-4 space-y-3 text-sm">
-        <div className="flex flex-wrap justify-between gap-2"><dt className="text-muted">{t("ops.activationFee")}</dt><dd className="font-semibold">{new Intl.NumberFormat(locale, {
-          style: "currency", currency: activation.currency,
-        }).format(activation.activation_fee_minor / 100)}</dd></div>
+        <div className="flex flex-wrap justify-between gap-2"><dt className="text-muted">{t("ops.activationFee")}</dt><dd className="font-semibold">{formatMinorCurrency(activation.activation_fee_minor, activation.currency, locale)}</dd></div>
         {([['ops.termsAcceptedAt', activation.terms_accepted_at], ['ops.activatedAt', activation.activated_at], ['ops.suspendedAt', activation.suspended_at]] as const).map(([key, value]) => <div key={key} className="flex flex-wrap justify-between gap-2">
           <dt className="text-muted">{t(key)}</dt><dd>{date(value)}</dd>
         </div>)}

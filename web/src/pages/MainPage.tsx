@@ -97,6 +97,7 @@ function DiscoveryHero({ featured }: { featured?: PublicEvent }) {
       <div className={`brand-art grid min-w-0 place-items-center ${featured ? "p-5 pt-0 sm:p-8 lg:py-9" : "hidden min-h-68 px-12 py-10 sm:grid"}`}>
         {featured && featured.cover_image_url ? (
           <Link to={`/events/${featured.slug}`} className="group relative z-10 w-full max-w-xl overflow-hidden rounded-[1.2rem] bg-white text-ink shadow-[0_16px_40px_#120d27a0]">
+            {/* Decorative: the link text below already names the event (WCAG H2). */}
             <img src={eventImageSrc(featured.cover_image_url)} alt="" fetchPriority="high"
               className="aspect-[2.25] w-full object-cover sm:aspect-[2.05]" />
             <div className="flex items-center justify-between gap-4 px-4 py-3.5 sm:px-5 sm:py-4">

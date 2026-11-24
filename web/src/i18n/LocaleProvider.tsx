@@ -15,6 +15,10 @@ const theme = {
     colorPrimary: "#593bc9",
     colorText: "#1c1830",
     colorTextSecondary: "#615d73",
+    // WCAG 1.4.3: antd's defaults (#ff4d4f errors, #8c8c8c hints and counters)
+    // fall below 4.5:1 on white; these keep the hue and pass AA.
+    colorError: "#c42b2b",
+    colorTextDescription: "#615d73",
     colorBgLayout: "#f7f7f2",
     colorBorder: "#dad8e3",
     colorSplit: "#eae8f0",

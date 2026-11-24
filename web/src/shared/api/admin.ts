@@ -30,6 +30,7 @@ export type AdminTimelineEntry = {
   id: number;
   created_at: string;
   actor_user_id: number | null;
+  actor_name?: string | null;
   action: string;
   entity_type: string;
   entity_id: number;
@@ -58,6 +59,7 @@ export type AdminOverview = {
   payments_failed: number;
   open_reports: number;
   open_support_cases: number;
+  open_disputes: number;
   is_simulated: boolean;
 };
 
@@ -77,7 +79,7 @@ export type AdminEventReport = {
   resolved_at: string | null;
 };
 
-export const adminOrderStatuses = ["pending", "confirmed", "cancelled", "refunded", "expired"] as const;
+export const adminOrderStatuses = ["pending", "confirmed", "cancelled", "refunded", "partially_refunded", "expired"] as const;
 export const adminPaymentStatuses = ["pending", "succeeded", "failed", "refunded"] as const;
 export type AdminOrderStatus = (typeof adminOrderStatuses)[number];
 export type AdminPaymentStatus = (typeof adminPaymentStatuses)[number];
@@ -140,6 +142,44 @@ export type AdminCampaign = {
   net_minor: number;
 };
 
+export const adminEventStatuses = ["draft", "published", "suspended", "cancelled"] as const;
+export type AdminEventStatus = (typeof adminEventStatuses)[number];
+
+export const disputeStatuses = ["open", "under_review", "resolved_organizer", "resolved_attendee", "closed"] as const;
+export type DisputeStatus = (typeof disputeStatuses)[number];
+export type AdminDispute = {
+  id: number;
+  order_id: number;
+  order_number: string;
+  event_id: number;
+  event_title: string;
+  payment_id: number | null;
+  status: DisputeStatus;
+  reason: string;
+  amount_minor: number;
+  currency: string;
+  evidence_notes: string | null;
+  resolution_notes: string | null;
+  opened_by_user_id: number | null;
+  resolved_by_user_id: number | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type DisputeInput = {
+  order_number: string;
+  payment_id?: number;
+  reason: string;
+  amount_minor?: number;
+  evidence_notes?: string;
+};
+export type DisputeUpdate = { status?: DisputeStatus; evidence_notes?: string | null; resolution_notes?: string | null };
+
+/** Optional filters shared by the admin lists and their CSV exports. */
+export type AdminFilters = { query?: string; status?: string };
+export type TimelineRange = { since?: string; until?: string };
+export type AdminExport = "orders" | "payments" | "refunds" | "users" | "events" | "activations";
+
 export type AdminSettings = {
   activation_fee_minor: number;
   processing_fee_bps: number;
@@ -148,12 +188,18 @@ export type AdminSettings = {
 export type AdminPageRequest = { limit: number; offset: number; signal?: AbortSignal };
 
 const base = (eventId: number) => `/admin/events/${eventId}`;
-const params = (limit: number, offset: number, query?: string, status?: string) => {
-  const search = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+const filterParams = ({ query, status }: AdminFilters = {}) => {
+  const search = new URLSearchParams();
   if (query?.trim()) search.set("q", query.trim());
   if (status) search.set("status", status);
   return search;
 };
+const params = (limit: number, offset: number, query?: string, status?: string) => {
+  const search = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  for (const [key, value] of filterParams({ query, status })) search.set(key, value);
+  return search;
+};
+const withQuery = (path: string, search: URLSearchParams) => search.size ? `${path}?${search}` : path;
 
 export const adminApi = {
   overview: (signal?: AbortSignal) => api.get<AdminOverview>("/admin/overview", { signal }),
@@ -168,20 +214,32 @@ export const adminApi = {
     api.post<AdminEventReport>(`/admin/reports/${reportId}/resolve`, { status }),
   orders: ({ limit, offset, signal }: AdminPageRequest, query: string, status?: AdminOrderStatus) =>
     api.get<AdminOrder[]>(`/admin/orders?${params(limit, offset, query, status)}`, { signal }),
-  payments: ({ limit, offset, signal }: AdminPageRequest, status?: AdminPaymentStatus) =>
-    api.get<AdminPayment[]>(`/admin/payments?${params(limit, offset, undefined, status)}`, { signal }),
+  /** `query` matches the order number, provider reference, or payment ID. */
+  payments: ({ limit, offset, signal }: AdminPageRequest, status?: AdminPaymentStatus, query = "") =>
+    api.get<AdminPayment[]>(`/admin/payments?${params(limit, offset, query, status)}`, { signal }),
   refunds: ({ limit, offset, signal }: AdminPageRequest) =>
     api.get<AdminRefund[]>(`/admin/refunds?${params(limit, offset)}`, { signal }),
-  activations: ({ limit, offset, signal }: AdminPageRequest) =>
-    api.get<AdminActivationRecord[]>(`/admin/activations?${params(limit, offset)}`, { signal }),
-  campaigns: ({ limit, offset, signal }: AdminPageRequest) =>
-    api.get<AdminCampaign[]>(`/admin/campaigns?${params(limit, offset)}`, { signal }),
+  activations: ({ limit, offset, signal }: AdminPageRequest, status?: AdminActivation["status"]) =>
+    api.get<AdminActivationRecord[]>(`/admin/activations?${params(limit, offset, undefined, status)}`, { signal }),
+  campaigns: ({ limit, offset, signal }: AdminPageRequest, query = "", active?: boolean) => {
+    const search = params(limit, offset, query);
+    if (active !== undefined) search.set("is_active", String(active));
+    return api.get<AdminCampaign[]>(`/admin/campaigns?${search}`, { signal });
+  },
+  disputes: ({ limit, offset, signal }: AdminPageRequest, status?: DisputeStatus, query = "") =>
+    api.get<AdminDispute[]>(`/admin/disputes?${params(limit, offset, query, status)}`, { signal }),
+  dispute: (disputeId: number, signal?: AbortSignal) => api.get<AdminDispute>(`/admin/disputes/${disputeId}`, { signal }),
+  openDispute: (input: DisputeInput) => api.post<AdminDispute>("/admin/disputes", input),
+  updateDispute: (disputeId: number, changes: DisputeUpdate) => api.patch<AdminDispute>(`/admin/disputes/${disputeId}`, changes),
   settings: (signal?: AbortSignal) => api.get<AdminSettings>("/admin/settings", { signal }),
   updateSettings: (changes: Partial<AdminSettings>) => api.put<AdminSettings>("/admin/settings", changes),
-  ordersCsv: () => api.file("/admin/exports/orders.csv", "text/csv"),
-  paymentsCsv: () => api.file("/admin/exports/payments.csv", "text/csv"),
-  events: (query = "", limit = 20, offset = 0, signal?: AbortSignal) =>
-    api.get<AdminEvent[]>(`/admin/events?${params(limit, offset, query)}`, { signal }),
+  ordersCsv: () => adminApi.exportCsv("orders"),
+  paymentsCsv: () => adminApi.exportCsv("payments"),
+  /** Every admin CSV export, filtered the same way as the list it sits on. */
+  exportCsv: (kind: AdminExport, filters?: AdminFilters) =>
+    api.file(withQuery(`/admin/exports/${kind}.csv`, filterParams(filters)), "text/csv"),
+  events: (query = "", limit = 20, offset = 0, signal?: AbortSignal, status?: AdminEventStatus) =>
+    api.get<AdminEvent[]>(`/admin/events?${params(limit, offset, query, status)}`, { signal }),
   // The current backend exposes event reads only through its paginated admin
   // list. A slug hint keeps list-to-detail navigation efficient; bare ID links
   // still work by walking that authorized list, including non-public events.
@@ -208,6 +266,10 @@ export const adminApi = {
   },
   transitionActivation: (eventId: number, action: AdminActivationAction, reason?: string) =>
     api.post<AdminActivation>(`${base(eventId)}/activation/${action}`, action === "suspend" ? { reason: reason?.trim() } : undefined),
-  timeline: (eventId: number, limit = 25, offset = 0, signal?: AbortSignal) =>
-    api.get<AdminTimelineEntry[]>(`${base(eventId)}/timeline?${params(limit, offset)}`, { signal }),
+  timeline: (eventId: number, limit = 25, offset = 0, signal?: AbortSignal, range: TimelineRange = {}) => {
+    const search = params(limit, offset);
+    if (range.since) search.set("since", range.since);
+    if (range.until) search.set("until", range.until);
+    return api.get<AdminTimelineEntry[]>(`${base(eventId)}/timeline?${search}`, { signal });
+  },
 };

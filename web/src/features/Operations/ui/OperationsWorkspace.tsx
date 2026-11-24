@@ -1,5 +1,5 @@
 import { Alert, Button, Tag } from "antd";
-import { ArrowLeft, CalendarDays, ChartColumn, CreditCard, Flag, LayoutDashboard, LoaderCircle, RefreshCw, ScanLine, Settings, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChartColumn, CreditCard, Flag, LayoutDashboard, LifeBuoy, LoaderCircle, RefreshCw, Scale, ScanLine, Settings, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink } from "react-router-dom";
@@ -13,6 +13,8 @@ const adminLinks = [
   { to: "/admin/reports", label: "eventReport.queue", end: true, Icon: Flag },
   { to: "/admin/transactions", label: "adminFinance.title", end: true, Icon: CreditCard },
   { to: "/admin/sales", label: "adminSales.title", end: true, Icon: ChartColumn },
+  { to: "/admin/disputes", label: "adminDisputes.title", end: true, Icon: Scale },
+  { to: "/staff/support?escalated=true", label: "adminSupport.escalated", end: true, Icon: LifeBuoy },
   { to: "/admin/settings", label: "adminSettings.title", end: true, Icon: Settings },
 ] as const;
 

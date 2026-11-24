@@ -15,10 +15,11 @@ export const EventPreviewContent = ({ snapshot }: { snapshot: EventPreview }) =>
 
   return (
     <article aria-label={t("eventWorkflow.previewContent")} className="overflow-hidden rounded-xl border border-line bg-white">
-      {event.cover_image_url && <img src={eventImageSrc(event.cover_image_url)} alt="" className="max-h-80 w-full object-cover" />}
+      {event.cover_image_url && <img src={eventImageSrc(event.cover_image_url)} alt={t("a11y.eventCover", { title: event.title })} className="max-h-80 w-full object-cover" />}
       <div className="space-y-7 p-5 sm:p-8">
         {snapshot.gallery_images.length > 0 && <div className="grid grid-cols-2 gap-3">
-          {snapshot.gallery_images.map((source, index) => <img key={index} src={eventImageSrc(source)} alt=""
+          {snapshot.gallery_images.map((source, index) => <img key={index} src={eventImageSrc(source)}
+            alt={t("a11y.eventPhoto", { title: event.title, number: index + 1 })}
             className="h-36 w-full rounded-lg object-cover sm:h-44" />)}
         </div>}
         <div>
