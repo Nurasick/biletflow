@@ -43,6 +43,12 @@ async function setup(responses, storedCsrf, apiOverride) {
   return { ...await import(authUrl), ...await import(urls), authUrl, calls, storage };
 }
 
+async function eventModuleReplacements(authUrl) {
+  const replacements = { '"./auth"': JSON.stringify(authUrl) };
+  const eventAccessUrl = await moduleUrl('../src/shared/api/eventAccess.ts', replacements);
+  return { ...replacements, '"./eventAccess"': JSON.stringify(eventAccessUrl) };
+}
+
 test('API calls and locally stored uploads use the web origin or the explicit API origin', async () => {
   for (const override of [undefined, 'https://api.example.test/api/v1/']) {
     const { rawRequest, eventImageSrc, calls } = await setup([[200, []]], undefined, override);
@@ -165,15 +171,27 @@ test('registration maps backend validation errors to form fields', async () => {
   });
 });
 
+test('resending verification requires a session and always targets the signed-in account', async () => {
+  const { authApi, calls } = await setup([[200, tokens], [200, user], [202, { detail: 'Accepted' }]]);
+  await assert.rejects(authApi.resendVerification(), { status: 401 });
+  assert.equal(calls.length, 0);
+
+  await authApi.login(credentials);
+  await authApi.resendVerification();
+  const resend = calls.at(-1);
+  assert.equal(resend.method, 'POST');
+  assert.equal(new URL(resend.url).pathname, '/api/v1/users/me/verify-email');
+  assert.equal(resend.headers.get('Authorization'), 'Bearer access-1');
+  assert.equal(resend.body, undefined);
+});
+
 test('guest ticket PDFs and the public calendar keep their file contents and guest link', async () => {
   const { authUrl, calls } = await setup([
     new Response('%PDF-order', { headers: { 'Content-Type': 'application/pdf' } }),
     new Response('%PDF-ticket', { headers: { 'Content-Type': 'application/pdf' } }),
     new Response('BEGIN:VCALENDAR', { headers: { 'Content-Type': 'text/calendar; charset=utf-8' } }),
   ]);
-  const { eventsApi, ordersApi } = await import(await moduleUrl('../src/shared/api/events.ts', {
-    '"./auth"': JSON.stringify(authUrl),
-  }));
+  const { eventsApi, ordersApi } = await import(await moduleUrl('../src/shared/api/events.ts', await eventModuleReplacements(authUrl)));
   const token = 'guest+&/?';
   assert.equal(await (await ordersApi.ticketsPdf('BF-ORDER', token)).text(), '%PDF-order');
   assert.equal(await (await ordersApi.ticketsPdf('BF-ORDER', token, 'BF-TICKET')).text(), '%PDF-ticket');
@@ -188,12 +206,31 @@ test('guest ticket PDFs and the public calendar keep their file contents and gue
   assert.ok(calls.every(call => !call.headers.has('Authorization')));
 });
 
+test('private calendar downloads keep access headers and the requested media type', async () => {
+  const { optionalAuthFile, calls } = await setup([
+    new Response('BEGIN:VCALENDAR', { headers: { 'Content-Type': 'text/calendar' } }),
+  ]);
+  const signal = new AbortController().signal;
+  await optionalAuthFile('/events/jazz/calendar.ics', 'text/calendar', {
+    headers: { 'X-Event-Access-Token': 'private-calendar-access' },
+    signal,
+  });
+  const download = calls[0];
+  assert.equal(download.headers.get('Accept'), 'text/calendar');
+  assert.equal(download.headers.get('X-Event-Access-Token'), 'private-calendar-access');
+  assert.equal(download.signal, signal);
+});
+
+test('a structured permission error exposes the response code, message, and access options', async () => {
+  const detail = { code: 'private_event_access_required', message: 'Private event access required', has_access_code: true };
+  const { rawRequest } = await setup([[403, { detail }]]);
+  await assert.rejects(rawRequest('/events/private-event'), { status: 403, message: detail.message, details: detail });
+});
+
 test('event reports accept guests and attach the signed-in session when available', async () => {
   const accepted = { detail: 'Report accepted' };
   const { authApi, authUrl, calls } = await setup([[202, accepted], [200, tokens], [200, user], [202, accepted]]);
-  const { eventsApi } = await import(await moduleUrl('../src/shared/api/events.ts', {
-    '"./auth"': JSON.stringify(authUrl),
-  }));
+  const { eventsApi } = await import(await moduleUrl('../src/shared/api/events.ts', await eventModuleReplacements(authUrl)));
   assert.deepEqual(await eventsApi.report('weekend-event', 'duplicate', '  '), accepted);
   await authApi.login(credentials);
   await eventsApi.report('weekend-event', 'misleading', '  Venue description differs  ');
@@ -211,9 +248,7 @@ test('the signed-in order owner can download a PDF after access-token refresh', 
     [200, tokens], [200, user], [401, {}], [200, { access_token: 'access-2', csrf_token: 'csrf-2' }],
     new Response('%PDF-ticket', { headers: { 'Content-Type': 'application/pdf' } }),
   ]);
-  const { ordersApi } = await import(await moduleUrl('../src/shared/api/events.ts', {
-    '"./auth"': JSON.stringify(authUrl),
-  }));
+  const { ordersApi } = await import(await moduleUrl('../src/shared/api/events.ts', await eventModuleReplacements(authUrl)));
   await authApi.login(credentials);
   assert.equal(await (await ordersApi.ticketsPdf('BF-ORDER', null)).text(), '%PDF-ticket');
   assert.equal(calls.at(-1).headers.get('Authorization'), 'Bearer access-2');
@@ -267,7 +302,7 @@ test('admin CSV downloads preserve the file bytes and use authenticated export e
 test('promo quote and checkout submit the campaign token with the current basket', async () => {
   const quote = { code: 'JAZZ20', subtotal_minor: 100_000, discount_minor: 20_000, total_minor: 80_000 };
   const { authUrl, calls } = await setup([[200, quote], [201, { status: 'pending' }]]);
-  const replacements = { '"./auth"': JSON.stringify(authUrl) };
+  const replacements = await eventModuleReplacements(authUrl);
   const { campaignsApi } = await import(await moduleUrl('../src/shared/api/campaigns.ts', replacements));
   const { ordersApi } = await import(await moduleUrl('../src/shared/api/events.ts', replacements));
   const signal = new AbortController().signal;

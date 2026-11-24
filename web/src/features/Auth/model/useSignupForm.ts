@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { resolveLocale } from "../../../i18n/config";
 import { useAuth } from "../../../hooks/useAuth";
-import { ApiError } from "../../../shared/api/auth";
+import { ApiError, type User } from "../../../shared/api/auth";
 import { passwordSchema } from "./passwordSchema";
 
 const signupSchema = z
@@ -23,7 +23,7 @@ const signupSchema = z
 
 type SignupValues = z.infer<typeof signupSchema>;
 
-export const useSignupForm = (onSuccess: (email: string) => void) => {
+export const useSignupForm = (onSuccess: (user: User) => void) => {
   const { registration } = useAuth();
   const { i18n } = useTranslation();
   const locale = resolveLocale(i18n.language);
@@ -45,7 +45,7 @@ export const useSignupForm = (onSuccess: (email: string) => void) => {
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await registration.mutateAsync({
+      const user = await registration.mutateAsync({
         first_name: values.firstName,
         last_name: values.lastName,
         email: values.email,
@@ -53,7 +53,7 @@ export const useSignupForm = (onSuccess: (email: string) => void) => {
         // The language the person is using right now (audit #23).
         locale,
       });
-      onSuccess(values.email);
+      onSuccess(user);
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.fieldErrors.first_name) {

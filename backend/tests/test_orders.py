@@ -61,6 +61,26 @@ def count(db: Session, model) -> int:
     return db.scalar(select(func.count()).select_from(model))
 
 
+# A browser refresh at the hold deadline should reflect the expired state even
+# when the inventory sweeper has not yet persisted it.
+def test_guest_reads_expired_order_before_the_hold_sweep(api, db, event, monkeypatch):
+    vip = add_ticket_type(db, event.id, price_minor=100_000)
+    response = api.post(CHECKOUT.format(slug=event.slug), json=payload((vip.id, 1)))
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "pending"
+    order = db.scalar(select(Order).where(Order.order_number == body["order_number"]))
+    deadline = datetime.fromisoformat(body["expires_at"]).replace(tzinfo=UTC)
+    monkeypatch.setattr("app.api.v1.routes.orders.utcnow", lambda: deadline)
+
+    read = api.get(ORDER.format(number=order.order_number), params={"token": body["access_token"]})
+
+    assert read.status_code == 200
+    assert read.json()["status"] == "expired"
+    db.refresh(order)
+    assert order.status == OrderStatus.PENDING
+
+
 # --- free path end to end ---------------------------------------------------
 
 

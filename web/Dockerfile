@@ -18,6 +18,7 @@ CMD ["npm", "run", "dev"]
 FROM development AS build
 
 ARG VITE_API_URL
+ARG VITE_GA4_MEASUREMENT_ID
 RUN npm run build
 
 FROM nginx:1.28-alpine AS runtime

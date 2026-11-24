@@ -10,11 +10,13 @@ import { useLocale } from "../../../../i18n/useLocale";
 import { ApiError } from "../../../../shared/api/auth";
 import { campaignsApi } from "../../../../shared/api/campaigns";
 import type { PromoSource } from "../../../../shared/api/campaigns";
-import { ordersApi } from "../../../../shared/api/events";
-import type { EventDetail, PublicTicketType } from "../../../../shared/api/events";
+import { eventsApi, ordersApi } from "../../../../shared/api/events";
+import type { EventDetail, EventSeat, PublicTicketType } from "../../../../shared/api/events";
+import { trackCheckoutStart } from "../../../../shared/lib/analytics";
 import { formatMinor } from "../../../../shared/lib/formatPrice";
 import { useAuthErrorMessage } from "../../../../shared/lib/useAuthErrorMessage";
 import { ticketSaleStatus, ticketSaleWindow } from "../../model/ticketSales";
+import { SeatMap } from "../SeatMap/SeatMap";
 
 // The backend's per-request bound (schemas/order.py MAX_TICKETS_PER_ORDER).
 // Each type's own max_per_order applies on top (audit #19: one policy).
@@ -22,12 +24,22 @@ export const MAX_TICKETS_PER_ORDER = 20;
 const MAX_TIMEOUT_MS = 2_147_483_647;
 const inputStyles = "border-muted! hover:border-primary! focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-primary! aria-invalid:border-red-700!";
 
-type Props = { event: EventDetail; ticketTypes: PublicTicketType[]; loading: boolean };
+type Props = {
+  event: EventDetail;
+  ticketTypes: PublicTicketType[];
+  loading: boolean;
+  accessToken?: string | null;
+  accessRevision?: string | null;
+};
 type CheckoutTicket = PublicTicketType & { saleWindow: ReturnType<typeof ticketSaleWindow> };
 
 const limitFor = (type: PublicTicketType) => Math.max(0, Math.min(type.available, type.max_per_order ?? MAX_TICKETS_PER_ORDER));
 
-export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
+export const CheckoutPanel = ({ event, accessRevision, ...props }: Props) => (
+  <CheckoutForm key={JSON.stringify([event.id, accessRevision])} event={event} accessRevision={accessRevision} {...props} />
+);
+
+const CheckoutForm = ({ event, ticketTypes, loading, accessToken, accessRevision }: Props) => {
   const { t } = useTranslation();
   const locale = useLocale();
   const navigate = useNavigate();
@@ -35,6 +47,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
   const { me } = useAuth();
   const errorMessage = useAuthErrorMessage();
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [pickedSeats, setPickedSeats] = useState<ReadonlyMap<number, EventSeat>>(() => new Map());
   const [contact, setContact] = useState<{ name?: string; email?: string }>({});
   const [contactValidated, setContactValidated] = useState(false);
   const [names, setNames] = useState<Record<string, string>>({});
@@ -42,6 +55,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
   const [appliedCode, setAppliedCode] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now);
   const submitting = useRef(false);
+  const trackedStart = useRef(false);
   const formId = useId();
   const nameId = `${formId}-name`;
   const emailId = `${formId}-email`;
@@ -65,13 +79,49 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
   }, [now, tickets]);
 
   const onSale = event.status === "published" && event.phase !== "completed";
-  const selected = tickets.filter((type) => quantities[type.id] > 0);
-  const basket = selected.map((type) => ({ ticket_type_id: type.id, quantity: quantities[type.id] }));
+  const assigned = event.seating_mode === "assigned";
+  const seatMap = useQuery({
+    queryKey: ["events", "seats", event.slug, me.data?.id ?? null, accessRevision ?? null],
+    queryFn: assigned && onSale ? ({ signal }) => eventsApi.seats(event.slug, accessToken, signal) : skipToken,
+    refetchInterval: 15_000,
+    retry: false,
+  });
+  const liveSeats = useMemo(() => new Map(seatMap.data?.sections.flatMap((section) =>
+    section.rows.flatMap((row) => row.seats.map((seat) => [seat.event_seat_id, seat] as const))) ?? []), [seatMap.data]);
+  const seatsByType = new Map<number, number[]>();
+  for (const [id, seat] of pickedSeats) {
+    if (seat.ticket_type_id === null) continue;
+    const ids = seatsByType.get(seat.ticket_type_id) ?? [];
+    ids.push(id);
+    seatsByType.set(seat.ticket_type_id, ids);
+  }
+  const countFor = (id: number) => assigned ? seatsByType.get(id)?.length ?? 0 : quantities[id] ?? 0;
+  const selected = tickets.filter((type) => countFor(type.id) > 0);
+  const basket = selected.map((type) => ({ ticket_type_id: type.id, quantity: countFor(type.id) }));
   const total = basket.reduce((sum, line) => sum + line.quantity, 0);
-  const subtotal = selected.reduce((sum, type) => sum + type.price_minor * quantities[type.id], 0);
+  const subtotal = selected.reduce((sum, type) => sum + type.price_minor * countFor(type.id), 0);
   const purchasable = (type: CheckoutTicket, at = now) => onSale && ticketSaleStatus(type.saleWindow, at) === "open"
     && limitFor(type) > 0 && (type.price_minor === 0 || event.paid_sales_active);
-  const selectionUnavailable = selected.some((type) => !purchasable(type) || quantities[type.id] > limitFor(type));
+  const seatUnavailable = [...pickedSeats].some(([id, original]) => {
+    const live = liveSeats.get(id);
+    return live?.status !== "available" || live.ticket_type_id !== original.ticket_type_id;
+  });
+  const selectionUnavailable = selected.some((type) => !purchasable(type) || countFor(type.id) > limitFor(type))
+    || (assigned && pickedSeats.size > 0 && (seatMap.isError || seatUnavailable || pickedSeats.size !== total));
+
+  const canSelectSeat = (seat: EventSeat) => {
+    if (seat.status !== "available" || seatMap.isError || pickedSeats.size >= MAX_TICKETS_PER_ORDER) return false;
+    const type = tickets.find(({ id }) => id === seat.ticket_type_id);
+    return Boolean(type && purchasable(type) && countFor(type.id) < limitFor(type));
+  };
+  const toggleSeat = (seat: EventSeat) => {
+    if (!pickedSeats.has(seat.event_seat_id) && !canSelectSeat(seat)) return;
+    setPickedSeats((current) => {
+      const next = new Map(current);
+      if (!next.delete(seat.event_seat_id)) next.set(seat.event_seat_id, seat);
+      return next;
+    });
+  };
 
   const change = (type: PublicTicketType, delta: number) => setQuantities((current) => {
     const next = Math.min(limitFor(type), Math.max(0, (current[type.id] ?? 0) + delta));
@@ -84,12 +134,14 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
   const promo: PromoSource | null = appliedCode ? { kind: "code", value: appliedCode }
     : campaignToken ? { kind: "token", value: campaignToken } : null;
   const quote = useQuery({
-    queryKey: ["events", "promo", event.slug, promo, basket, subtotal],
-    queryFn: promo && onSale ? ({ signal }) => campaignsApi.quote(event.slug, promo, basket, signal) : skipToken,
+    queryKey: ["events", "promo", event.slug, me.data?.id ?? null, accessRevision ?? null, promo, basket, subtotal],
+    queryFn: promo && onSale ? ({ signal }) => campaignsApi.quote(event.slug, promo, basket, signal, accessToken) : skipToken,
     retry: false,
   });
   const quoted = onSale && promo && quote.isSuccess && !quote.isFetching ? quote.data : undefined;
   const totalMinor = quoted?.total_minor ?? subtotal;
+  // The platform deducts this portion from the organizer's payout. It is included in totalMinor.
+  const feeMinor = event.processing_fee_bps === undefined ? null : Math.floor((totalMinor * event.processing_fee_bps + 5_000) / 10_000);
   const removeCampaignToken = () => {
     if (!campaignToken) return;
     const next = new URLSearchParams(params);
@@ -103,16 +155,24 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
       contact_email: contactEmail.trim(),
       items: basket.map(({ ticket_type_id, quantity }) => ({
         ticket_type_id,
-        attendees: Array.from({ length: quantity }, (_, i) => ({
-          full_name: (names[`${ticket_type_id}-${i}`] ?? "").trim() || contactName.trim(),
-        })),
+        attendees: Array.from({ length: quantity }, (_, i) => {
+          const seatId = seatsByType.get(ticket_type_id)?.[i];
+          const nameKey = seatId === undefined ? `${ticket_type_id}-${i}` : `seat-${seatId}`;
+          return {
+            full_name: (names[nameKey] ?? "").trim() || contactName.trim(),
+            ...(seatId !== undefined && { event_seat_id: seatId }),
+          };
+        }),
       })),
       ...(promo?.kind === "code" && { promo_code: promo.value }),
       ...(promo?.kind === "token" && { campaign_token: promo.value }),
-    }),
+    }, accessToken),
     onSuccess: (order) => navigate(`/orders/${encodeURIComponent(order.order_number)}?token=${encodeURIComponent(order.access_token)}`),
     onError: (error) => {
-      if (promo && error instanceof ApiError && error.status === 409) void quote.refetch();
+      if (error instanceof ApiError && error.status === 409) {
+        if (promo) void quote.refetch();
+        if (assigned) void seatMap.refetch();
+      }
     },
     onSettled: () => { submitting.current = false; },
   });
@@ -128,7 +188,30 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
       </div>
       {loading && <p role="status" className="mt-4 text-sm text-muted">{t("common.loading")}</p>}
       {!loading && ticketTypes.length === 0 && <p className="mt-4 text-sm text-muted">{t("eventWorkflow.noTickets")}</p>}
-      <ul className="mt-4 space-y-3">
+      {assigned && onSale && <>
+        {seatMap.isPending && <p role="status" className="mt-4 text-sm text-muted">{t("booking.loadingSeats")}</p>}
+        {seatMap.isError && <Alert className="mt-4" type="warning" showIcon title={t("booking.seatMapError")}
+          action={<Button size="small" loading={seatMap.isFetching} onClick={() => void seatMap.refetch()}>{t("common.retry")}</Button>} />}
+        {seatMap.data && <SeatMap map={seatMap.data} selected={pickedSeats} canSelect={canSelectSeat}
+          onToggle={toggleSeat} disabled={buy.isPending} />}
+        {pickedSeats.size > 0 && <ul className="mt-3 space-y-2">
+          {[...pickedSeats.values()].map((seat, index) => {
+            const key = `seat-${seat.event_seat_id}`;
+            const nameId = `${formId}-${key}`;
+            return <li key={key} className="rounded-lg border border-line-soft bg-paper p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold" id={`${nameId}-seat`}>{seat.seat_label}</p>
+                <Button size="small" disabled={buy.isPending} onClick={() => toggleSeat(seat)}
+                  aria-label={t("booking.removeSeat", { seat: seat.seat_label })}>{t("promo.remove")}</Button>
+              </div>
+              <label htmlFor={nameId} className="mt-2 block text-sm font-semibold">{t("checkout.attendeeName", { number: index + 1 })}</label>
+              <Input id={nameId} className={`mt-1 ${inputStyles}`} maxLength={200} disabled={buy.isPending}
+                aria-describedby={`${nameId}-seat`} value={names[key] ?? ""} onChange={(e) => setNames({ ...names, [key]: e.target.value })} />
+            </li>;
+          })}
+        </ul>}
+      </>}
+      {!assigned && <ul className="mt-4 space-y-3">
         {tickets.map((type) => {
           const count = quantities[type.id] ?? 0;
           const open = purchasable(type);
@@ -173,7 +256,7 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
             </label>)}
           </li>;
         })}
-      </ul>
+      </ul>}
       <form id={formId} noValidate onSubmit={(e) => {
         e.preventDefault();
         if (!canSubmit || submitting.current) return;
@@ -185,6 +268,10 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
         const currentTime = Date.now();
         if (selected.some((type) => !purchasable(type, currentTime))) { setNow(currentTime); return; }
         submitting.current = true;
+        if (!trackedStart.current) {
+          trackedStart.current = true;
+          void trackCheckoutStart(event.id, campaignToken);
+        }
         buy.mutate();
       }}>
         {total > 0 && <div className="mt-4 space-y-3">
@@ -241,12 +328,16 @@ export const CheckoutPanel = ({ event, ticketTypes, loading }: Props) => {
             <Button size="small" onClick={() => void quote.refetch()}>{t("common.retry")}</Button>} />}
       </div>}
       <dl className="mt-4 space-y-2 border-t border-line-soft pt-4 text-sm">
-        {quoted && quoted.discount_minor > 0 && <>
+        {(subtotal > 0 || quoted) && <>
           <div className="flex justify-between gap-3 text-muted">
-            <dt>{t("booking.subtotal")}</dt><dd>{formatMinor(quoted.subtotal_minor, locale)}</dd>
+            <dt>{t("booking.subtotal")}</dt><dd>{formatMinor(quoted?.subtotal_minor ?? subtotal, locale)}</dd>
           </div>
           <div className="flex justify-between gap-3 text-[#027A48]">
-            <dt>{t("promo.discount")}</dt><dd>{formatMinor(-quoted.discount_minor, locale)}</dd>
+            <dt>{t("promo.discount")}</dt><dd>{formatMinor(0 - (quoted?.discount_minor ?? 0), locale)}</dd>
+          </div>
+          <div className="flex justify-between gap-3 text-muted">
+            <dt>{t("checkout.processingFee")}</dt>
+            <dd>{feeMinor === null ? t("checkout.feeIncluded") : formatMinor(feeMinor, locale)}</dd>
           </div>
         </>}
         <div className="flex items-center justify-between gap-3">

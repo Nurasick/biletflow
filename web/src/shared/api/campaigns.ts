@@ -1,4 +1,5 @@
-import { api, rawRequest } from "./auth";
+import { api, optionalAuthRequest } from "./auth";
+import { eventAccessHeaders } from "./eventAccess";
 
 export type DiscountType = "percent" | "fixed";
 
@@ -56,9 +57,10 @@ export const campaignsApi = {
     api.patch<Campaign>(`${campaignPath(eventId)}/${campaignId}`, input),
   qr: (eventId: number, campaignId: number) =>
     api.file(`${campaignPath(eventId)}/${campaignId}/qr.svg`, "image/svg+xml"),
-  quote: (slug: string, source: PromoSource, items: BasketLine[], signal?: AbortSignal) =>
-    rawRequest<PromoQuote>(`/events/${encodeURIComponent(slug)}/promo`, {
+  quote: (slug: string, source: PromoSource, items: BasketLine[], signal?: AbortSignal, accessToken?: string | null) =>
+    optionalAuthRequest<PromoQuote>(`/events/${encodeURIComponent(slug)}/promo`, {
       ...api.json("POST", { [source.kind]: source.value, items }),
+      headers: { "Content-Type": "application/json", ...eventAccessHeaders(accessToken) },
       signal,
     }),
 };

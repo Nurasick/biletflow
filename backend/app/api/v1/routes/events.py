@@ -41,6 +41,7 @@ from app.services import calendar as calendar_service
 from app.services import event as event_service
 from app.services import event_image as image_service
 from app.services import event_lifecycle as lifecycle
+from app.services import platform as platform_service
 from app.services import seating as seating_service
 
 router = APIRouter(tags=["events"])
@@ -105,6 +106,7 @@ def read_event(
         "organizer_name": organizer_name,
         "images": image_service.list_images(db, event.id),
         "paid_sales_active": activation_service.is_active(db, event.id),
+        "processing_fee_bps": platform_service.get_int(db, "processing_fee_bps"),
         "calendar_links": calendar_service.provider_links(event),
     }
 

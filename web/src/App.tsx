@@ -6,7 +6,8 @@ import { SignupPage } from "./pages/SignupPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { AccountPage } from "./pages/AccountPage";
-import { GuestRoute, ProtectedRoute } from "./shared/auth/RouteGuards";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { GuestRoute, ProtectedRoute, StaffRoute } from "./shared/auth/RouteGuards";
 import { Layout } from "./shared/Layout/Layout";
 import { OrganizerProfilePage } from "./pages/OrganizerProfilePage";
 import { OrganizerRoute } from "./shared/auth/OrganizerRoute";
@@ -74,10 +75,24 @@ function App() {
           children: [
             { path: "/account", element: <AccountPage /> },
             { path: "/notifications", element: <NotificationsPage /> },
-            { path: "/staff/events", element: <StaffEventsPage /> },
-            { path: "/staff/events/:eventId", element: <StaffEventPage /> },
-            { path: "/staff/support", element: <StaffSupportPage /> },
-            { path: "/staff/support/:caseNumber", element: <StaffSupportCasePage /> },
+            {
+              path: "/staff/events",
+              element: <StaffRoute area="checkIn" />,
+              children: [
+                { index: true, element: <StaffEventsPage /> },
+                { path: ":eventId", element: <StaffEventPage /> },
+                { path: "*", element: <NotFoundPage /> },
+              ],
+            },
+            {
+              path: "/staff/support",
+              element: <StaffRoute area="support" />,
+              children: [
+                { index: true, element: <StaffSupportPage /> },
+                { path: ":caseNumber", element: <StaffSupportCasePage /> },
+                { path: "*", element: <NotFoundPage /> },
+              ],
+            },
           ],
         },
         {
@@ -101,6 +116,7 @@ function App() {
         { path: "/orders/:orderNumber", element: <OrderPage /> },
         { path: "/support", element: <SupportPage /> },
         { path: "/support/:caseNumber", element: <SupportCasePage /> },
+        { path: "*", element: <NotFoundPage /> },
       ],
     },
   ]);

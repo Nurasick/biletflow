@@ -5,12 +5,14 @@ import { Link, NavLink } from "react-router-dom";
 import { NotificationLink } from "../../../../features/Notifications/ui/NotificationLink";
 import { useAuth } from "../../../../hooks/useAuth";
 import { LanguageSwitcher } from "../../../../i18n/LanguageSwitcher";
+import { useStaffAccess } from "../../../auth/useStaffAccess";
 import { Brand } from "../../../ui/Brand";
 
 export const Header = () => {
   const { t } = useTranslation();
   const { me } = useAuth();
   const user = me.data;
+  const { canCheckIn, canHandleSupport } = useStaffAccess(user);
 
   return (
     <header className="border-b border-line bg-white">
@@ -59,11 +61,12 @@ export const Header = () => {
         </div>
       </div>
 
-      {user && (
+      {user && (canCheckIn || canHandleSupport) && (
         <div className="border-t border-line-soft bg-paper">
-          <nav className="site-container flex flex-wrap items-center gap-x-5 gap-y-2 py-3 text-xs font-semibold text-muted-strong" aria-label={t("organizer.workspace")}>
-            <Link to="/staff/events" className="hover:text-primary">{t("nav.checkIn")}</Link>
-            {(user.is_organizer || user.is_platform_admin) && <Link to="/staff/support" className="hover:text-primary">{t("support.queue")}</Link>}
+          <nav className="site-container flex flex-wrap items-center gap-x-5 gap-y-2 py-3 text-xs font-semibold text-muted-strong" aria-label={t("nav.account")}>
+            {user.is_organizer && <Link to="/organizer/events" className="hover:text-primary">{t("eventWorkflow.myEvents")}</Link>}
+            {canCheckIn && <Link to="/staff/events" className="hover:text-primary">{t("nav.checkIn")}</Link>}
+            {canHandleSupport && <Link to="/staff/support" className="hover:text-primary">{t("support.queue")}</Link>}
             {user.is_platform_admin && <Link to="/admin" className="hover:text-primary">{t("nav.admin")}</Link>}
           </nav>
         </div>

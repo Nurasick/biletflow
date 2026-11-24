@@ -1,15 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "antd";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { AuthHeading } from "../features/Auth/ui/AuthHeading";
 import { AuthShell } from "../features/Auth/ui/AuthShell";
+import { authKeys } from "../hooks/useAuth";
 import { authApi } from "../shared/api/auth";
 
 // Opened from the emailed link: /verify-email?token=... (§4.1).
 export const VerifyEmailPage = () => {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
   // The emailed token can be consumed once. Share the result across remounts.
@@ -23,6 +26,9 @@ export const VerifyEmailPage = () => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+  useEffect(() => {
+    if (verify.isSuccess) void queryClient.invalidateQueries({ queryKey: authKeys.me });
+  }, [queryClient, verify.isSuccess]);
 
   return (
     <AuthShell top={null}>

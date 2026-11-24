@@ -12,9 +12,9 @@ import { TicketQr } from "./TicketQr";
 
 const printable = (ticket: OrderTicket) => ticket.status === "valid" || ticket.status === "checked_in";
 
-type Props = { order: Order; showQr?: boolean; detailHref?: string; access?: { token: string | null } };
+type Props = { order: Order; showQr?: boolean; detailHref?: string; access?: { token: string | null }; showCalendar?: boolean };
 
-export const OrderCard = ({ order, showQr = true, detailHref, access }: Props) => {
+export const OrderCard = ({ order, showQr = true, detailHref, access, showCalendar = false }: Props) => {
   const { t } = useTranslation();
   const locale = useLocale();
   const when = new Intl.DateTimeFormat(locale, {
@@ -25,6 +25,16 @@ export const OrderCard = ({ order, showQr = true, detailHref, access }: Props) =
     event_id: order.event_id,
     order_number: order.order_number,
     ...(access?.token && { order_token: access.token }),
+  };
+  const hasBreakdown = order.subtotal_minor > 0 || Boolean(order.promo_code);
+  const cancelled = order.event.status === "cancelled";
+  const canShowCalendar = (access || showCalendar) && order.event.status !== "draft"
+    && (order.tickets.some(printable) || (cancelled && order.tickets.length > 0));
+  const calendarProps = {
+    slug: order.event.slug,
+    cancelled,
+    links: order.event.calendar_links,
+    getFile: () => ordersApi.calendar(order.order_number, access?.token ?? null),
   };
 
   return (
@@ -38,25 +48,30 @@ export const OrderCard = ({ order, showQr = true, detailHref, access }: Props) =
         </div>
         <div className="text-right">
           <p className={`rounded-full px-3 py-1.5 text-xs font-bold ${order.status === "confirmed" ? "bg-emerald-50 text-emerald-800" : order.status === "pending" ? "bg-amber-50 text-amber-800" : "bg-soft text-muted-strong"}`}>{t(`orderStatus.${order.status}`)}</p>
-          <p className="mt-2 text-sm font-semibold">{order.total_minor === 0 ? t("eventWorkflow.free") : formatMinor(order.total_minor, locale)}</p>
+          {!hasBreakdown && <p className="mt-2 text-sm font-semibold">{t("eventWorkflow.free")}</p>}
         </div>
       </div>
-      {order.promo_code && <dl className="mt-4 max-w-xs space-y-1 border-t border-line-soft pt-3 text-sm text-muted-strong">
+      {hasBreakdown && <dl className="mt-4 max-w-sm space-y-1.5 border-t border-line-soft pt-3 text-sm text-muted-strong">
         <div className="flex justify-between gap-3">
           <dt>{t("booking.subtotal")}</dt><dd>{formatMinor(order.subtotal_minor, locale)}</dd>
         </div>
         <div className="flex justify-between gap-3 text-[#027A48]">
-          <dt className="min-w-0 break-words">{t("orders.promoDiscount", { code: order.promo_code })}</dt>
+          <dt className="min-w-0 break-words">{order.promo_code ? t("orders.promoDiscount", { code: order.promo_code }) : t("promo.discount")}</dt>
           <dd className="shrink-0">{formatMinor(0 - order.discount_minor, locale)}</dd>
         </div>
+        <div className="flex justify-between gap-3">
+          <dt>{t("checkout.processingFee")}</dt><dd>{formatMinor(order.fee_minor, locale)}</dd>
+        </div>
+        <div className="flex justify-between gap-3 font-bold">
+          <dt>{t("checkout.total")}</dt><dd>{formatMinor(order.total_minor, locale)}</dd>
+        </div>
       </dl>}
-      {access && <div className="mt-4 flex flex-wrap items-start gap-2">
-        {order.tickets.some(printable) && <FileDownloadButton label={t("orders.downloadAll")}
+      {(access || canShowCalendar) && <div className="mt-4 flex flex-wrap items-start gap-2">
+        {access && order.tickets.some(printable) && <FileDownloadButton label={t("orders.downloadAll")}
           filename={`biletflow-${order.order_number}.pdf`}
           getFile={() => ordersApi.ticketsPdf(order.order_number, access.token)} />}
-        {order.event.status !== "draft" && <EventCalendarButton key={order.event.slug}
-          slug={order.event.slug} cancelled={order.event.status === "cancelled"} />}
-        <SupportRequestButton target={supportTarget} eventTitle={order.event.title} label={t("support.orderHelp")} />
+        {canShowCalendar && <EventCalendarButton {...calendarProps} />}
+        {access && <SupportRequestButton target={supportTarget} eventTitle={order.event.title} label={t("support.orderHelp")} />}
       </div>}
       {order.tickets.length > 0 && <ul className="mt-5 grid gap-4 sm:grid-cols-2">
         {order.tickets.map((ticket) => <li key={ticket.public_code} className="flex flex-wrap gap-4 rounded-xl border border-dashed border-line bg-paper p-4">
@@ -66,14 +81,21 @@ export const OrderCard = ({ order, showQr = true, detailHref, access }: Props) =
           <div className="min-w-0 text-sm">
             <p className="font-semibold">{ticket.attendee_name}</p>
             <p className="text-muted">{ticket.ticket_type_name}</p>
+            {ticket.seat_number && <p className="mt-1 font-semibold text-muted-strong">{t("booking.assignedSeat", {
+              seat: ticket.seat_label || [ticket.section_name, ticket.row_label, ticket.seat_number].filter(Boolean).join(" · "),
+            })}</p>}
             <p className="mt-2 font-mono text-xs">{ticket.public_code}</p>
             <p className="mt-1 text-xs font-semibold">{t(`ticketStatus.${ticket.status}`)}</p>
-            {access && <div className="mt-2 flex flex-wrap items-start gap-2">
-              {printable(ticket) && <FileDownloadButton label={t("orders.downloadTicket")} accessibleLabel={t("orders.downloadTicketFor", { code: ticket.public_code })}
+            {(access || canShowCalendar) && <div className="mt-2 flex flex-wrap items-start gap-2">
+              {access && printable(ticket) && <FileDownloadButton label={t("orders.downloadTicket")} accessibleLabel={t("orders.downloadTicketFor", { code: ticket.public_code })}
                 filename={`biletflow-${ticket.public_code}.pdf`}
                 getFile={() => ordersApi.ticketsPdf(order.order_number, access.token, ticket.public_code)} />}
-              <SupportRequestButton target={{ ...supportTarget, ticket_code: ticket.public_code }} eventTitle={order.event.title}
-                label={t("support.ticketHelp")} accessibleLabel={t("support.ticketHelpFor", { code: ticket.public_code })} />
+              {canShowCalendar && (printable(ticket) || cancelled) && <EventCalendarButton {...calendarProps}
+                accessibleLabel={t("booking.calendarTicket", {
+                  action: t(cancelled ? "event.calendarCancellation" : "event.addCalendar"), code: ticket.public_code,
+                })} />}
+              {access && <SupportRequestButton target={{ ...supportTarget, ticket_code: ticket.public_code }} eventTitle={order.event.title}
+                label={t("support.ticketHelp")} accessibleLabel={t("support.ticketHelpFor", { code: ticket.public_code })} />}
             </div>}
           </div>
         </li>)}

@@ -9,7 +9,7 @@ import { SupportRequestButton } from "../../../Support/ui/SupportRequestButton";
 import { EventCalendarButton } from "../EventCalendarButton";
 import { ReportEventButton } from "../ReportEventButton";
 
-export const EventDetails = ({ event }: { event: EventDetail }) => {
+export const EventDetails = ({ event, accessToken }: { event: EventDetail; accessToken?: string | null }) => {
   const { t } = useTranslation();
   const locale = useLocale();
   const dateTime = new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "short", timeZone: event.timezone });
@@ -50,7 +50,8 @@ export const EventDetails = ({ event }: { event: EventDetail }) => {
             </div>
           </div>
           <div className="mt-6 flex flex-wrap items-start gap-2">
-            <EventCalendarButton slug={event.slug} cancelled={event.status === "cancelled"} />
+            <EventCalendarButton slug={event.slug} cancelled={event.status === "cancelled"}
+              links={event.calendar_links} accessToken={accessToken} />
             <SupportRequestButton target={{ audience: "attendee", event_id: event.id }}
               eventTitle={event.title} label={t("support.contactOrganizer")} />
             <ReportEventButton key={event.slug} slug={event.slug} title={event.title} />

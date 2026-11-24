@@ -81,6 +81,27 @@ def test_private_event_access_control_across_all_public_routes(api, db: Session)
         "/api/v1/events/secret-gala/orders", headers=headers, json=payload((tt.id, 1))
     )
     assert checkout.status_code == 201
+    guest_order = checkout.json()
+    calendar_url = f"/api/v1/orders/{guest_order['order_number']}/calendar.ics"
+    assert api.get(calendar_url).status_code == 404
+    assert api.get(calendar_url, headers=auth(stranger)).status_code == 404
+    guest_calendar = api.get(calendar_url, params={"token": guest_order["access_token"]})
+    assert guest_calendar.status_code == 200
+    assert guest_calendar.headers["cache-control"] == "private, no-store"
+    assert f"UID:event-{event_id}@biletflow" in guest_calendar.text
+
+    signed_checkout = api.post(
+        "/api/v1/events/secret-gala/orders",
+        headers={**headers, **auth(stranger)},
+        json=payload((tt.id, 1)),
+    )
+    assert signed_checkout.status_code == 201, signed_checkout.text
+    signed_order = signed_checkout.json()
+    signed_calendar = api.get(
+        f"/api/v1/orders/{signed_order['order_number']}/calendar.ics", headers=auth(stranger)
+    )
+    assert signed_calendar.status_code == 200
+    assert f"UID:event-{event_id}@biletflow" in signed_calendar.text
 
     # Organizer-generated signed invite link also unlocks access.
     invite = api.post(
