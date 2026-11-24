@@ -103,8 +103,12 @@ def reverse_check_in(
     db: DbSession,
     data: DeviceInfo | None = None,
 ) -> dict:
-    """Undo an accidental check-in (§4.8). For the MVP every event admin who
-    may check in may also reverse; the record says who did."""
+    """Undo an accidental check-in (§4.8). Requires organizer role or
+    `can_reverse_check_in` permission on StaffAssignment."""
+    if not check_in.can_reverse(db, event, user):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "You do not have permission to reverse check-ins"
+        )
     try:
         ticket = check_in.find_ticket(db, event, public_code)
         check_in.reverse(db, event, ticket, user, data.device_info if data else None)

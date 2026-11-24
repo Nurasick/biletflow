@@ -1,11 +1,13 @@
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.event import Event, EventStatus
+from app.models.ticket import Ticket, TicketStatus
 from app.models.ticket_type import TicketType
 from app.models.user import User
 from app.schemas.ticket_type import TicketTypeCreate, TicketTypeUpdate
@@ -13,7 +15,11 @@ from app.services import audit
 
 
 class EventClosedForChanges(Exception):
-    """The event is cancelled, so its ticket types are frozen."""
+    """The event is cancelled or suspended, so its ticket types are frozen."""
+
+    def __init__(self, status: EventStatus = EventStatus.CANCELLED):
+        super().__init__(status)
+        self.status = status
 
 
 class QuantityBelowCommitted(Exception):
@@ -32,10 +38,27 @@ class ConcurrentInventoryChange(Exception):
     """A sale landed between our check and our commit; the client should retry."""
 
 
-def create_ticket_type(db: Session, event: Event, data: TicketTypeCreate) -> TicketType:
+def create_ticket_type(
+    db: Session, event: Event, data: TicketTypeCreate, actor: User | None = None
+) -> TicketType:
     _ensure_open(event)
     ticket_type = TicketType(**data.model_dump(), event_id=event.id)
     db.add(ticket_type)
+    db.flush()
+    audit.record(
+        db,
+        action="ticket_type.created",
+        entity_type="ticket_type",
+        entity_id=ticket_type.id,
+        event_id=event.id,
+        actor=actor,
+        summary=f"Ticket type '{ticket_type.name}' created",
+        payload={
+            "price_minor": ticket_type.price_minor,
+            "quantity_total": ticket_type.quantity_total,
+            "currency": ticket_type.currency,
+        },
+    )
     db.commit()
     db.refresh(ticket_type)
     return ticket_type
@@ -91,6 +114,57 @@ def list_for_organizer(db: Session, event: Event) -> Sequence[TicketType]:
     ).all()
 
 
+def ticket_metrics_by_type(db: Session, event_id: int) -> dict[int, dict[str, int]]:
+    """Return {ticket_type_id: {'refunded': n, 'checked_in': m}} in one query."""
+    rows = db.execute(
+        select(Ticket.ticket_type_id, Ticket.status, func.count())
+        .where(
+            Ticket.event_id == event_id,
+            Ticket.status.in_((TicketStatus.REFUNDED, TicketStatus.CHECKED_IN)),
+        )
+        .group_by(Ticket.ticket_type_id, Ticket.status)
+    ).all()
+    metrics: dict[int, dict[str, int]] = defaultdict(lambda: {"refunded": 0, "checked_in": 0})
+    for tt_id, status_val, count in rows:
+        if status_val == TicketStatus.REFUNDED:
+            metrics[tt_id]["refunded"] = int(count)
+        elif status_val == TicketStatus.CHECKED_IN:
+            metrics[tt_id]["checked_in"] = int(count)
+    return metrics
+
+
+def serialize_for_organizer(
+    db: Session, ticket_type: TicketType, metrics: dict[int, dict[str, int]] | None = None
+) -> dict:
+    if metrics is None:
+        metrics = ticket_metrics_by_type(db, ticket_type.event_id)
+    counts = metrics.get(ticket_type.id, {"refunded": 0, "checked_in": 0})
+    return {
+        "id": ticket_type.id,
+        "event_id": ticket_type.event_id,
+        "name": ticket_type.name,
+        "description": ticket_type.description,
+        "price_minor": ticket_type.price_minor,
+        "currency": ticket_type.currency,
+        "quantity_total": ticket_type.quantity_total,
+        "quantity_sold": ticket_type.quantity_sold,
+        "quantity_reserved": ticket_type.quantity_reserved,
+        "available": max(
+            ticket_type.quantity_total - ticket_type.quantity_sold - ticket_type.quantity_reserved,
+            0,
+        ),
+        "quantity_refunded": counts["refunded"],
+        "quantity_checked_in": counts["checked_in"],
+        "sales_start_at": ticket_type.sales_start_at,
+        "sales_end_at": ticket_type.sales_end_at,
+        "max_per_order": ticket_type.max_per_order,
+        "is_hidden": ticket_type.is_hidden,
+        "position": ticket_type.position,
+        "created_at": ticket_type.created_at,
+        "updated_at": ticket_type.updated_at,
+    }
+
+
 def list_public(db: Session, event: Event) -> Sequence[TicketType]:
     return db.scalars(
         select(TicketType)
@@ -123,8 +197,8 @@ def _audit_changes(
 
 
 def _ensure_open(event: Event) -> None:
-    if event.status == EventStatus.CANCELLED:
-        raise EventClosedForChanges
+    if event.status in (EventStatus.CANCELLED, EventStatus.SUSPENDED):
+        raise EventClosedForChanges(event.status)
 
 
 def _as_utc(value: datetime) -> datetime:

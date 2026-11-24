@@ -17,6 +17,8 @@ folding) are easier to test when they are visible.
 """
 
 from datetime import datetime, timedelta
+from email.utils import parseaddr
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from app.core.clock import as_utc, utcnow
@@ -26,6 +28,69 @@ from app.models.event import Event, EventStatus
 
 def event_url(event: Event) -> str:
     return f"{settings.PUBLIC_WEB_URL.rstrip('/')}/events/{event.slug}"
+
+
+def ics_url(event: Event) -> str:
+    return f"{settings.PUBLIC_API_URL.rstrip('/')}{settings.API_V1_PREFIX}/events/{event.slug}/calendar.ics"
+
+
+def provider_links(event: Event) -> dict[str, str]:
+    """Build one-click external calendar links (Google, Outlook Web, Yahoo) + .ics URL (§4.11).
+
+    Preserves event title, venue location, description with event URL, UTC start/end
+    instants, and configured IANA time zone without requiring OAuth or write access.
+    """
+    start_utc = as_utc(event.starts_at)
+    end_utc = as_utc(event.ends_at)
+    location = f"{event.venue_name}, {event.venue_address}"
+    if event.venue_city:
+        location = f"{location}, {event.venue_city}"
+    details = _description(event)
+
+    google_params = urlencode(
+        {
+            "action": "TEMPLATE",
+            "text": event.title,
+            "dates": f"{start_utc:%Y%m%dT%H%M%SZ}/{end_utc:%Y%m%dT%H%M%SZ}",
+            "ctz": event.timezone,
+            "location": location,
+            "details": details,
+        }
+    )
+    outlook_params = urlencode(
+        {
+            "path": "/calendar/action/compose",
+            "rru": "addevent",
+            "subject": event.title,
+            "startdt": start_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "enddt": end_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "location": location,
+            "body": details,
+        }
+    )
+    yahoo_params = urlencode(
+        {
+            "v": "60",
+            "title": event.title,
+            "st": start_utc.strftime("%Y%m%dT%H%M%SZ"),
+            "et": end_utc.strftime("%Y%m%dT%H%M%SZ"),
+            "in_loc": location,
+            "desc": details,
+        }
+    )
+    return {
+        "ics": ics_url(event),
+        "google": f"https://calendar.google.com/calendar/render?{google_params}",
+        "outlook": f"https://outlook.live.com/calendar/0/deeplink/compose?{outlook_params}",
+        "yahoo": f"https://calendar.yahoo.com/?{yahoo_params}",
+    }
+
+
+def _organizer_line() -> str:
+    cn, addr = parseaddr(settings.MAIL_FROM)
+    cn = (cn or settings.PROJECT_NAME).replace('"', "").replace("\r", "").replace("\n", "")
+    addr = addr or "no-reply@biletflow.local"
+    return f'ORGANIZER;CN="{cn}":mailto:{addr}'
 
 
 def build(event: Event, now: datetime | None = None) -> str:
@@ -46,6 +111,8 @@ def build(event: Event, now: datetime | None = None) -> str:
         # Stable for the life of the event: a calendar that already has this
         # UID replaces its entry instead of adding a second one.
         f"UID:event-{event.id}@biletflow",
+        # RFC 5546 requires ORGANIZER on METHOD:CANCEL (and accepts it on PUBLISH).
+        _organizer_line(),
         f"DTSTAMP:{now:%Y%m%dT%H%M%SZ}",
         # Whole seconds since the epoch of the last edit: strictly increasing,
         # which is all a calendar needs to know which copy is newer.

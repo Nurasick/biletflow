@@ -1,0 +1,206 @@
+# Production deployment stack for BiletFlow (§7, §9).
+#
+# Usage:
+#   cp .env.example .env   # set strong POSTGRES_PASSWORD, SECRET_KEY, TLS_DOMAIN, CORS_ORIGINS
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Security design:
+# - PostgreSQL and FastAPI live only on the isolated `internal` network (no host ports).
+# - Caddy terminates TLS on :443 (auto-redirecting HTTP :80 -> HTTPS :443) and emits HSTS.
+# - `web` runs the hardened Nginx `runtime` target with CSP and security headers.
+# - `migrate` runs Alembic migrations once before `api` starts with multi-worker uvicorn.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    init: true
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    logging: *default-logging
+
+  migrate:
+    build:
+      context: ./backend
+    restart: "no"
+    init: true
+    env_file: .env
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DB_SSLMODE: ${DB_SSLMODE:-prefer}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    command: ["alembic", "upgrade", "head"]
+    logging: *default-logging
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DB_SSLMODE: ${DB_SSLMODE:-prefer}
+      MEDIA_ROOT: /app/media
+    volumes:
+      - media_data:/app/media
+    tmpfs:
+      - /tmp
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "${API_WORKERS:-2}"
+      - --proxy-headers
+      - --forwarded-allow-ips=*
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/api/v1/health', timeout=2).close()",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+    logging: *default-logging
+
+  web:
+    build:
+      context: ./web
+      target: runtime
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    restart: unless-stopped
+    init: true
+    environment:
+      API_PROXY_TARGET: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - internal
+      - edge
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/healthz | grep -q ok"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+
+  proxy:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    init: true
+    environment:
+      TLS_DOMAIN: ${TLS_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - edge
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:2019/config/ >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+
+configs:
+  caddyfile:
+    content: |
+      {
+        admin 127.0.0.1:2019
+      }
+
+      {$$TLS_DOMAIN:localhost} {
+        encode zstd gzip
+        header {
+          Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+          -Server
+        }
+        reverse_proxy web:80 {
+          header_up X-Forwarded-Proto {scheme}
+          header_up X-Real-IP {remote_host}
+        }
+      }
+
+networks:
+  edge:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true
+
+volumes:
+  pgdata_prod:
+  media_data:
+  caddy_data:
+  caddy_config:

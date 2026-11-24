@@ -4,6 +4,7 @@ from app.models.attendee import Attendee
 from app.models.audit import AuditLog
 from app.models.campaign import Campaign, CampaignTicketType, PromoRedemption
 from app.models.check_in import CheckInRecord
+from app.models.dispute import Dispute
 from app.models.event import Event
 from app.models.event_image import EventImage
 from app.models.hold import Hold
@@ -11,12 +12,15 @@ from app.models.notification import Notification
 from app.models.order import Order, OrderItem
 from app.models.organizer import OrganizerProfile, PayoutAccount
 from app.models.payment import Payment, Refund
+from app.models.payout import Payout
 from app.models.platform import EventReport, PlatformSetting
+from app.models.seat import EventSeat
 from app.models.staff import StaffAssignment
-from app.models.support import SupportCase, SupportMessage
+from app.models.support import SupportAttachment, SupportCase, SupportMessage
 from app.models.ticket import Ticket
 from app.models.ticket_type import TicketType
-from app.models.token import UserToken
+from app.models.token import UserSession, UserToken
 from app.models.user import User
+from app.models.venue import Seat, Venue, VenueRow, VenueSection
 # Import every model module here so Alembic's --autogenerate sees them.
 # Unused imports are intentional (ruff F401 is disabled for this file).

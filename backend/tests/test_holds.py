@@ -37,7 +37,12 @@ def test_reserve_moves_units_into_reserved_and_creates_an_unattached_hold(db, ev
     assert hold.quantity == 3
     assert hold.order_id is None
     assert hold.released_at is None
-    assert hold.expires_at.replace(tzinfo=UTC) == NOW + hold_service.HOLD_TTL
+    expires = (
+        hold.expires_at.astimezone(UTC)
+        if hold.expires_at.tzinfo
+        else hold.expires_at.replace(tzinfo=UTC)
+    )
+    assert expires == NOW + hold_service.HOLD_TTL
 
 
 def test_reserve_can_take_exactly_the_last_units(db, event):

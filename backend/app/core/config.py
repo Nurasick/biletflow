@@ -13,7 +13,15 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     VERSION: str = "0.1.0"
     DATABASE_URL: str
+    # Optional Postgres TLS enforcement (e.g. "require", "verify-ca", "verify-full").
+    DB_SSLMODE: Literal["", "disable", "allow", "prefer", "require", "verify-ca", "verify-full"] = (
+        ""
+    )
     SECRET_KEY: str
+    # Optional Fernet key for application-level encryption of sensitive fields at rest.
+    # Leave empty in local development; in production set a Fernet key or rely on
+    # KMS/LUKS volume encryption as documented in docs/backup-recovery.md.
+    FIELD_ENCRYPTION_KEY: str = ""
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     # Lifetime of the signed "view my order" link guests receive. It has to
@@ -42,16 +50,23 @@ class Settings(BaseSettings):
     PUBLIC_API_URL: str = "http://localhost:8000"
     AWS_S3_BUCKET: str = ""
     AWS_REGION: str = ""
+    # Optional custom S3-compatible endpoint (MinIO, Cloudflare R2, DigitalOcean Spaces).
+    AWS_S3_ENDPOINT_URL: str = ""
+    AWS_S3_ADDRESSING_STYLE: Literal["auto", "virtual", "path"] = "virtual"
     MAX_IMAGE_BYTES: int = 2 * 1024 * 1024
     MAX_EVENT_IMAGES: int = 5
 
-    # Email. With SMTP_HOST empty, messages go to the log only (the default for
-    # tests and bare `uvicorn`). Compose sets it to the Mailpit container.
+    # Email. With SMTP_HOST and RESEND_API_KEY empty, messages go to the log
+    # only (the default for tests and bare `uvicorn`). Compose sets SMTP_HOST
+    # to Mailpit; production may use SMTP or the Resend HTTP API adapter.
+    EMAIL_PROVIDER: Literal["auto", "console", "smtp", "resend"] = "auto"
     SMTP_HOST: str = ""
     SMTP_PORT: int = 1025
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_STARTTLS: bool = False
+    RESEND_API_KEY: str = ""
+    RESEND_API_URL: str = "https://api.resend.com/emails"
     MAIL_FROM: str = "BiletFlow <no-reply@biletflow.local>"
     # How often queued notification emails are sent. 0 turns the sender off.
     NOTIFY_INTERVAL_SECONDS: int = 5
@@ -62,8 +77,24 @@ class Settings(BaseSettings):
     # organizer's payout (open question #3, decided). A Platform Admin can
     # change it at runtime (platform_settings); this is only the default.
     PROCESSING_FEE_BPS: int = 250
+    DEFAULT_CURRENCY: str = "KZT"
+    SUPPORTED_CURRENCIES: Annotated[list[str], NoDecode] = ["KZT"]
 
     CORS_ORIGINS: Annotated[list[AnyHttpUrl], NoDecode] = []
+
+    @field_validator("SUPPORTED_CURRENCIES", mode="before")
+    @classmethod
+    def assemble_supported_currencies(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return ["KZT"]
+            if v.startswith("["):
+                return [c.strip().upper() for c in json.loads(v) if c.strip()]
+            return [c.strip().upper() for c in v.split(",") if c.strip()]
+        if isinstance(v, list):
+            return [str(c).strip().upper() for c in v if str(c).strip()]
+        raise ValueError(f"Invalid SUPPORTED_CURRENCIES: {v!r}")
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

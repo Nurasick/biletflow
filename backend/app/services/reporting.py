@@ -17,6 +17,8 @@ from app.models.payment import Payment, PaymentPurpose, PaymentStatus, Refund, R
 from app.models.ticket import Ticket, TicketStatus
 from app.models.ticket_type import TicketType
 from app.services import check_in
+from app.services import seating as seating_service
+from app.services import ticket_type as ticket_type_service
 
 # Orders that represent a real outcome. Pending ones are still in someone's
 # checkout and expired ones never happened; neither belongs in a sales list.
@@ -92,15 +94,29 @@ def summary(db: Session, event: Event) -> dict:
         ),
     )
     sold = sum(t.quantity_sold for t in types)
+    reserved = sum(t.quantity_reserved for t in types)
     total = sum(t.quantity_total for t in types)
+    sellable = seating_service.sellable_seat_count(db, event.id)
+    if sellable is not None:
+        total = sellable
     capacity = min(event.capacity, total) if event.capacity is not None else total
+    metrics = ticket_type_service.ticket_metrics_by_type(db, event.id)
+    has_simulated_payments = (
+        db.scalar(
+            select(Payment.id)
+            .join(Order, Order.id == Payment.order_id)
+            .where(Order.event_id == event.id, Payment.is_simulated.is_(True))
+            .limit(1)
+        )
+        is not None
+    )
     return {
-        "currency": "KZT",
-        "is_simulated": True,
+        "currency": types[0].currency if types else "KZT",
+        "is_simulated": has_simulated_payments,
         "capacity": capacity,
         "tickets_sold": sold,
-        "tickets_reserved": sum(t.quantity_reserved for t in types),
-        "tickets_remaining": max(capacity - sold - sum(t.quantity_reserved for t in types), 0),
+        "tickets_reserved": reserved,
+        "tickets_remaining": max(capacity - sold - reserved, 0),
         "percent_sold": round(100 * sold / capacity, 1) if capacity else 0.0,
         "gross_minor": gross,
         "refunds_minor": refunded,
@@ -117,6 +133,9 @@ def summary(db: Session, event: Event) -> dict:
                 "quantity_total": t.quantity_total,
                 "quantity_sold": t.quantity_sold,
                 "quantity_reserved": t.quantity_reserved,
+                "available": max(t.quantity_total - t.quantity_sold - t.quantity_reserved, 0),
+                "quantity_refunded": metrics.get(t.id, {}).get("refunded", 0),
+                "quantity_checked_in": metrics.get(t.id, {}).get("checked_in", 0),
                 "revenue_minor": _type_revenue(db, t.id),
             }
             for t in types
@@ -125,11 +144,11 @@ def summary(db: Session, event: Event) -> dict:
 
 
 def _type_revenue(db: Session, ticket_type_id: int) -> int:
-    # From the order line snapshot, not today's price: an organizer's later
-    # price edit must not rewrite what was earned.
+    # From the order line snapshot minus its discount, not today's price:
+    # an organizer's later price edit must not rewrite what was earned.
     return _sum(
         db,
-        select(func.sum(OrderItem.subtotal_minor))
+        select(func.sum(OrderItem.subtotal_minor - OrderItem.discount_minor))
         .join(Order, Order.id == OrderItem.order_id)
         .where(OrderItem.ticket_type_id == ticket_type_id, Order.status == OrderStatus.CONFIRMED),
     )

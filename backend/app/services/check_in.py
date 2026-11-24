@@ -15,7 +15,9 @@ from sqlalchemy.orm import Session
 from app.core import qr
 from app.models.attendee import Attendee
 from app.models.check_in import CheckInAction, CheckInRecord
-from app.models.event import Event
+from app.models.event import Event, EventStatus
+from app.models.order import Order
+from app.models.organizer import OrganizerProfile
 from app.models.staff import StaffAssignment
 from app.models.ticket import Ticket, TicketStatus
 from app.models.ticket_type import TicketType
@@ -59,6 +61,19 @@ class NotCheckedIn(Exception):
     """Only a checked-in ticket can have its check-in reversed."""
 
 
+class EventNotCheckInEligible(Exception):
+    """Check-in is blocked on draft or suspended events."""
+
+    def __init__(self, status: EventStatus):
+        super().__init__(status)
+        self.status = status
+
+
+def _ensure_check_in_allowed(event: Event) -> None:
+    if event.status in (EventStatus.DRAFT, EventStatus.SUSPENDED):
+        raise EventNotCheckInEligible(event.status)
+
+
 def can_staff(db: Session, event: Event, user: User, organizer_user_id: int | None) -> bool:
     """§4.8 "view only assigned events": a staff_assignments row for this event.
 
@@ -79,6 +94,7 @@ def can_staff(db: Session, event: Event, user: User, organizer_user_id: int | No
 
 
 def scan(db: Session, event: Event, admin: User, payload: str, device: str | None) -> ScanResult:
+    _ensure_check_in_allowed(event)
     claims = qr.verify(payload)
     # Step 1, signature. Anything forged, altered or not ours ends here.
     if claims is None:
@@ -101,6 +117,7 @@ def scan(db: Session, event: Event, admin: User, payload: str, device: str | Non
 
 def admit(db: Session, event: Event, ticket: Ticket, admin: User, device: str | None) -> ScanResult:
     """Step 5. Also the manual path, after a search by name or code (§4.8)."""
+    _ensure_check_in_allowed(event)
     # Conditional UPDATE, never read-then-write: the same ticket scanned at two
     # doors at once must admit one person (concurrency.md, check-in).
     flipped = db.execute(
@@ -166,18 +183,36 @@ def counts(db: Session, event: Event) -> dict[str, int | float]:
     }
 
 
+def can_reverse(db: Session, event: Event, user: User) -> bool:
+    """Organizers may always reverse check-in; assigned staff require `can_reverse_check_in`."""
+    owner_id = db.scalar(
+        select(OrganizerProfile.user_id).where(OrganizerProfile.id == event.organizer_profile_id)
+    )
+    if owner_id == user.id:
+        return True
+    allowed = db.scalar(
+        select(StaffAssignment.can_reverse_check_in).where(
+            StaffAssignment.event_id == event.id, StaffAssignment.user_id == user.id
+        )
+    )
+    return bool(allowed)
+
+
 def search(db: Session, event: Event, q: str, limit: int = 25) -> Sequence[tuple]:
-    """Manual lookup by attendee name or ticket code (§4.8 "search manually")."""
+    """Manual lookup by attendee name, email, order number, or ticket code (§4.8)."""
     needle = "%" + q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     return db.execute(
         select(Ticket, Attendee.full_name, TicketType.name)
         .join(Attendee, Attendee.id == Ticket.attendee_id)
         .join(TicketType, TicketType.id == Ticket.ticket_type_id)
+        .join(Order, Order.id == Ticket.order_id)
         .where(
             Ticket.event_id == event.id,
             or_(
                 Attendee.full_name.ilike(needle, escape="\\"),
+                Attendee.email.ilike(needle, escape="\\"),
                 Ticket.public_code.ilike(needle, escape="\\"),
+                Order.order_number.ilike(needle, escape="\\"),
             ),
         )
         .order_by(Attendee.full_name, Ticket.id)

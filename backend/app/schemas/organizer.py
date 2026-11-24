@@ -13,6 +13,8 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.crypto import decrypt_field
+
 # The two sandbox providers the web form offers. No real provider exists in
 # the MVP (§8 excludes real payouts), so anything else is refused.
 PayoutProvider = Literal["sandbox_bank", "sandbox_wallet"]
@@ -79,6 +81,11 @@ class PayoutAccountRead(BaseModel):
     status: str
     is_simulated: bool
 
+    @field_validator("external_account_ref", mode="before")
+    @classmethod
+    def decrypt_ref(cls, v: str) -> str:
+        return decrypt_field(v) or v
+
 
 class OrganizerProfileRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -89,6 +96,7 @@ class OrganizerProfileRead(BaseModel):
     contact_phone: str | None
     description: str | None
     verification_status: str
+    verification_is_simulated: bool = True
     payout_account: PayoutAccountRead | None
     created_at: datetime
     updated_at: datetime
@@ -96,11 +104,16 @@ class OrganizerProfileRead(BaseModel):
 
 class StaffAssign(BaseModel):
     email: EmailStr
+    can_reverse_check_in: bool = True
 
     @field_validator("email")
     @classmethod
     def normalize_email(cls, v: str) -> str:
         return v.lower()
+
+
+class StaffUpdate(BaseModel):
+    can_reverse_check_in: bool
 
 
 class StaffRead(BaseModel):
@@ -109,4 +122,5 @@ class StaffRead(BaseModel):
     first_name: str
     last_name: str
     role: str
+    can_reverse_check_in: bool = True
     created_at: datetime

@@ -1,7 +1,17 @@
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Identity, Index, String
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,6 +57,9 @@ class Notification(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # In-app only: when the user opened their feed and saw it.
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=sa_func.now()
     )
@@ -54,7 +67,9 @@ class Notification(Base):
     __table_args__ = (
         CheckConstraint(f"channel IN ({check_list(Channel)})", name="channel"),
         CheckConstraint(f"status IN ({check_list(DeliveryStatus)})", name="status"),
-        # The sender picks up pending rows; the feed reads one user's rows.
+        # The sender picks up pending rows and failed rows due for retry;
+        # the feed reads one user's rows.
         Index("ix_notifications_status_created_at", "status", "created_at"),
+        Index("ix_notifications_status_next_retry_at", "status", "next_retry_at"),
         Index("ix_notifications_user_id_channel_created_at", "user_id", "channel", "created_at"),
     )

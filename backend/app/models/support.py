@@ -28,8 +28,7 @@ class CaseAudience(StrEnum):
 
 
 class CaseCategory(StrEnum):
-    # §4.13 verbatim. A UI dropdown as much as a constraint: no ninth value
-    # without changing the spec.
+    # §4.13 categories plus organizer paid-sales activation category.
     TICKET_DELIVERY = "ticket_delivery"
     PAYMENT = "payment"
     REFUND = "refund"
@@ -37,6 +36,7 @@ class CaseCategory(StrEnum):
     EVENT_INFO = "event_info"
     CHECK_IN = "check_in"
     ACCOUNT = "account"
+    ACTIVATION = "activation"
     TECHNICAL = "technical"
 
 
@@ -83,6 +83,10 @@ class SupportCase(Base):
         string_enum(CaseStatus, 30), server_default=CaseStatus.OPEN.value
     )
     assigned_to_user_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
+    is_escalated: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    escalated_by_user_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
+    escalation_reason: Mapped[str | None] = mapped_column(Text)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -99,6 +103,8 @@ class SupportCase(Base):
         Index("ix_support_cases_audience_status_updated_at", "audience", "status", "updated_at"),
         # An organizer's cases for one event.
         Index("ix_support_cases_event_id_status", "event_id", "status"),
+        # Escalated attendee cases for Platform Admins.
+        Index("ix_support_cases_is_escalated_status", "is_escalated", "status"),
     )
 
 
@@ -128,3 +134,25 @@ class SupportMessage(Base):
         # The thread, in order.
         Index("ix_support_messages_support_case_id_created_at", "support_case_id", "created_at"),
     )
+
+
+class SupportAttachment(Base):
+    """Optional file attachment uploaded to a support case or message (§4.13 Bonus)."""
+
+    __tablename__ = "support_attachments"
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    support_case_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("support_cases.id", ondelete="CASCADE"), index=True
+    )
+    support_message_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("support_messages.id", ondelete="SET NULL"), index=True
+    )
+    uploaded_by_user_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
+    filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(100))
+    size_bytes: Mapped[int] = mapped_column(BigInteger)
+    storage_key: Mapped[str] = mapped_column(String(255), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (CheckConstraint("size_bytes > 0", name="size_positive"),)

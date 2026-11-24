@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
 from app.models.activation import ActivationStatus, EventActivation
-from app.models.event import Event
+from app.models.event import Event, EventStatus
 from app.models.organizer import AccountStatus, OrganizerProfile, PayoutAccount, VerificationStatus
 from app.models.payment import Payment, PaymentPurpose, PaymentStatus
 from app.models.ticket_type import TicketType
@@ -36,6 +36,19 @@ class IllegalActivationTransition(Exception):
     def __init__(self, reason: str):
         super().__init__(reason)
         self.reason = reason
+
+
+class IdempotencyKeyReused(Exception):
+    """The idempotency key already belongs to another payment."""
+
+
+def _ensure_event_mutable(db: Session, event_id: int) -> Event:
+    event = db.get(Event, event_id)
+    if event is not None and event.status in (EventStatus.SUSPENDED, EventStatus.CANCELLED):
+        raise IllegalActivationTransition(
+            f"cannot modify paid-sales activation for a {event.status.value} event"
+        )
+    return event
 
 
 @dataclass(frozen=True)
@@ -98,6 +111,7 @@ def checklist(db: Session, event: Event, activation: EventActivation) -> Checkli
 def accept_terms(
     db: Session, activation: EventActivation, actor: User, now: datetime | None = None
 ):
+    _ensure_event_mutable(db, activation.event_id)
     if activation.terms_accepted_at is None:
         activation.terms_accepted_at = now or utcnow()
         audit.record(
@@ -112,9 +126,30 @@ def accept_terms(
 
 
 def pay_fee(
-    db: Session, activation: EventActivation, actor: User, outcome: provider.Outcome
+    db: Session,
+    activation: EventActivation,
+    actor: User,
+    outcome: provider.Outcome,
+    *,
+    idempotency_key: str | None = None,
 ) -> Payment:
-    """Charge the activation fee through the simulator. Paying twice is refused."""
+    """Charge the activation fee through the simulator. Paying twice is refused.
+
+    Acquires FOR UPDATE on the EventActivation row and supports Idempotency-Key
+    so concurrent requests cannot charge the activation fee twice.
+    """
+    event = _ensure_event_mutable(db, activation.event_id)
+    if idempotency_key:
+        replay = db.scalar(select(Payment).where(Payment.idempotency_key == idempotency_key))
+        if replay is not None:
+            if (
+                replay.purpose != PaymentPurpose.ACTIVATION_FEE
+                or replay.event_id != activation.event_id
+            ):
+                raise IdempotencyKeyReused
+            return replay
+
+    db.refresh(activation, with_for_update=True)
     if activation.payment_id is not None:
         raise IllegalActivationTransition("the activation fee is already paid")
     result = provider.charge(activation.activation_fee_minor, outcome)
@@ -128,6 +163,7 @@ def pay_fee(
         status=PaymentStatus.SUCCEEDED if result.succeeded else PaymentStatus.FAILED,
         is_simulated=provider.IS_SIMULATED,
         failure_reason=result.failure_reason,
+        idempotency_key=idempotency_key,
     )
     db.add(payment)
     db.flush()
@@ -145,11 +181,23 @@ def pay_fee(
         + ("paid" if result.succeeded else "payment was declined"),
         payload={"amount_minor": payment.amount_minor, "is_simulated": True},
     )
+    if not result.succeeded:
+        notify.notify_user(
+            db,
+            actor,
+            "activation.fee_failed",
+            {
+                "event_title": event.title if event is not None else "",
+                "reason": result.failure_reason or "Declined",
+                "link": notify.web_link(f"/organizer/events/{activation.event_id}/preview"),
+            },
+        )
     return payment
 
 
 def activate(db: Session, event: Event, activation: EventActivation, actor: User, now=None):
     """pending -> active, only when every §3.2 precondition holds."""
+    _ensure_event_mutable(db, event.id)
     missing = checklist(db, event, activation).missing()
     if missing:
         raise ActivationIncomplete(missing)
@@ -219,6 +267,7 @@ def _tell_organizer(db: Session, activation: EventActivation, status: str) -> No
         {
             "event_title": event.title,
             "status": status,
+            "status_key": status,
             "link": notify.web_link(f"/organizer/events/{event.id}/preview"),
         },
     )

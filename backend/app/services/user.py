@@ -1,8 +1,9 @@
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash, verify_hashed_password
+from app.models.attendee import Attendee
 from app.models.user import User
 from app.schemas.user import UserCreate
 
@@ -32,12 +33,20 @@ def create_user(db: Session, data: UserCreate) -> User:
     )
     db.add(user)
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         # The unique index is the authority, not a prior SELECT: two requests
         # for the same address can both pass a check and only one can commit.
         db.rollback()
         raise EmailAlreadyRegistered from None
+    # Link any previously gifted/group tickets addressed to this email.
+    db.execute(
+        update(Attendee)
+        .where(func.lower(Attendee.email) == user.email.lower(), Attendee.user_id.is_(None))
+        .values(user_id=user.id)
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
     db.refresh(user)
     return user
 

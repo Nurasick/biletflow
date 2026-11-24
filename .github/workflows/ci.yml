@@ -23,9 +23,10 @@ jobs:
     env:
       DATABASE_URL: "postgresql+psycopg://ci:ci@localhost:5432/ci"
       SECRET_KEY: "ci-not-a-real-secret"
+      TEST_USE_POSTGRES: "1"
     services:
-      # Any test that touches the database needs a real Postgres. The runner
-      # reaches this on localhost:5432, which is what DATABASE_URL above says.
+      # Every backend test — both standard and concurrency tests — runs against
+      # real PostgreSQL 17 in CI.
       postgres:
         image: postgres:17
         env:
@@ -52,7 +53,7 @@ jobs:
         run: uv sync --locked
 
       - name: Lint
-        run: uv run ruff check . 
+        run: uv run ruff check .
 
       - name: Format check
         run: uv run ruff format --check .
@@ -67,7 +68,7 @@ jobs:
           uv run alembic downgrade base
           uv run alembic upgrade head
 
-      - name: Tests
+      - name: Tests (PostgreSQL 17)
         run: uv run pytest
 
       - name: Extract OpenAPI spec
@@ -76,7 +77,70 @@ jobs:
       - name: Verify OpenAPI spec has been updated
         run: git diff --exit-code -- ../docs/openapi.json
 
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc -b
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build production bundle
+        run: npm run build
+
+  mobile:
+    name: mobile
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Export check (iOS/Android/Web)
+        run: npm run export:check
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests
+        run: npm run test:e2e
 
   docker:
     name: docker
@@ -84,6 +148,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build image
+      - name: Validate production Compose config
+        env:
+          POSTGRES_USER: biletflow
+          POSTGRES_PASSWORD: ci-placeholder-password
+          POSTGRES_DB: biletflow
+          SECRET_KEY: ci-placeholder-secret-key
+          DATABASE_URL: postgresql+psycopg://biletflow:ci@db:5432/biletflow
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.prod.yml config --quiet
+
+      - name: Build backend image
         run: docker build -t biletflow-api ./backend
 
+      - name: Build web production runtime image
+        run: docker build --target runtime -t biletflow-web ./web
+
+      - name: Build mobile image
+        run: docker build -t biletflow-mobile ./mobile

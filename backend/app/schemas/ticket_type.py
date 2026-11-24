@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Self
+from typing import Self
 
 from pydantic import (
     AwareDatetime,
@@ -7,8 +7,21 @@ from pydantic import (
     ConfigDict,
     Field,
     computed_field,
+    field_validator,
     model_validator,
 )
+
+from app.core.config import settings
+
+
+def _check_currency(value: str | None) -> str | None:
+    if value is None:
+        return None
+    code = value.strip().upper()
+    if code not in settings.SUPPORTED_CURRENCIES:
+        allowed = ", ".join(settings.SUPPORTED_CURRENCIES)
+        raise ValueError(f"currency must be one of: {allowed}")
+    return code
 
 
 def _check_sales_windows(
@@ -23,13 +36,18 @@ class TicketTypeCreate(BaseModel):
     name: str = Field(max_length=200, min_length=1)
     description: str | None = None
     price_minor: int = Field(default=0, ge=0)
-    currency: Literal["KZT"] = Field(default="KZT")
+    currency: str = Field(default="KZT", min_length=3, max_length=3)
     quantity_total: int = Field(ge=1)
     sales_start_at: AwareDatetime | None = None
     sales_end_at: AwareDatetime | None = None
     max_per_order: int | None = Field(default=None, gt=0)
     is_hidden: bool = Field(default=False)
     position: int = Field(default=0)
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, v: str) -> str:
+        return _check_currency(v) or settings.DEFAULT_CURRENCY
 
     @model_validator(mode="after")
     def check_window(self) -> Self:
@@ -44,13 +62,18 @@ class TicketTypeUpdate(BaseModel):
     name: str | None = Field(default=None, max_length=200, min_length=1)
     description: str | None = None
     price_minor: int | None = Field(default=None, ge=0)
-    currency: Literal["KZT"] | None = Field(default=None)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
     quantity_total: int | None = Field(default=None, ge=1)
     sales_start_at: AwareDatetime | None = None
     sales_end_at: AwareDatetime | None = None
     max_per_order: int | None = Field(default=None, gt=0)
     is_hidden: bool | None = Field(default=None)
     position: int | None = Field(default=None)
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, v: str | None) -> str | None:
+        return _check_currency(v)
 
     @model_validator(mode="after")
     def check_window(self) -> Self:
@@ -79,6 +102,9 @@ class TicketTypeRead(BaseModel):
     quantity_total: int
     quantity_sold: int
     quantity_reserved: int
+    available: int = 0
+    quantity_refunded: int = 0
+    quantity_checked_in: int = 0
     sales_start_at: datetime | None
     sales_end_at: datetime | None
     max_per_order: int | None

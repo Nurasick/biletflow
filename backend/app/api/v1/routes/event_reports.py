@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentUser, DbSession, OwnedEvent
+from app.api.deps import CurrentOrganizer, CurrentUser, DbSession, OwnedEvent
 from app.models.event import Event
 from app.models.order import Order
 from app.models.ticket import Ticket
@@ -15,6 +15,7 @@ from app.schemas.reporting import (
     AttendeeRow,
     EventAnalytics,
     EventSummary,
+    OrganizerAnalytics,
     OrganizerOrderRow,
     RefundRequest,
     TimelineEntry,
@@ -26,6 +27,23 @@ router = APIRouter(tags=["organizer reports"])
 
 Limit = Annotated[int, Query(ge=1, le=200)]
 Offset = Annotated[int, Query(ge=0)]
+
+
+@router.get("/organizer/analytics", response_model=OrganizerAnalytics)
+def organizer_analytics(
+    organizer: CurrentOrganizer,
+    db: DbSession,
+    event_id: int | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+) -> dict:
+    """§4.15: cross-event summary & analytics across an organizer's events."""
+    result = analytics.organizer_analytics(
+        db, organizer, event_id=event_id, since=since, until=until
+    )
+    if result is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Event not found")
+    return result
 
 
 @router.get("/organizer/events/{event_id}/orders", response_model=list[OrganizerOrderRow])
@@ -159,7 +177,7 @@ def refund_order(
     """A full refund of a paid order (§4.9, UC5), through the simulated provider."""
     order = _event_order(db, event, order_number)
     try:
-        order_lifecycle.refund(db, order, user, data.reason)
+        order_lifecycle.refund(db, order, user, data.reason, override_policy=data.override_policy)
     except order_lifecycle.IllegalOrderTransition as exc:
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, exc.reason) from None

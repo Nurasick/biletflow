@@ -59,6 +59,7 @@ class AccountStatus(StrEnum):
     PENDING = "pending"
     ACTIVE = "active"
     REJECTED = "rejected"
+    INACTIVE = "inactive"
 
 
 _ACCOUNT_STATUSES = ", ".join(f"'{s.value}'" for s in AccountStatus)
@@ -76,6 +77,7 @@ class PayoutAccount(Base):
 
     status: Mapped[AccountStatus] = mapped_column(String(20), server_default=AccountStatus.PENDING)
     is_simulated: Mapped[bool] = mapped_column(Boolean, server_default=true())
+    deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (CheckConstraint(f"status IN ({_ACCOUNT_STATUSES})", name="status"),)

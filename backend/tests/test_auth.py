@@ -349,3 +349,156 @@ def test_logout_clears_the_refresh_cookie(api, registered):
     cleared = set_cookie_header(response, "refresh_token")
     assert 'refresh_token=""' in cleared or "refresh_token=;" in cleared
     assert "Max-Age=0" in cleared or "expires=" in cleared.lower()
+
+
+def test_refresh_rotates_and_invalidates_previous_refresh_token(api, registered):
+    first = login(api, mode="bearer").json()
+    refreshed = api.post(REFRESH, json={"refresh_token": first["refresh_token"]})
+    assert refreshed.status_code == 200
+
+    # Replaying the already-rotated refresh token must fail.
+    replay = api.post(REFRESH, json={"refresh_token": first["refresh_token"]})
+    assert replay.status_code == 401
+
+
+def test_logout_revokes_bearer_refresh_token_server_side(api, registered):
+    tokens = login(api, mode="bearer").json()
+
+    out = api.post(
+        LOGOUT,
+        headers={"Authorization": f"Bearer {tokens['access_token']}"},
+        json={"refresh_token": tokens["refresh_token"]},
+    )
+    assert out.status_code == 204
+
+    replay = api.post(REFRESH, json={"refresh_token": tokens["refresh_token"]})
+    assert replay.status_code == 401
+
+
+def test_logout_without_body_revokes_all_active_bearer_sessions(api, registered):
+    tokens = login(api, mode="bearer").json()
+
+    out = api.post(LOGOUT, headers={"Authorization": f"Bearer {tokens['access_token']}"})
+    assert out.status_code == 204
+
+    assert api.post(REFRESH, json={"refresh_token": tokens["refresh_token"]}).status_code == 401
+
+
+def test_logout_revokes_cookie_session_even_if_cookie_replayed(api, registered):
+    first = login(api, mode="cookie")
+    access = first.json()["access_token"]
+    csrf = first.json()["csrf_token"]
+    raw_cookie = first.cookies.get("refresh_token")
+
+    out = api.post(LOGOUT, headers={"Authorization": f"Bearer {access}"})
+    assert out.status_code == 204
+
+    # Even if an attacker replays the stolen cookie + CSRF token, it is revoked server-side.
+    replay = api.post(
+        REFRESH,
+        headers={"X-CSRF-Token": csrf},
+        cookies={"refresh_token": raw_cookie},
+    )
+    assert replay.status_code == 401
+
+
+def test_password_reset_revokes_all_sessions_and_existing_access_tokens(api, db, registered):
+    import re
+
+    from app.services import mailer, notify
+
+    mailer.outbox.clear()
+    session_one = login(api, mode="bearer").json()
+    session_two = login(api, mode="bearer").json()
+
+    api.post("/api/v1/auth/password-reset", json={"email": "abai@example.com"})
+    notify.deliver_pending(db)
+    reset_token = re.search(r"token=([\w-]+)", mailer.outbox[-1].body).group(1)
+
+    confirm = api.post(
+        "/api/v1/auth/password-reset/confirm",
+        json={"token": reset_token, "new_password": "new-secret-password"},
+    )
+    assert confirm.status_code == 204
+
+    # Both prior refresh tokens and prior access tokens are now rejected.
+    assert (
+        api.post(REFRESH, json={"refresh_token": session_one["refresh_token"]}).status_code == 401
+    )
+    assert (
+        api.post(REFRESH, json={"refresh_token": session_two["refresh_token"]}).status_code == 401
+    )
+    assert (
+        api.get(ME, headers={"Authorization": f"Bearer {session_one['access_token']}"}).status_code
+        == 401
+    )
+
+
+def test_unverified_user_is_blocked_from_privileged_organizer_and_paid_checkout(api, db):
+    from app.models.event import EventStatus
+    from tests.test_events import add_event, add_organizer, add_user, auth
+    from tests.test_orders import activate_paid_sales, payload
+    from tests.test_ticket_types import add_ticket_type
+
+    unverified = add_user(db, "unverified@example.com", verified=False)
+    res_profile = api.put(
+        "/api/v1/organizer/profile",
+        headers=auth(unverified),
+        json={"display_name": "Org", "contact_email": "unverified@example.com"},
+    )
+    assert res_profile.status_code == 403
+    assert res_profile.json()["detail"]["code"] == "email_not_verified"
+
+    # Verified organizer owns an event; if later unverified, publish/verify/activation fail 403.
+    org_user, profile = add_organizer(db, "org2@example.com")
+    draft = add_event(db, profile, slug="unverified-pub")
+    add_ticket_type(db, draft.id, price_minor=500_000)
+    org_user.is_email_verified = False
+    db.commit()
+
+    assert api.post("/api/v1/organizer/profile/verify", headers=auth(org_user)).status_code == 403
+    assert (
+        api.post(f"/api/v1/organizer/events/{draft.id}/publish", headers=auth(org_user)).status_code
+        == 403
+    )
+    assert (
+        api.post(
+            f"/api/v1/organizer/events/{draft.id}/activation/terms", headers=auth(org_user)
+        ).status_code
+        == 403
+    )
+    assert (
+        api.post(
+            f"/api/v1/organizer/events/{draft.id}/activation/fee",
+            headers=auth(org_user),
+            json={"outcome": "succeed"},
+        ).status_code
+        == 403
+    )
+    assert (
+        api.post(
+            f"/api/v1/organizer/events/{draft.id}/activation/activate", headers=auth(org_user)
+        ).status_code
+        == 403
+    )
+
+    # Authenticated paid checkout blocked for unverified user, while free checkout succeeds.
+    pub = add_event(db, profile, slug="paid-verify-check", status=EventStatus.PUBLISHED)
+    activate_paid_sales(db, pub)
+    paid_tt = add_ticket_type(db, pub.id, name="Paid", price_minor=500_000)
+    free_tt = add_ticket_type(db, pub.id, name="Free", price_minor=0)
+
+    paid_res = api.post(
+        f"/api/v1/events/{pub.slug}/orders",
+        headers=auth(unverified),
+        json=payload((paid_tt.id, 1)),
+    )
+    assert paid_res.status_code == 403
+    assert paid_res.json()["detail"]["code"] == "email_not_verified"
+
+    free_res = api.post(
+        f"/api/v1/events/{pub.slug}/orders",
+        headers=auth(unverified),
+        json=payload((free_tt.id, 1)),
+    )
+    assert free_res.status_code == 201

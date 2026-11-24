@@ -4,21 +4,30 @@ from typing import Annotated
 from fastapi import APIRouter, Header, HTTPException, Query, status
 from sqlalchemy import select
 
-from app.api.deps import CurrentUser, DbSession, OptionalUser
+from app.api.deps import (
+    EMAIL_NOT_VERIFIED_DETAIL,
+    CurrentUser,
+    DbSession,
+    EventAccess,
+    OptionalUser,
+    require_event_access,
+)
 from app.core import qr
 from app.core.security import create_order_token
 from app.models.campaign import Campaign
 from app.models.event import Event
-from app.models.order import Order
+from app.models.order import Order, OrderStatus
 from app.models.ticket import TicketStatus
 from app.schemas.activation import SimulatedPayment
-from app.schemas.order import CheckoutRequest, CheckoutResponse, OrderRead
+from app.schemas.order import CheckoutRequest, CheckoutResponse, MyTicketRead, OrderRead
+from app.services import calendar as calendar_service
 from app.services import campaign as campaign_service
 from app.services import event as event_service
 from app.services import hold as hold_service
 from app.services import order as order_service
 from app.services import order_lifecycle
 from app.services import payment as payment_service
+from app.services import seating as seating_service
 
 router = APIRouter(tags=["orders"])
 
@@ -31,6 +40,20 @@ _SCANNABLE = (TicketStatus.VALID, TicketStatus.CHECKED_IN)
 OrderToken = Annotated[str | None, Query(description="The signed link token for guests")]
 
 
+def _order_event_dict(event: Event) -> dict:
+    return {
+        "slug": event.slug,
+        "title": event.title,
+        "venue_name": event.venue_name,
+        "venue_address": event.venue_address,
+        "starts_at": event.starts_at,
+        "ends_at": event.ends_at,
+        "timezone": event.timezone,
+        "status": event.status,
+        "calendar_links": calendar_service.provider_links(event),
+    }
+
+
 def _read(db: DbSession, order: Order) -> dict:
     tickets = [
         {
@@ -39,6 +62,13 @@ def _read(db: DbSession, order: Order) -> dict:
             "ticket_type_name": type_name,
             "status": ticket.status,
             "attendee_name": name,
+            "event_seat_id": ticket.event_seat_id,
+            "section_name": ticket.section_name,
+            "row_label": ticket.row_label,
+            "seat_number": ticket.seat_number,
+            "seat_label": seating_service.format_seat_label(
+                ticket.section_name, ticket.row_label, ticket.seat_number
+            ),
             "qr_payload": qr.sign(
                 qr.ADMISSION, ticket.public_code, ticket.event_id, ticket.qr_nonce
             )
@@ -47,6 +77,7 @@ def _read(db: DbSession, order: Order) -> dict:
         }
         for ticket, name, type_name in order_service.order_tickets(db, order)
     ]
+    event = db.get(Event, order.event_id)
     body = OrderRead.model_validate(
         {
             # There are no relationship() attributes on the models, so the
@@ -57,10 +88,11 @@ def _read(db: DbSession, order: Order) -> dict:
                 for field in OrderRead.model_fields
                 if field not in ("items", "tickets", "event", "promo_code", "is_simulated")
             },
-            "event": db.get(Event, order.event_id),
+            "event": _order_event_dict(event),
             "promo_code": db.scalar(select(Campaign.code).where(Campaign.id == order.campaign_id))
             if order.campaign_id
             else None,
+            "is_simulated": order_service.order_is_simulated(db, order),
             "items": order_service.order_items(db, order),
             "tickets": tickets,
         }
@@ -81,7 +113,13 @@ def _viewable(db: DbSession, order_number: str, user, token: str | None) -> Orde
     response_model=CheckoutResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def checkout(slug: str, data: CheckoutRequest, user: OptionalUser, db: DbSession) -> dict:
+def checkout(
+    slug: str,
+    data: CheckoutRequest,
+    user: OptionalUser,
+    db: DbSession,
+    access: EventAccess,
+) -> dict:
     """Reserve and order in one request. Free orders come back `confirmed`
     with tickets; paid ones come back `pending`, to be paid within
     `expires_at` through POST /orders/{order_number}/pay.
@@ -89,11 +127,25 @@ def checkout(slug: str, data: CheckoutRequest, user: OptionalUser, db: DbSession
     event = event_service.get_event_by_slug(db, slug)
     if event is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Event not found")
+    require_event_access(db, event, user, access)
     try:
         order = order_service.checkout(db, event, data, user)
+    except order_service.EmailNotVerified:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, EMAIL_NOT_VERIFIED_DETAIL) from None
     except order_service.UnknownTicketType:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown ticket type for this event"
+        ) from None
+    except order_service.SeatSelectionRequired:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Select an event_seat_id for every attendee on assigned-seating events",
+        ) from None
+    except seating_service.InvalidSeatSelection as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, exc.reason) from None
+    except seating_service.SeatUnavailable:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "One or more selected seats are no longer available"
         ) from None
     except hold_service.QuantityNotAllowed:
         raise HTTPException(
@@ -188,12 +240,14 @@ def pay_order(
 def cancel_order(
     order_number: str, db: DbSession, user: OptionalUser, token: OrderToken = None
 ) -> dict:
-    """The buyer abandons a pending order; its tickets go back on sale now
-    instead of when the hold times out. Confirmed orders are cancelled or
-    refunded by the organizer (§4.9), not here."""
+    """Cancel a pending order (abandoning checkout) OR self-cancel a confirmed
+    free registration (§4.9). Confirmed paid orders are refunded by the organizer."""
     order = _viewable(db, order_number, user, token)
     try:
-        order_lifecycle.cancel_pending(db, order, user)
+        if order.status == OrderStatus.CONFIRMED and order.total_minor == 0:
+            order_lifecycle.cancel_registration(db, order, user, self_cancelled=True)
+        else:
+            order_lifecycle.cancel_pending(db, order, user)
     except order_lifecycle.IllegalOrderTransition as exc:
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, exc.reason) from None
@@ -205,3 +259,36 @@ def cancel_order(
 @router.get("/users/me/orders", response_model=list[OrderRead])
 def list_my_orders(user: CurrentUser, db: DbSession) -> list[dict]:
     return [_read(db, order) for order in order_service.list_user_orders(db, user)]
+
+
+@router.get("/users/me/tickets", response_model=list[MyTicketRead])
+def list_my_tickets(user: CurrentUser, db: DbSession) -> list[dict]:
+    """Every ticket belonging to the signed-in user, including gifted/group tickets."""
+    return [
+        MyTicketRead.model_validate(
+            {
+                "public_code": ticket.public_code,
+                "ticket_type_id": ticket.ticket_type_id,
+                "ticket_type_name": tt.name,
+                "status": ticket.status,
+                "attendee_name": attendee.full_name,
+                "event_seat_id": ticket.event_seat_id,
+                "section_name": ticket.section_name,
+                "row_label": ticket.row_label,
+                "seat_number": ticket.seat_number,
+                "seat_label": seating_service.format_seat_label(
+                    ticket.section_name, ticket.row_label, ticket.seat_number
+                ),
+                "qr_payload": qr.sign(
+                    qr.ADMISSION, ticket.public_code, ticket.event_id, ticket.qr_nonce
+                )
+                if ticket.status in _SCANNABLE
+                else "",
+                "order_number": order.order_number,
+                "event_id": ticket.event_id,
+                "event": _order_event_dict(event),
+                "issued_at": ticket.issued_at,
+            }
+        ).model_dump()
+        for ticket, attendee, tt, order, event in order_service.list_user_tickets(db, user)
+    ]

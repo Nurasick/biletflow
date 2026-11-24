@@ -55,7 +55,16 @@ def test_saving_again_replaces_the_payout_account_instead_of_adding_one(api, db)
     )
 
     assert cleared.json()["payout_account"] is None
-    assert db.scalars(select(PayoutAccount)).all() == []
+    rows = db.scalars(select(PayoutAccount).order_by(PayoutAccount.id)).all()
+    # Replaced and cleared payout accounts are soft-deactivated, never hard-deleted.
+    assert len(rows) == 2
+    assert all(row.status == "inactive" and row.deactivated_at is not None for row in rows)
+    actions = list(db.scalars(select(AuditLog.action).order_by(AuditLog.id)))
+    assert actions == [
+        "organizer.profile_created",
+        "organizer.profile_updated",
+        "organizer.profile_updated",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -81,6 +90,8 @@ def test_simulated_verification_marks_the_profile_verified(api, db):
     body = api.post(PROFILE + "/verify", headers=auth(user)).json()
 
     assert body["verification_status"] == "verified"
+    assert body["verification_is_simulated"] is True
+    assert list(db.scalars(select(AuditLog.action))) == ["organizer.verified"]
 
 
 def test_assign_list_and_remove_event_staff(api, db):

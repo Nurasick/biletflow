@@ -76,13 +76,15 @@ def test_an_admin_finds_a_payment_by_its_order_number(api, db, admin, event):
 
 def test_an_admin_finds_a_payment_by_its_exact_id(api, db, admin, event):
     vip = add_ticket_type(db, event.id, price_minor=500_000)
-    # Twelve payments, so ids 1 and 10-12 exist: "1" must find only id 1.
+    # Twelve payments, so exact-id search must match only the target id (not substring ids).
     for _ in range(12):
         buy(api, event, vip)
 
-    rows = payments(api, admin, q="1")
+    all_rows = payments(api, admin)
+    target_id = min(row["id"] for row in all_rows)
+    rows = payments(api, admin, q=str(target_id))
 
-    assert [row["id"] for row in rows] == [1]
+    assert [row["id"] for row in rows] == [target_id]
 
 
 def test_a_search_with_no_match_is_empty_not_an_error(api, admin):

@@ -15,12 +15,13 @@ STARTS = datetime(2030, 11, 30, 14, 0, tzinfo=UTC)
 ENDS = datetime(2030, 11, 30, 17, 0, tzinfo=UTC)
 
 
-def add_user(db: Session, email: str) -> User:
+def add_user(db: Session, email: str, *, verified: bool = True) -> User:
     user = User(
         email=email,
         hashed_password="$argon2id$fake",
         first_name="Abai",
         last_name="Kunanbayev",
+        is_email_verified=verified,
     )
     db.add(user)
     db.commit()
@@ -190,7 +191,7 @@ def test_read_event_hides_drafts(api, db, organizer):
     assert api.get(f"{EVENTS}/jazz-night-almaty").status_code == 404
 
 
-@pytest.mark.parametrize("visibility", list(EventVisibility))
+@pytest.mark.parametrize("visibility", [EventVisibility.PUBLIC, EventVisibility.UNLISTED])
 def test_read_event_reaches_a_published_event_by_link_whatever_its_visibility(
     api, db, organizer, visibility
 ):
@@ -201,6 +202,14 @@ def test_read_event_reaches_a_published_event_by_link_whatever_its_visibility(
 
     assert response.status_code == 200
     assert response.json()["visibility"] == visibility
+
+
+def test_private_event_requires_access_or_owner_role(api, db, organizer):
+    user, profile = organizer
+    add_event(db, profile, status=EventStatus.PUBLISHED, visibility=EventVisibility.PRIVATE)
+
+    assert api.get(f"{EVENTS}/jazz-night-almaty").status_code == 403
+    assert api.get(f"{EVENTS}/jazz-night-almaty", headers=auth(user)).status_code == 200
 
 
 # --- organizer --------------------------------------------------------------

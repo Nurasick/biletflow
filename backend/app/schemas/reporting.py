@@ -34,6 +34,9 @@ class TicketTypeSales(BaseModel):
     quantity_total: int
     quantity_sold: int
     quantity_reserved: int
+    available: int = 0
+    quantity_refunded: int = 0
+    quantity_checked_in: int = 0
     revenue_minor: int
 
 
@@ -92,21 +95,64 @@ class EventAnalytics(BaseModel):
     is_simulated: bool
     capacity: int
     tickets_sold: int
+    tickets_reserved: int = 0
     tickets_remaining: int
     percent_sold: float
     gross_minor: int
     discounts_minor: int
     refunds_minor: int
+    fees_minor: int = 0
     net_minor: int
+    estimated_payout_minor: int = 0
     sales_over_time: list[SalesPoint]
     by_ticket_type: list[TicketTypeAnalytics]
     campaigns: list[CampaignAnalytics]
     attendance: AttendanceRead
     # Which filters each part honours: "inventory", "money", "sales_over_time",
     # "by_ticket_type", "campaigns" and "attendance", each mapped to the
-    # subset of ["date_range", "ticket_type"] that applies. Campaigns are
-    # lifetime totals and inventory is the count now, whatever the filters.
+    # subset of ["date_range", "ticket_type"] that applies.
     filter_scope: dict[str, list[str]]
+
+
+class OrganizerEventAnalyticsRow(BaseModel):
+    event_id: int
+    slug: str
+    title: str
+    status: str
+    starts_at: datetime
+    capacity: int
+    tickets_sold: int
+    tickets_reserved: int
+    tickets_remaining: int
+    gross_minor: int
+    discounts_minor: int
+    refunds_minor: int
+    fees_minor: int
+    net_minor: int
+    estimated_payout_minor: int
+    attendance: AttendanceRead
+
+
+class OrganizerAnalytics(BaseModel):
+    """GET /organizer/analytics (§4.15): cross-event summary for one organizer."""
+
+    currency: str
+    is_simulated: bool
+    event_count: int
+    capacity: int
+    tickets_sold: int
+    tickets_reserved: int
+    tickets_remaining: int
+    percent_sold: float
+    gross_minor: int
+    discounts_minor: int
+    refunds_minor: int
+    fees_minor: int
+    net_minor: int
+    estimated_payout_minor: int
+    attendance: AttendanceRead
+    sales_over_time: list[SalesPoint]
+    events: list[OrganizerEventAnalyticsRow]
 
 
 class TimelineEntry(BaseModel):
@@ -129,3 +175,5 @@ class TimelineEntry(BaseModel):
 
 class RefundRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
+    # Organizers may override structured policy rules (e.g. past cutoff) explicitly if needed.
+    override_policy: bool = False

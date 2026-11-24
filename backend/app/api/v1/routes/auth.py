@@ -38,14 +38,16 @@ SUSPENDED = HTTPException(status.HTTP_403_FORBIDDEN, "Account suspended")
 CSRF_FAILED = HTTPException(status.HTTP_403_FORBIDDEN, "CSRF check failed")
 
 
-def _issue(user: User, response: Response, bearer_mode: bool) -> TokenResponse:
-    """Hand out a fresh pair the way this client asked to receive it."""
+def _issue(db: DbSession, user: User, response: Response, bearer_mode: bool) -> TokenResponse:
+    """Hand out a fresh pair the way this client asked to receive it and persist the session."""
     if bearer_mode:
-        access, refresh = auth_service.issue_tokens(user)
+        access, refresh = auth_service.issue_session(db, user)
+        db.commit()
         return TokenResponse(access_token=access, refresh_token=refresh)
 
     csrf = generate_url_token()
-    access, refresh = auth_service.issue_tokens(user, csrf=csrf)
+    access, refresh = auth_service.issue_session(db, user, csrf=csrf)
+    db.commit()
     set_refresh_cookie(response, refresh)
     return TokenResponse(access_token=access, csrf_token=csrf)
 
@@ -91,7 +93,7 @@ def login(
         raise INVALID_CREDENTIALS
     if user.status != UserStatus.ACTIVE:
         raise SUSPENDED
-    return _issue(user, response, bearer_mode)
+    return _issue(db, user, response, bearer_mode)
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -102,7 +104,7 @@ def refresh(
     bearer_mode: BearerMode,
     data: RefreshRequest | None = None,
 ) -> TokenResponse:
-    """Trade a refresh token for a fresh pair.
+    """Trade a refresh token for a fresh pair, rotating and invalidating the old token.
 
     The token comes from the body for clients in bearer mode and from the
     httpOnly cookie for browsers. A cookie-borne token additionally has to pass
@@ -121,23 +123,37 @@ def refresh(
     user = auth_service.resolve_token_user(db, token, "refresh")
     if user is None:
         raise INVALID_REFRESH_TOKEN
+    session = auth_service.find_active_session(db, token, user.id)
+    if session is None:
+        raise INVALID_REFRESH_TOKEN
     if from_cookie:
         _verify_csrf(request, token)
     if user.status != UserStatus.ACTIVE:
         raise SUSPENDED
-    return _issue(user, response, bearer_mode)
+    # Atomically consume the old refresh session so replay / concurrent double-use fails.
+    if not auth_service.consume_session(db, session.id):
+        db.rollback()
+        raise INVALID_REFRESH_TOKEN
+    return _issue(db, user, response, bearer_mode)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(user: CurrentUser, response: Response) -> None:
-    """Clear the refresh cookie; the caller discards its in-memory access token.
-
-    For a browser this genuinely ends the session, because the refresh token
-    only ever existed as the cookie being deleted here. For a client in bearer
-    mode nothing is revoked: that refresh token stays valid until it expires,
-    and this codebase has no store of issued tokens to mark as spent. Real
-    revocation would be added here, without changing any client.
-    """
+def logout(
+    request: Request,
+    user: CurrentUser,
+    db: DbSession,
+    response: Response,
+    data: RefreshRequest | None = None,
+) -> None:
+    """Revoke active refresh token(s) for both cookie and bearer clients and clear cookie."""
+    token = data.refresh_token if data and data.refresh_token else None
+    if token is None:
+        token = request.cookies.get(REFRESH_COOKIE)
+    if token:
+        auth_service.revoke_refresh_token(db, token, user_id=user.id)
+    else:
+        auth_service.revoke_all_user_sessions(db, user)
+    db.commit()
     clear_refresh_cookie(response)
     return None
 

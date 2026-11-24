@@ -23,7 +23,7 @@ from app.core.clock import as_utc, utcnow
 from app.core.config import settings
 from app.models.campaign import Campaign, CampaignTicketType, DiscountType, PromoRedemption
 from app.models.event import Event
-from app.models.order import Order, OrderStatus
+from app.models.order import Order, OrderItem, OrderStatus
 from app.models.payment import Refund, RefundStatus
 from app.models.ticket import Ticket
 from app.models.ticket_type import TicketType
@@ -370,34 +370,128 @@ def link(event: Event, campaign: Campaign) -> str:
     return f"{settings.PUBLIC_WEB_URL.rstrip('/')}/events/{event.slug}?c={campaign.qr_token}"
 
 
-def stats(db: Session, campaign: Campaign) -> dict:
+def stats(
+    db: Session,
+    campaign: Campaign,
+    *,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    ticket_type_id: int | None = None,
+) -> dict:
     """§4.14: "exact redemptions, orders, tickets sold, gross revenue, discount
     amount, and net revenue for each campaign". Computed from orders every
-    time, never stored: a cached total that disagrees with the orders it
-    summarizes is worse than a slow page.
-    """
-    orders, gross, discount = db.execute(
-        select(
+    time, never stored. Supports optional date-range and ticket-type filters."""
+    if ticket_type_id is None:
+        order_q = select(
             func.count(Order.id),
             func.coalesce(func.sum(Order.subtotal_minor), 0),
             func.coalesce(func.sum(Order.discount_minor), 0),
         ).where(Order.campaign_id == campaign.id, Order.status.in_(_COUNTED))
-    ).one()
-    tickets = db.scalar(
-        select(func.count(Ticket.id))
-        .join(Order, Order.id == Ticket.order_id)
-        .where(Order.campaign_id == campaign.id, Order.status.in_(_COUNTED))
-    )
-    refunds = db.scalar(
-        select(func.coalesce(func.sum(Refund.amount_minor), 0))
-        .join(Order, Order.id == Refund.order_id)
-        .where(Order.campaign_id == campaign.id, Refund.status == RefundStatus.SUCCEEDED)
-    )
-    redemptions = db.scalar(select(func.count()).where(PromoRedemption.campaign_id == campaign.id))
+        ticket_q = (
+            select(func.count(Ticket.id))
+            .join(Order, Order.id == Ticket.order_id)
+            .where(Order.campaign_id == campaign.id, Order.status.in_(_COUNTED))
+        )
+        refund_q = (
+            select(func.coalesce(func.sum(Refund.amount_minor), 0))
+            .join(Order, Order.id == Refund.order_id)
+            .where(Order.campaign_id == campaign.id, Refund.status == RefundStatus.SUCCEEDED)
+        )
+        redemption_q = select(func.count(PromoRedemption.id)).where(
+            PromoRedemption.campaign_id == campaign.id
+        )
+        if since is not None:
+            order_q = order_q.where(Order.confirmed_at >= since)
+            ticket_q = ticket_q.where(Order.confirmed_at >= since)
+            refund_q = refund_q.where(Refund.created_at >= since)
+            redemption_q = redemption_q.where(PromoRedemption.created_at >= since)
+        if until is not None:
+            order_q = order_q.where(Order.confirmed_at < until)
+            ticket_q = ticket_q.where(Order.confirmed_at < until)
+            refund_q = refund_q.where(Refund.created_at < until)
+            redemption_q = redemption_q.where(PromoRedemption.created_at < until)
+
+        orders, gross, discount = db.execute(order_q).one()
+        tickets = int(db.scalar(ticket_q) or 0)
+        refunds = int(db.scalar(refund_q) or 0)
+        redemptions = int(db.scalar(redemption_q) or 0)
+    else:
+        item_q = (
+            select(
+                func.count(func.distinct(Order.id)),
+                func.coalesce(func.sum(OrderItem.subtotal_minor), 0),
+                func.coalesce(func.sum(OrderItem.discount_minor), 0),
+            )
+            .join(Order, Order.id == OrderItem.order_id)
+            .where(
+                Order.campaign_id == campaign.id,
+                Order.status.in_(_COUNTED),
+                OrderItem.ticket_type_id == ticket_type_id,
+            )
+        )
+        ticket_q = (
+            select(func.count(Ticket.id))
+            .join(Order, Order.id == Ticket.order_id)
+            .where(
+                Order.campaign_id == campaign.id,
+                Order.status.in_(_COUNTED),
+                Ticket.ticket_type_id == ticket_type_id,
+            )
+        )
+        redemption_q = (
+            select(func.count(func.distinct(PromoRedemption.id)))
+            .join(OrderItem, OrderItem.order_id == PromoRedemption.order_id)
+            .where(
+                PromoRedemption.campaign_id == campaign.id,
+                OrderItem.ticket_type_id == ticket_type_id,
+            )
+        )
+        refund_orders_q = (
+            select(Refund.order_id, Refund.amount_minor)
+            .join(Order, Order.id == Refund.order_id)
+            .where(Order.campaign_id == campaign.id, Refund.status == RefundStatus.SUCCEEDED)
+        )
+        if since is not None:
+            item_q = item_q.where(Order.confirmed_at >= since)
+            ticket_q = ticket_q.where(Order.confirmed_at >= since)
+            redemption_q = redemption_q.where(PromoRedemption.created_at >= since)
+            refund_orders_q = refund_orders_q.where(Refund.created_at >= since)
+        if until is not None:
+            item_q = item_q.where(Order.confirmed_at < until)
+            ticket_q = ticket_q.where(Order.confirmed_at < until)
+            redemption_q = redemption_q.where(PromoRedemption.created_at < until)
+            refund_orders_q = refund_orders_q.where(Refund.created_at < until)
+
+        orders, gross, discount = db.execute(item_q).one()
+        tickets = int(db.scalar(ticket_q) or 0)
+        redemptions = int(db.scalar(redemption_q) or 0)
+
+        # Share each campaign order's refund proportionally across its lines.
+        refund_rows = db.execute(refund_orders_q).all()
+        refunds = 0
+        if refund_rows:
+            from collections import defaultdict
+
+            from app.services.analytics import split_refund
+
+            order_lines: dict[int, list[tuple[int, int]]] = defaultdict(list)
+            for oid, tt_id, paid in db.execute(
+                select(
+                    OrderItem.order_id,
+                    OrderItem.ticket_type_id,
+                    OrderItem.subtotal_minor - OrderItem.discount_minor,
+                )
+                .where(OrderItem.order_id.in_({oid for oid, _ in refund_rows}))
+                .order_by(OrderItem.id)
+            ):
+                order_lines[oid].append((tt_id, paid))
+            for oid, amount in refund_rows:
+                refunds += split_refund(amount, order_lines[oid]).get(ticket_type_id, 0)
+
     return {
-        "redemptions": redemptions,
-        "orders": orders,
-        "tickets_sold": tickets,
+        "redemptions": int(redemptions),
+        "orders": int(orders),
+        "tickets_sold": int(tickets),
         "gross_minor": int(gross),
         "discount_minor": int(discount),
         "refunds_minor": int(refunds),
