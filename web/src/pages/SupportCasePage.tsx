@@ -7,6 +7,7 @@ import { Link, useLocation, useParams, useSearchParams } from "react-router-dom"
 import { OperationsError, OperationsLoading, RefreshButton } from "../features/Operations/ui/OperationsWorkspace";
 import { SUPPORT_POLL_INTERVAL, supportKeys } from "../features/Support/model/supportModel";
 import { CaseHeading, CaseThread } from "../features/Support/ui/SupportCaseContent";
+import { SupportAttachments } from "../features/Support/ui/SupportAttachments";
 import { SupportReplyForm } from "../features/Support/ui/SupportReplyForm";
 import { useAuth } from "../hooks/useAuth";
 import { ApiError } from "../shared/api/auth";
@@ -76,5 +77,9 @@ const RequesterCaseView = ({ number, ownerId, token, created }: {
     {supportCase.status === "resolved" && <p className="text-sm text-muted-strong">{t("support.reopenHint")}</p>}
     {reply.isError && <Alert type="error" showIcon role="alert" title={errorMessage(reply.error, t("support.replyError"))} />}
     <SupportReplyForm busy={reply.isPending} sending={reply.isPending} onSend={async (body) => { await reply.mutateAsync(body); }} />
+    <SupportAttachments attachments={supportCase.attachments ?? []} scope={["requester", number, ownerId, token]}
+      disabled={reply.isPending}
+      upload={async (file) => { await supportApi.attach(number, token, file); await detail.refetch(); }}
+      download={(attachment) => supportApi.attachmentFile(number, token, attachment.id, attachment.content_type)} />
   </>;
 };

@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { LanguageSwitcher } from "../../../i18n/LanguageSwitcher";
+import { RouteTitle } from "../../../shared/Layout/usePageTitle";
+import { SkipLink } from "../../../shared/Layout/ui/SkipLink";
 import { Brand, BrandTicket } from "../../../shared/ui/Brand";
 
 type AuthShellProps = {
@@ -14,6 +16,8 @@ export const AuthShell = ({ children, top }: AuthShellProps) => {
   const { t } = useTranslation();
   return (
     <div className="flex min-h-dvh flex-col">
+      <RouteTitle />
+      <SkipLink />
       <header className="border-b border-line bg-white">
         <div className="site-container flex min-h-[72px] flex-wrap items-center justify-between gap-3 py-3">
           <Brand />

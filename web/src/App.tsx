@@ -27,6 +27,7 @@ import { AdminEventReportsPage } from "./pages/AdminEventReportsPage";
 import { AdminTransactionsPage } from "./pages/AdminTransactionsPage";
 import { AdminSalesPage } from "./pages/AdminSalesPage";
 import { AdminSettingsPage } from "./pages/AdminSettingsPage";
+import { AdminDisputesPage } from "./pages/AdminDisputesPage";
 import { AdminRoute } from "./shared/auth/AdminRoute";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { SupportPage } from "./pages/SupportPage";
@@ -106,6 +107,7 @@ function App() {
             { path: "/admin/reports", element: <AdminEventReportsPage /> },
             { path: "/admin/transactions", element: <AdminTransactionsPage /> },
             { path: "/admin/sales", element: <AdminSalesPage /> },
+            { path: "/admin/disputes", element: <AdminDisputesPage /> },
             { path: "/admin/settings", element: <AdminSettingsPage /> },
           ],
         },

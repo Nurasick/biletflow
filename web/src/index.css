@@ -206,3 +206,10 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* WCAG 1.4.3: antd draws preset tag words in palette shade 7 (e.g. #389e0d on
+   #f6ffed, 3.4:1). Keep each tag's tint and border, set the words in ink.
+   antd's runtime selectors stack :not() clauses, so this override is !important. */
+.ant-tag {
+  color: var(--color-ink) !important;
+}

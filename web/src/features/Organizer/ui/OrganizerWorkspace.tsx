@@ -5,6 +5,8 @@ import { Link, NavLink, useOutletContext } from "react-router-dom";
 
 import { LanguageSwitcher } from "../../../i18n/LanguageSwitcher";
 import type { OrganizerContext } from "../../../shared/auth/OrganizerRoute";
+import { RouteTitle } from "../../../shared/Layout/usePageTitle";
+import { SkipLink } from "../../../shared/Layout/ui/SkipLink";
 import { Brand } from "../../../shared/ui/Brand";
 import { NotificationLink } from "../../Notifications/ui/NotificationLink";
 
@@ -23,6 +25,8 @@ export const OrganizerWorkspace = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="min-h-dvh">
+      <RouteTitle />
+      <SkipLink />
       <header className="border-b border-line bg-white">
         <div className="site-container flex min-h-[72px] flex-wrap items-center justify-between gap-3 py-3">
           <Brand />

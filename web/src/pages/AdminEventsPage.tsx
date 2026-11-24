@@ -9,9 +9,13 @@ import { operationsKeys } from "../features/Operations/model/operationsModel";
 import { OperationsError, OperationsLoading, OperationsPagination, OperationsStatus, OperationsWorkspace, RefreshButton } from "../features/Operations/ui/OperationsWorkspace";
 import { useAuth } from "../hooks/useAuth";
 import { useLocale } from "../i18n/useLocale";
-import { adminApi } from "../shared/api/admin";
+import { adminApi, adminEventStatuses } from "../shared/api/admin";
+import { FileDownloadButton } from "../shared/ui/FileDownloadButton";
 
 const PAGE_SIZE = 20;
+const statusLabels = {
+  draft: "ops.statusDraft", published: "ops.statusPublished", suspended: "ops.statusSuspended", cancelled: "ops.statusCancelled",
+} as const;
 
 export const AdminEventsPage = () => {
   const { t } = useTranslation();
@@ -20,17 +24,19 @@ export const AdminEventsPage = () => {
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const query = (params.get("q") ?? "").trim().slice(0, 100);
+  const status = adminEventStatuses.find((value) => value === params.get("status"));
   const pageNumber = Number(params.get("page") ?? "1");
   const page = Number.isSafeInteger(pageNumber) && pageNumber > 0 && pageNumber <= 100_000 ? pageNumber - 1 : 0;
   const [draft, setDraft] = useState(query);
   const events = useQuery({
-    queryKey: operationsKeys.adminList(me.data?.id, query, page),
-    queryFn: ({ signal }) => adminApi.events(query, PAGE_SIZE + 1, page * PAGE_SIZE, signal),
+    queryKey: operationsKeys.adminList(me.data?.id, query, page, status),
+    queryFn: ({ signal }) => adminApi.events(query, PAGE_SIZE + 1, page * PAGE_SIZE, signal, status),
     enabled: Boolean(me.data?.is_platform_admin), retry: false,
   });
   const setPage = (nextPage: number) => {
     const next = new URLSearchParams();
     if (query) next.set("q", query);
+    if (status) next.set("status", status);
     if (nextPage > 0) next.set("page", String(nextPage + 1));
     setParams(next);
   };
@@ -38,18 +44,39 @@ export const AdminEventsPage = () => {
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h1 className="page-title">{t("ops.adminEvents")}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{t("ops.adminDescription")}</p></div>
-      <RefreshButton refresh={() => void events.refetch()} fetching={events.isFetching} />
+      <div className="flex flex-wrap items-start gap-3">
+        <div>
+          <FileDownloadButton filename="biletflow-events.csv" label={t("adminFinance.exportEvents")}
+            getFile={() => adminApi.exportCsv("events", { query, status })} />
+          <p className="mt-1 text-xs text-muted">{t("adminFinance.exportScope")}</p>
+        </div>
+        <RefreshButton refresh={() => void events.refetch()} fetching={events.isFetching} />
+      </div>
     </div>
-    <form className="my-6 max-w-xl space-y-2" onSubmit={(event) => {
+    <form className="my-6 flex max-w-3xl flex-wrap items-end gap-3" onSubmit={(event) => {
       event.preventDefault();
       const value = draft.trim();
-      if (value === query && page === 0) void events.refetch();
-      else setParams(value ? { q: value } : {});
+      const selection = String(new FormData(event.currentTarget).get("status") ?? "");
+      if (value === query && selection === (status ?? "") && page === 0) { void events.refetch(); return; }
+      const next = new URLSearchParams();
+      if (value) next.set("q", value);
+      if (selection) next.set("status", selection);
+      setParams(next);
     }}>
-      <label htmlFor="admin-event-search" className="block text-sm font-semibold">{t("ops.eventSearchLabel")}</label>
-      <div className="flex gap-2"><Input id="admin-event-search" type="search" value={draft} maxLength={100}
-        onChange={(event) => setDraft(event.target.value)} className="min-w-0 flex-1" />
-        <Button htmlType="submit" type="primary" loading={events.isFetching}>{t("ops.search")}</Button></div>
+      <div className="min-w-0 flex-1 basis-64">
+        <label htmlFor="admin-event-search" className="mb-1.5 block text-sm font-semibold">{t("ops.eventSearchLabel")}</label>
+        <Input id="admin-event-search" type="search" value={draft} maxLength={100}
+          onChange={(event) => setDraft(event.target.value)} />
+      </div>
+      <div>
+        <label htmlFor="admin-event-status" className="mb-1.5 block text-sm font-semibold">{t("support.statusLabel")}</label>
+        <select id="admin-event-status" name="status" key={status ?? ""} defaultValue={status ?? ""}
+          className="block min-h-11 w-full rounded-lg border border-line bg-white px-3 text-sm">
+          <option value="">{t("support.anyStatus")}</option>
+          {adminEventStatuses.map((value) => <option key={value} value={value}>{t(statusLabels[value])}</option>)}
+        </select>
+      </div>
+      <Button htmlType="submit" type="primary" loading={events.isFetching}>{t("ops.search")}</Button>
     </form>
     {events.isPending ? <OperationsLoading /> : events.isError ? <OperationsError error={events.error} retry={() => void events.refetch()} />
       : events.data.length === 0 ? <p className="panel p-8 text-sm text-muted">{t("ops.noEvents")}</p>

@@ -1,12 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { Button, Input } from "antd";
-import { useState } from "react";
+import { Alert, Button, Input, Modal } from "antd";
+import { ShieldAlert } from "lucide-react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useLocale } from "../../../i18n/useLocale";
 import { adminApi } from "../../../shared/api/admin";
+import { ApiError } from "../../../shared/api/auth";
+import { staffApi } from "../../../shared/api/eventManagement";
 import type { StaffCase, StaffCaseStatus, StaffCaseUpdate } from "../../../shared/api/support";
+import { parseApiInstant } from "../../../shared/lib/parseApiInstant";
 import { OperationsError, OperationsLoading, OperationsPagination } from "../../Operations/ui/OperationsWorkspace";
-import { CASE_PAGE_SIZE, staffTransitions } from "../model/supportModel";
+import { CASE_PAGE_SIZE, ESCALATION_REASON_MAX, staffTransitions } from "../model/supportModel";
 
 const transitionLabels: Record<StaffCaseStatus, "support.startCase" | "support.waitForRequester" | "support.resolveCase"> = {
   in_progress: "support.startCase",
@@ -14,8 +19,9 @@ const transitionLabels: Record<StaffCaseStatus, "support.startCase" | "support.w
   resolved: "support.resolveCase",
 };
 
-export const StaffCaseActions = ({ supportCase, userId, busy, update }: {
+export const StaffCaseActions = ({ supportCase, userId, busy, update, escalate }: {
   supportCase: StaffCase; userId: number; busy: boolean; update: (input: StaffCaseUpdate) => void;
+  escalate: (reason: string) => Promise<void>;
 }) => {
   const { t } = useTranslation();
   const assignee = supportCase.assigned_to_user_id;
@@ -43,6 +49,9 @@ export const StaffCaseActions = ({ supportCase, userId, busy, update }: {
       <summary className="cursor-pointer text-sm font-semibold">{t("support.findAssignee")}</summary>
       <AssigneeSearch userId={userId} assignee={assignee} busy={busy} assign={assign} />
     </details>}
+    {supportCase.audience === "attendee" && supportCase.event_id !== null && <EventStaffAssignees
+      eventId={supportCase.event_id} userId={userId} assignee={assignee} busy={busy} assign={assign} />}
+    <Escalation supportCase={supportCase} busy={busy} escalate={escalate} />
     {transitions.length > 0 && <div className="flex flex-wrap gap-2 border-t border-line-soft pt-4">
       {transitions.map((status) => <Button key={status} size="small" disabled={busy}
         onClick={() => update({ status })}>{t(transitionLabels[status])}</Button>)}
@@ -97,5 +106,96 @@ const AssigneeSearch = ({ userId, assignee, busy, assign }: {
           </li>)}
         </ul>)}
     {(page > 0 || hasMore) && <OperationsPagination page={page} next={hasMore} busy={busy || results.isFetching} onPage={setPage} />}
+  </div>;
+};
+
+/** Event staff the organizer assigned. Only the organizer may list them, so for
+ * everyone else (staff, admins) this stays hidden and "Assign to me" remains. */
+const EventStaffAssignees = ({ eventId, userId, assignee, busy, assign }: {
+  eventId: number; userId: number; assignee: number | null; busy: boolean; assign: (id: number) => void;
+}) => {
+  const { t } = useTranslation();
+  const staff = useQuery({
+    queryKey: ["support", "event-staff", userId, eventId],
+    queryFn: () => staffApi.list(eventId),
+    retry: false,
+  });
+  if (staff.isError && staff.error instanceof ApiError && [403, 404].includes(staff.error.status)) return null;
+  const others = staff.data?.filter((member) => member.user_id !== userId) ?? [];
+  if (staff.isSuccess && others.length === 0) return null;
+  return <details className="rounded-lg border border-line-soft p-3">
+    <summary className="cursor-pointer text-sm font-semibold">{t("support.assignStaff")}</summary>
+    <div className="mt-3">
+      {staff.isPending ? <OperationsLoading /> : staff.isError
+        ? <OperationsError error={staff.error} retry={() => void staff.refetch()} />
+        : <ul className="divide-y divide-line-soft">
+          {others.map((member) => {
+            const name = `${member.first_name} ${member.last_name}`;
+            return <li key={member.user_id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <div className="min-w-0">
+                <p className="break-words font-semibold">{name}</p>
+                <p className="break-all text-xs text-muted">{member.email}</p>
+              </div>
+              <Button size="small" disabled={busy || assignee === member.user_id}
+                aria-label={assignee === member.user_id ? undefined : t("support.assignTo", { name })}
+                onClick={() => assign(member.user_id)}>
+                {t(assignee === member.user_id ? "support.alreadyAssigned" : "staff.assign")}
+              </Button>
+            </li>;
+          })}
+        </ul>}
+    </div>
+  </details>;
+};
+
+const Escalation = ({ supportCase, busy, escalate }: {
+  supportCase: StaffCase; busy: boolean; escalate: (reason: string) => Promise<void>;
+}) => {
+  const { t } = useTranslation();
+  const locale = useLocale();
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [sending, setSending] = useState(false);
+
+  if (supportCase.is_escalated) {
+    return <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm">
+      <p className="flex items-center gap-2 font-semibold"><ShieldAlert size={16} aria-hidden="true" />{t("support.escalated")}</p>
+      {supportCase.escalated_at && <p className="mt-1 text-xs text-muted-strong">{new Intl.DateTimeFormat(locale, {
+        dateStyle: "medium", timeStyle: "short",
+      }).format(parseApiInstant(supportCase.escalated_at))}</p>}
+      {supportCase.escalation_reason && <p className="mt-2 whitespace-pre-wrap [overflow-wrap:anywhere]">{supportCase.escalation_reason}</p>}
+    </div>;
+  }
+  if (supportCase.audience !== "attendee" || supportCase.status === "resolved") return null;
+  const trimmed = reason.trim();
+  return <div className="border-t border-line-soft pt-4">
+    <Button size="small" danger icon={<ShieldAlert size={14} aria-hidden="true" />} disabled={busy}
+      onClick={() => setOpen(true)}>{t("support.escalate")}</Button>
+    <p className="mt-2 text-xs text-muted">{t("support.escalateHint")}</p>
+    {open && <Modal open title={t("support.escalateTitle")} okText={t("support.escalate")} cancelText={t("ops.close")}
+      okButtonProps={{ danger: true, disabled: !trimmed || trimmed.length > ESCALATION_REASON_MAX }}
+      confirmLoading={sending} closable={!sending} keyboard={!sending} mask={{ closable: false }}
+      cancelButtonProps={{ disabled: sending }}
+      onCancel={() => { if (!sending) setOpen(false); }}
+      onOk={async () => {
+        if (!trimmed || sending) return;
+        setSending(true);
+        try {
+          await escalate(trimmed);
+          setOpen(false);
+          setReason("");
+        } catch {
+          // The case page shows the API error; keep the dialog and draft for a retry.
+        } finally {
+          setSending(false);
+        }
+      }}>
+      <p className="mt-3 text-sm text-muted-strong">{t("support.escalateDescription")}</p>
+      <label htmlFor={`${id}-reason`} className="mt-4 mb-1.5 block text-sm font-semibold">{t("ops.reasonRequired")}</label>
+      <Input.TextArea id={`${id}-reason`} rows={3} maxLength={ESCALATION_REASON_MAX} showCount value={reason}
+        disabled={sending} onChange={(event) => setReason(event.target.value)} />
+      {sending && <Alert className="mt-3" type="info" showIcon title={t("support.escalating")} />}
+    </Modal>}
   </div>;
 };

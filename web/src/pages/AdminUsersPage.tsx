@@ -10,6 +10,7 @@ import { useLocale } from "../i18n/useLocale";
 import { adminApi } from "../shared/api/admin";
 import type { AdminUser } from "../shared/api/admin";
 import { parseApiInstant } from "../shared/lib/parseApiInstant";
+import { FileDownloadButton } from "../shared/ui/FileDownloadButton";
 
 const PAGE_SIZE = 20;
 const displayName = (account: AdminUser) => `${account.first_name} ${account.last_name}`;
@@ -54,7 +55,14 @@ const AdminUsers = ({ adminId }: { adminId: number }) => {
   return <OperationsWorkspace admin>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="page-title">{t("adminUsers.title")}</h1>
-      <RefreshButton refresh={() => void users.refetch()} fetching={users.isFetching} />
+      <div className="flex flex-wrap items-start gap-3">
+        <div>
+          <FileDownloadButton filename="biletflow-users.csv" label={t("adminFinance.exportUsers")}
+            getFile={() => adminApi.exportCsv("users", { query })} />
+          <p className="mt-1 text-xs text-muted">{t("adminFinance.exportScope")}</p>
+        </div>
+        <RefreshButton refresh={() => void users.refetch()} fetching={users.isFetching} />
+      </div>
     </div>
     <form className="my-6 max-w-xl space-y-2" onSubmit={(event) => {
       event.preventDefault();

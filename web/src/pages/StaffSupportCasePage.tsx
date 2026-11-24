@@ -8,6 +8,7 @@ import { OperationsError, OperationsLoading, RefreshButton } from "../features/O
 import { SUPPORT_POLL_INTERVAL, supportKeys } from "../features/Support/model/supportModel";
 import { StaffCaseActions } from "../features/Support/ui/StaffCaseActions";
 import { CaseHeading, CaseThread } from "../features/Support/ui/SupportCaseContent";
+import { SupportAttachments } from "../features/Support/ui/SupportAttachments";
 import { SupportReplyForm } from "../features/Support/ui/SupportReplyForm";
 import { useAuth } from "../hooks/useAuth";
 import { ApiError } from "../shared/api/auth";
@@ -15,7 +16,12 @@ import { staffSupportApi } from "../shared/api/support";
 import type { StaffCaseUpdate } from "../shared/api/support";
 import { useAuthErrorMessage } from "../shared/lib/useAuthErrorMessage";
 
-type CaseAction = { kind: "reply"; body: string; internal: boolean } | { kind: "update"; input: StaffCaseUpdate };
+type CaseAction = { kind: "reply"; body: string; internal: boolean } | { kind: "update"; input: StaffCaseUpdate }
+  | { kind: "escalate"; reason: string };
+
+const actionErrors = {
+  reply: "support.replyError", update: "support.updateError", escalate: "support.escalateError",
+} as const;
 
 export const StaffSupportCasePage = () => {
   const { t } = useTranslation();
@@ -41,7 +47,9 @@ const StaffCaseView = ({ number, userId }: { number: string; userId: number }) =
   const queryKey = supportKeys.staff(number, userId);
   const change = useMutation({
     mutationFn: (action: CaseAction) => action.kind === "reply"
-      ? staffSupportApi.reply(number, action.body, action.internal) : staffSupportApi.update(number, action.input),
+      ? staffSupportApi.reply(number, action.body, action.internal)
+      : action.kind === "escalate" ? staffSupportApi.escalate(number, action.reason)
+        : staffSupportApi.update(number, action.input),
     onMutate: () => client.cancelQueries({ queryKey }),
     onSuccess: async (updated) => {
       await client.cancelQueries({ queryKey });
@@ -65,15 +73,20 @@ const StaffCaseView = ({ number, userId }: { number: string; userId: number }) =
     <CaseHeading summary={supportCase} context={supportCase.context} />
     {detail.isError && <OperationsError error={detail.error} retry={() => void detail.refetch()} />}
     {change.isError && <Alert type="error" showIcon role="alert"
-      title={errorMessage(change.error, t(change.variables?.kind === "reply" ? "support.replyError" : "support.updateError"))} />}
+      title={errorMessage(change.error, t(actionErrors[change.variables?.kind ?? "update"]))} />}
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0 space-y-4">
         <CaseThread messages={supportCase.messages} staff />
         <SupportReplyForm staff busy={change.isPending} sending={change.isPending && change.variables?.kind === "reply"}
           onSend={async (body, internal) => { await change.mutateAsync({ kind: "reply", body, internal }); }} />
+        <SupportAttachments attachments={supportCase.attachments ?? []} scope={["staff", number, userId]}
+          disabled={change.isPending}
+          upload={async (file) => { await staffSupportApi.attach(number, file); await detail.refetch(); }}
+          download={(attachment) => staffSupportApi.attachmentFile(number, attachment.id, attachment.content_type)} />
       </div>
       <StaffCaseActions supportCase={supportCase} userId={userId} busy={change.isPending}
-        update={(input) => change.mutate({ kind: "update", input })} />
+        update={(input) => change.mutate({ kind: "update", input })}
+        escalate={async (reason) => { await change.mutateAsync({ kind: "escalate", reason }); }} />
     </div>
   </>;
 };

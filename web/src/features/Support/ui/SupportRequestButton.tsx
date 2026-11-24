@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../../hooks/useAuth";
-import { caseCategories, requesterCaseHref, supportApi } from "../../../shared/api/support";
+import { audienceCategories, requesterCaseHref, supportApi } from "../../../shared/api/support";
 import type { CaseCategory, CaseInput, CaseTarget } from "../../../shared/api/support";
 import { useAuthErrorMessage } from "../../../shared/lib/useAuthErrorMessage";
 import { OperationsError, OperationsLoading } from "../../Operations/ui/OperationsWorkspace";
@@ -79,7 +79,7 @@ const SupportRequestDialog = ({ target, eventTitle, onClose }: {
               onChange={(event) => setCategory(event.target.value as CaseCategory | "")}
               className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm">
               <option value="" disabled>{t("support.chooseCategory")}</option>
-              {caseCategories.map((value) => <option key={value} value={value}>{t(`support.category.${value}`)}</option>)}
+              {audienceCategories[target.audience].map((value) => <option key={value} value={value}>{t(`support.category.${value}`)}</option>)}
             </select>
           </div>
           {user ? <p className="break-words text-sm text-muted">{t("support.replyEmail", { email: user.email })}</p> : <div>

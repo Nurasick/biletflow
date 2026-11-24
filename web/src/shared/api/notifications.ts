@@ -18,4 +18,5 @@ export const notificationKey = (userId: number) => ["notifications", userId] as 
 export const notificationsApi = {
   feed: (signal?: AbortSignal) => api.get<NotificationFeed>("/users/me/notifications", { signal }),
   markRead: () => api.post<null>("/users/me/notifications/read"),
+  markOneRead: (notificationId: number) => api.post<null>(`/users/me/notifications/${notificationId}/read`),
 };
