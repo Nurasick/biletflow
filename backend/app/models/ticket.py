@@ -10,6 +10,7 @@ from sqlalchemy import (
     Index,
     String,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -48,6 +49,12 @@ class Ticket(Base):
     ticket_type_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("ticket_types.id"))
     # One attendee, one ticket.
     attendee_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("attendees.id"), unique=True)
+    event_seat_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("event_seats.id"), index=True
+    )
+    section_name: Mapped[str | None] = mapped_column(String(100))
+    row_label: Mapped[str | None] = mapped_column(String(20))
+    seat_number: Mapped[str | None] = mapped_column(String(10))
 
     status: Mapped[TicketStatus] = mapped_column(
         string_enum(TicketStatus, 20), server_default=TicketStatus.VALID.value
@@ -64,4 +71,14 @@ class Ticket(Base):
         CheckConstraint(f"status IN ({check_list(TicketStatus)})", name="status"),
         # The check-in screen and every §4.15 attendance count filter on this pair.
         Index("ix_tickets_event_id_status", "event_id", "status"),
+        # At most one live ticket per event_seat; cancelled/refunded seats can be resold.
+        Index(
+            "uq_tickets_live_event_seat",
+            "event_seat_id",
+            unique=True,
+            postgresql_where=text(
+                "event_seat_id IS NOT NULL AND status IN ('valid', 'checked_in')"
+            ),
+            sqlite_where=text("event_seat_id IS NOT NULL AND status IN ('valid', 'checked_in')"),
+        ),
     )

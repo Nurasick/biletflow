@@ -77,6 +77,28 @@ class CaseUpdate(BaseModel):
         return self
 
 
+class CaseEscalate(BaseModel):
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+class AttachmentCreate(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+    data_url: str = Field(min_length=1)
+    support_message_id: int | None = None
+
+
+class AttachmentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    support_message_id: int | None
+    filename: str
+    content_type: str
+    size_bytes: int
+    created_at: datetime
+    download_url: str
+
+
 class CaseContext(BaseModel):
     """The attached context, shown so the requester can confirm it is the right
     ticket. Public identifiers only: order numbers and ticket codes, not ids."""
@@ -114,6 +136,7 @@ class RequesterCaseSummary(BaseModel):
 class RequesterCaseRead(RequesterCaseSummary):
     context: CaseContext
     messages: list[RequesterMessageRead]
+    attachments: list[AttachmentRead] = Field(default_factory=list)
 
 
 class CaseCreated(RequesterCaseRead):
@@ -134,8 +157,13 @@ class StaffCaseSummary(RequesterCaseSummary):
     opened_by_user_id: int | None
     assigned_to_user_id: int | None
     event_id: int | None
+    is_escalated: bool = False
+    escalated_at: datetime | None = None
+    escalated_by_user_id: int | None = None
+    escalation_reason: str | None = None
 
 
 class StaffCaseRead(StaffCaseSummary):
     context: CaseContext
     messages: list[StaffMessageRead]
+    attachments: list[AttachmentRead] = Field(default_factory=list)

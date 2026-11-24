@@ -160,7 +160,7 @@ def test_refunds_outside_the_date_range_are_left_out(api, organizer, event, refu
 def test_the_response_says_which_filters_each_figure_follows(api, organizer, event):
     scope = analytics(api, organizer, event)["filter_scope"]
 
-    assert scope["campaigns"] == []
+    assert set(scope["campaigns"]) == {"date_range", "ticket_type"}
     assert scope["inventory"] == ["ticket_type"]
     assert set(scope["money"]) == {"date_range", "ticket_type"}
 

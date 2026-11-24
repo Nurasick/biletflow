@@ -14,6 +14,7 @@ Who sees what:
 """
 
 from collections.abc import Sequence
+from pathlib import PurePath
 from typing import Literal
 
 from jwt import InvalidTokenError
@@ -27,18 +28,20 @@ from app.models.audit import AuditLog
 from app.models.event import Event, EventStatus
 from app.models.order import Order
 from app.models.organizer import OrganizerProfile
+from app.models.staff import StaffAssignment
 from app.models.support import (
     CaseAudience,
     CaseCategory,
     CaseStatus,
     MessageSender,
+    SupportAttachment,
     SupportCase,
     SupportMessage,
 )
 from app.models.ticket import Ticket
-from app.models.user import User
+from app.models.user import User, UserStatus
 from app.schemas.support import CaseContext, CaseCreate, CaseUpdate
-from app.services import audit, codes, notify
+from app.services import audit, codes, notify, storage
 from app.services import order as order_service
 
 
@@ -67,6 +70,14 @@ class InvalidTransition(Exception):
 
 class InvalidAssignee(Exception):
     """The user to assign could not see the case, so could not work on it."""
+
+
+class CannotEscalate(Exception):
+    """Only non-escalated attendee cases can be escalated to Platform Admins."""
+
+
+class AttachmentMessageNotFound(Exception):
+    """The cited support message does not belong to this case."""
 
 
 # Staff moves, from state-machines.md §8. The requester's own move (a reply
@@ -275,26 +286,38 @@ def add_requester_message(
 # --- the staff side -----------------------------------------------------------
 
 
+def _like(q: str) -> str:
+    return "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
 def staff_scope(user: User) -> ColumnElement[bool]:
     """The cases this user may answer, as a WHERE clause.
 
-    Attendee cases belong to the owner of their event: the relationship walk
-    event_id -> events.organizer_profile_id -> organizer_profiles.user_id. Not
-    any organizer, not anyone with a profile. Organizer cases belong to
-    Platform Admins.
+    - Attendee cases belong to the event's organizer AND assigned event staff
+      (`StaffAssignment`), plus Platform Admins once explicitly escalated.
+    - Organizer cases belong to Platform Admins.
     """
     owned_events = (
         select(Event.id)
         .join(OrganizerProfile, OrganizerProfile.id == Event.organizer_profile_id)
         .where(OrganizerProfile.user_id == user.id)
     )
+    assigned_events = select(StaffAssignment.event_id).where(StaffAssignment.user_id == user.id)
     attendee_cases = and_(
-        SupportCase.audience == CaseAudience.ATTENDEE, SupportCase.event_id.in_(owned_events)
+        SupportCase.audience == CaseAudience.ATTENDEE,
+        or_(SupportCase.event_id.in_(owned_events), SupportCase.event_id.in_(assigned_events)),
     )
-    organizer_cases = (
-        SupportCase.audience == CaseAudience.ORGANIZER if user.is_platform_admin else false()
-    )
-    return or_(attendee_cases, organizer_cases)
+    if user.is_platform_admin:
+        admin_cases = or_(
+            SupportCase.audience == CaseAudience.ORGANIZER,
+            and_(
+                SupportCase.audience == CaseAudience.ATTENDEE,
+                SupportCase.is_escalated.is_(True),
+            ),
+        )
+    else:
+        admin_cases = false()
+    return or_(attendee_cases, admin_cases)
 
 
 def get_staff_case(
@@ -311,6 +334,9 @@ def list_staff_cases(
     status: CaseStatus | None,
     category: CaseCategory | None,
     event_id: int | None,
+    escalated: bool | None = None,
+    audience: CaseAudience | None = None,
+    q: str | None = None,
     limit: int,
     offset: int,
 ) -> Sequence[SupportCase]:
@@ -323,6 +349,18 @@ def list_staff_cases(
         query = query.where(SupportCase.category == category)
     if event_id is not None:
         query = query.where(SupportCase.event_id == event_id)
+    if escalated is not None:
+        query = query.where(SupportCase.is_escalated.is_(escalated))
+    if audience is not None:
+        query = query.where(SupportCase.audience == audience)
+    if q:
+        needle = _like(q.strip())
+        query = query.where(
+            or_(
+                SupportCase.case_number.ilike(needle, escape="\\"),
+                SupportCase.contact_email.ilike(needle, escape="\\"),
+            )
+        )
     unclaimed_first = case((SupportCase.status == CaseStatus.OPEN, 0), else_=1)
     return db.scalars(
         query.order_by(unclaimed_first, SupportCase.updated_at.desc(), SupportCase.id.desc())
@@ -353,8 +391,10 @@ def add_staff_message(
     )
     # A note is staff talking to staff: it neither claims the case nor
     # reaches the requester.
+    status_changed = False
     if not internal and support_case.status == CaseStatus.OPEN:
         _set_status(db, support_case, CaseStatus.IN_PROGRESS, user, "staff")
+        status_changed = True
     _touch(support_case)
     if not internal:
         _notify_requester(
@@ -363,6 +403,16 @@ def add_staff_message(
             "support.message",
             {"author": "Support team", "excerpt": body[:200]},
         )
+        if status_changed:
+            _notify_requester(
+                db,
+                support_case,
+                "support.status",
+                {
+                    "status": STATUS_LABELS[support_case.status],
+                    "status_key": support_case.status.value,
+                },
+            )
     db.commit()
     db.refresh(support_case)
     return support_case
@@ -373,6 +423,7 @@ def update_case(
 ) -> SupportCase:
     changes = data.model_dump(exclude_unset=True)
     assignee: User | None = None
+    old_assignee_id = support_case.assigned_to_user_id
     old_status = support_case.status
 
     if "assigned_to_user_id" in changes:
@@ -398,7 +449,7 @@ def update_case(
 
     _touch(support_case)
 
-    if assignee is not None and assignee.id != user.id:
+    if assignee is not None and assignee.id != user.id and assignee.id != old_assignee_id:
         # assigned_to_user_id is already the new assignee, so _notify_staff
         # picks exactly them.
         _notify_staff(db, support_case, "support.assigned", {})
@@ -416,6 +467,136 @@ def update_case(
     db.commit()
     db.refresh(support_case)
     return support_case
+
+
+def escalate_case(db: Session, support_case: SupportCase, user: User, reason: str) -> SupportCase:
+    """Escalate an attendee support case so Platform Admins can assist (§4.13)."""
+    if support_case.audience != CaseAudience.ATTENDEE:
+        raise CannotEscalate("Only attendee support cases can be escalated to Platform Admins")
+    if support_case.is_escalated:
+        raise CannotEscalate("This support case is already escalated")
+
+    now = utcnow()
+    support_case.is_escalated = True
+    support_case.escalated_at = now
+    support_case.escalated_by_user_id = user.id
+    support_case.escalation_reason = reason
+    db.add(
+        SupportMessage(
+            support_case_id=support_case.id,
+            sender=MessageSender.SYSTEM,
+            body=f"Case escalated to Platform Admins: {reason}",
+        )
+    )
+    if support_case.event_id is not None:
+        audit.record(
+            db,
+            action="support.escalated",
+            entity_type=CASE_ENTITY,
+            entity_id=support_case.id,
+            event_id=support_case.event_id,
+            actor=user,
+            summary=f"Support case {support_case.case_number} escalated to Platform Admins",
+            payload={"case_number": support_case.case_number, "reason": reason},
+        )
+    _touch(support_case)
+    _notify_admins(
+        db,
+        support_case,
+        "support.escalated",
+        {"author": user.email, "reason": reason},
+    )
+    db.commit()
+    db.refresh(support_case)
+    return support_case
+
+
+# --- attachments (Bonus §4.13) -----------------------------------------------
+
+
+def add_attachment(
+    db: Session,
+    support_case: SupportCase,
+    uploader: User | None,
+    filename: str,
+    data_url: str,
+    *,
+    support_message_id: int | None = None,
+    is_staff: bool = False,
+) -> SupportAttachment:
+    if support_message_id is not None:
+        msg = db.scalar(
+            select(SupportMessage).where(
+                SupportMessage.id == support_message_id,
+                SupportMessage.support_case_id == support_case.id,
+            )
+        )
+        if msg is None or (not is_staff and msg.is_internal_note):
+            raise AttachmentMessageNotFound
+
+    content, content_type = storage.decode_attachment_data_url(data_url)
+    clean_name = PurePath(filename.replace("\\", "/")).name.strip() or "attachment"
+    clean_name = clean_name[:255]
+    key, _url = storage.save(f"support/{support_case.id}", content, content_type)
+
+    attachment = SupportAttachment(
+        support_case_id=support_case.id,
+        support_message_id=support_message_id,
+        uploaded_by_user_id=uploader.id if uploader is not None else None,
+        filename=clean_name,
+        content_type=content_type,
+        size_bytes=len(content),
+        storage_key=key,
+    )
+    db.add(attachment)
+    _touch(support_case)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        storage.delete(key)
+        raise
+    db.refresh(attachment)
+    return attachment
+
+
+def list_attachments(
+    db: Session, support_case: SupportCase, *, include_internal: bool = False
+) -> Sequence[SupportAttachment]:
+    query = select(SupportAttachment).where(SupportAttachment.support_case_id == support_case.id)
+    if not include_internal:
+        internal_msg_ids = select(SupportMessage.id).where(
+            SupportMessage.support_case_id == support_case.id,
+            SupportMessage.is_internal_note.is_(True),
+        )
+        query = query.where(
+            or_(
+                SupportAttachment.support_message_id.is_(None),
+                SupportAttachment.support_message_id.notin_(internal_msg_ids),
+            )
+        )
+    return db.scalars(query.order_by(SupportAttachment.created_at, SupportAttachment.id)).all()
+
+
+def get_attachment(
+    db: Session, support_case: SupportCase, attachment_id: int, *, include_internal: bool = False
+) -> SupportAttachment | None:
+    query = select(SupportAttachment).where(
+        SupportAttachment.id == attachment_id,
+        SupportAttachment.support_case_id == support_case.id,
+    )
+    if not include_internal:
+        internal_msg_ids = select(SupportMessage.id).where(
+            SupportMessage.support_case_id == support_case.id,
+            SupportMessage.is_internal_note.is_(True),
+        )
+        query = query.where(
+            or_(
+                SupportAttachment.support_message_id.is_(None),
+                SupportAttachment.support_message_id.notin_(internal_msg_ids),
+            )
+        )
+    return db.scalar(query)
 
 
 # --- shared -------------------------------------------------------------------
@@ -562,20 +743,62 @@ def _notify_requester(
     )
 
 
+def _active_platform_admins(db: Session) -> Sequence[User]:
+    return db.scalars(
+        select(User).where(
+            User.is_platform_admin.is_(True),
+            User.status == UserStatus.ACTIVE,
+        )
+    ).all()
+
+
+def _notify_admins(
+    db: Session, support_case: SupportCase, template_key: str, payload: dict
+) -> None:
+    for admin_user in _active_platform_admins(db):
+        notify.notify(
+            db,
+            template_key=template_key,
+            payload={
+                "case_number": support_case.case_number,
+                "subject": support_case.category,
+                "link": _staff_link(support_case),
+            }
+            | payload,
+            email=admin_user.email,
+            user_id=admin_user.id,
+        )
+
+
 def _notify_staff(db: Session, support_case: SupportCase, template_key: str, payload: dict) -> None:
-    """The assignee if there is one, else the event's owner. An unassigned
-    organizer case has no single recipient: it waits in the admins' queue."""
-    recipient_id = support_case.assigned_to_user_id
-    if recipient_id is None and support_case.audience == CaseAudience.ATTENDEE:
-        recipient_id = db.scalar(
+    """Notify the assignee if there is one; otherwise:
+    - Unassigned organizer cases fan out to all active Platform Admins.
+    - Unassigned attendee cases notify the event's owner (plus active Platform
+      Admins if the case has been escalated).
+    """
+    recipients: dict[int, User] = {}
+    if support_case.assigned_to_user_id is not None:
+        assignee = db.get(User, support_case.assigned_to_user_id)
+        if assignee is not None:
+            recipients[assignee.id] = assignee
+    elif support_case.audience == CaseAudience.ORGANIZER:
+        for admin_user in _active_platform_admins(db):
+            recipients[admin_user.id] = admin_user
+    else:
+        owner_id = db.scalar(
             select(OrganizerProfile.user_id)
             .join(Event, Event.organizer_profile_id == OrganizerProfile.id)
             .where(Event.id == support_case.event_id)
         )
-    if recipient_id is None:
-        return
-    recipient = db.get(User, recipient_id)
-    if recipient is not None:
+        if owner_id is not None:
+            owner = db.get(User, owner_id)
+            if owner is not None:
+                recipients[owner.id] = owner
+        if support_case.is_escalated:
+            for admin_user in _active_platform_admins(db):
+                recipients[admin_user.id] = admin_user
+
+    for recipient in recipients.values():
         notify.notify(
             db,
             template_key=template_key,

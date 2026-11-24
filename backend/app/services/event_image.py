@@ -14,7 +14,16 @@ class TooManyImages(Exception):
 
 
 class EventClosedForChanges(Exception):
-    """Cancelled events are frozen, images included."""
+    """Cancelled and suspended events are frozen, images included."""
+
+    def __init__(self, status: EventStatus = EventStatus.CANCELLED):
+        super().__init__(status)
+        self.status = status
+
+
+def _ensure_editable(event: Event) -> None:
+    if event.status in (EventStatus.CANCELLED, EventStatus.SUSPENDED):
+        raise EventClosedForChanges(event.status)
 
 
 def list_images(db: Session, event_id: int) -> Sequence[EventImage]:
@@ -25,14 +34,13 @@ def list_images(db: Session, event_id: int) -> Sequence[EventImage]:
     ).all()
 
 
-def add_image(db: Session, event: Event, data_url: str) -> EventImage:
+def add_image(db: Session, event: Event, data_url: str, alt_text: str | None = None) -> EventImage:
     """Validate, store, and append an image. The first one becomes the cover.
 
     Serialize image edits for this event so limits and cover updates stay consistent.
     """
     db.refresh(event, with_for_update=True)
-    if event.status == EventStatus.CANCELLED:
-        raise EventClosedForChanges
+    _ensure_editable(event)
     count = db.scalar(select(func.count()).where(EventImage.event_id == event.id))
     if count >= settings.MAX_EVENT_IMAGES:
         raise TooManyImages
@@ -45,6 +53,7 @@ def add_image(db: Session, event: Event, data_url: str) -> EventImage:
         content_type=content_type,
         size_bytes=len(content),
         position=count,
+        alt_text=alt_text,
     )
     db.add(image)
     try:
@@ -62,6 +71,7 @@ def add_image(db: Session, event: Event, data_url: str) -> EventImage:
 
 def delete_image(db: Session, event: Event, image_id: int) -> bool:
     db.refresh(event, with_for_update=True)
+    _ensure_editable(event)
     image = db.scalar(
         select(EventImage).where(EventImage.id == image_id, EventImage.event_id == event.id)
     )
@@ -77,6 +87,37 @@ def delete_image(db: Session, event: Event, image_id: int) -> bool:
     db.commit()
     storage.delete(key)
     return True
+
+
+def update_image_alt(
+    db: Session, event: Event, image_id: int, alt_text: str | None
+) -> EventImage | None:
+    db.refresh(event, with_for_update=True)
+    _ensure_editable(event)
+    image = db.scalar(
+        select(EventImage).where(EventImage.id == image_id, EventImage.event_id == event.id)
+    )
+    if image is None:
+        return None
+    image.alt_text = alt_text
+    db.commit()
+    db.refresh(image)
+    return image
+
+
+def reorder_images(db: Session, event: Event, image_ids: list[int]) -> Sequence[EventImage]:
+    db.refresh(event, with_for_update=True)
+    _ensure_editable(event)
+    existing = list(list_images(db, event.id))
+    by_id = {img.id: img for img in existing}
+    if set(image_ids) != set(by_id) or len(image_ids) != len(by_id):
+        raise ValueError("image_ids must list every image of this event exactly once")
+    for position, image_id in enumerate(image_ids):
+        by_id[image_id].position = position
+    db.flush()
+    _sync_cover(db, event)
+    db.commit()
+    return list_images(db, event.id)
 
 
 def _sync_cover(db: Session, event: Event) -> None:

@@ -7,6 +7,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     Identity,
+    Integer,
     String,
     false,
     func,
@@ -53,11 +54,17 @@ class User(Base):
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))
 
-    is_email_verified: Mapped[bool] = mapped_column(Boolean, server_default=false())
-    is_platform_admin: Mapped[bool] = mapped_column(Boolean, server_default=false())
+    is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    is_platform_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
-    status: Mapped[UserStatus] = mapped_column(USER_STATUS, server_default=UserStatus.ACTIVE.value)
-    locale: Mapped[str] = mapped_column(String(5), server_default="ru")
+    # Incremented on password reset (or forced sign-out) so every previously
+    # issued access and refresh JWT is immediately rejected.
+    token_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+    status: Mapped[UserStatus] = mapped_column(
+        USER_STATUS, default=UserStatus.ACTIVE, server_default=UserStatus.ACTIVE.value
+    )
+    locale: Mapped[str] = mapped_column(String(5), default="ru", server_default="ru")
 
     __table_args__ = (
         CheckConstraint(f"status IN ({_STATUS_LIST})", name="status"),

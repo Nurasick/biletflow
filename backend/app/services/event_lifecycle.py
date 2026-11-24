@@ -238,9 +238,10 @@ def duplicate(db: Session, event: Event, profile: OrganizerProfile, actor: User)
 
 
 _DUPLICATED_FIELDS = (
-    "title", "description", "category", "visibility", "seating_mode", "venue_name",
-    "venue_address", "starts_at", "ends_at", "timezone", "capacity",
-    "registration_opens_at", "registration_closes_at", "refund_policy",
+    "title", "description", "category", "visibility", "access_code_hash", "seating_mode",
+    "venue_name", "venue_address", "venue_city", "starts_at", "ends_at", "timezone", "capacity",
+    "registration_opens_at", "registration_closes_at", "refund_policy", "refunds_allowed",
+    "refund_cutoff_hours_before_start",
 )  # fmt: skip
 _DUPLICATED_TICKET_FIELDS = (
     "name", "description", "price_minor", "currency", "quantity_total", "sales_start_at",
@@ -277,7 +278,9 @@ def _settle_orders(db: Session, event: Event, actor: User, now: datetime) -> dic
             order_lifecycle.cancel_registration(db, order, actor, now)
             counts["registrations_cancelled"] += 1
         else:
-            order_lifecycle.refund(db, order, actor, "Event cancelled by the organizer", now)
+            order_lifecycle.refund(
+                db, order, actor, "Event cancelled by the organizer", now, override_policy=True
+            )
             counts["orders_refunded"] += 1
     return counts
 

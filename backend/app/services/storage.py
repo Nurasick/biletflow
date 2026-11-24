@@ -25,8 +25,20 @@ _SIGNATURES = {
     "image/png": lambda b: b.startswith(b"\x89PNG\r\n\x1a\n"),
     "image/webp": lambda b: len(b) >= 12 and b[:4] == b"RIFF" and b[8:12] == b"WEBP",
 }
-_EXTENSIONS = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+_ATTACHMENT_SIGNATURES = {
+    **_SIGNATURES,
+    "application/pdf": lambda b: b.startswith(b"%PDF-"),
+}
+_EXTENSIONS = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "application/pdf": "pdf",
+}
 _DATA_URL = re.compile(r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$")
+_ATTACHMENT_DATA_URL = re.compile(
+    r"^data:(image/(?:jpeg|png|webp)|application/pdf);base64,([A-Za-z0-9+/]+={0,2})$"
+)
 
 
 class InvalidImage(Exception):
@@ -63,6 +75,38 @@ def decode_data_url(data_url: str) -> tuple[bytes, str]:
     if not _SIGNATURES[declared](content):
         raise InvalidImage("the file content does not match its declared image type")
     return content, declared
+
+
+def decode_attachment_data_url(data_url: str) -> tuple[bytes, str]:
+    """Decode a support attachment data URL (JPEG, PNG, WebP, or PDF), verified
+    by magic bytes rather than filename or header."""
+    match = _ATTACHMENT_DATA_URL.match(data_url)
+    if match is None:
+        raise InvalidImage("expected a base64 data URL of a JPEG, PNG, WebP image or PDF document")
+    declared, payload = match.groups()
+    if len(payload) > (settings.MAX_IMAGE_BYTES * 4) // 3 + 4:
+        raise InvalidImage(
+            f"attachments are limited to {settings.MAX_IMAGE_BYTES // (1024 * 1024)} MB"
+        )
+    try:
+        content = base64.b64decode(payload, validate=True)
+    except (binascii.Error, ValueError):
+        raise InvalidImage("the attachment data is not valid base64") from None
+    if not content or len(content) > settings.MAX_IMAGE_BYTES:
+        raise InvalidImage(
+            f"attachments are limited to {settings.MAX_IMAGE_BYTES // (1024 * 1024)} MB"
+        )
+    if not _ATTACHMENT_SIGNATURES[declared](content):
+        raise InvalidImage("the file content does not match its declared media type")
+    return content, declared
+
+
+def read_local_bytes(key: str) -> bytes | None:
+    """Read local file bytes for authenticated private downloads."""
+    path = local_path(key)
+    if not path.is_file():
+        return None
+    return path.read_bytes()
 
 
 def save(prefix: str, content: bytes, content_type: str) -> tuple[str, str]:
@@ -117,14 +161,15 @@ def s3_read_url(key: str) -> str:
         raise StorageUnavailable from exc
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=4)
 def _s3_client(region: str):
     return Session().client(
         "s3",
         region_name=region or None,
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL or None,
         config=Config(
             signature_version="s3v4",
-            s3={"addressing_style": "virtual"},
+            s3={"addressing_style": settings.AWS_S3_ADDRESSING_STYLE},
             connect_timeout=3,
             read_timeout=5,
         ),

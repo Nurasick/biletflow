@@ -15,23 +15,29 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 
 from app.api.deps import EVENT_NOT_FOUND, CurrentAdmin, DbSession, OptionalUser
 from app.core.clock import utcnow
-from app.models.activation import EventActivation
+from app.models.activation import ActivationStatus, EventActivation
 from app.models.campaign import Campaign
+from app.models.dispute import Dispute, DisputeStatus
 from app.models.event import Event, EventStatus
 from app.models.order import Order, OrderStatus
 from app.models.organizer import OrganizerProfile
 from app.models.payment import Payment, PaymentStatus, Refund, RefundStatus
+from app.models.payout import PayoutStatus
 from app.models.platform import EventReport, ReportStatus
 from app.models.support import CaseStatus, SupportCase
 from app.models.ticket import Ticket
 from app.models.user import User, UserStatus
+from app.schemas.dispute import DisputeCreate, DisputeRead, DisputeUpdate
+from app.schemas.payout import PayoutCreate, PayoutRead, PayoutUpdate
 from app.services import audit, platform
 from app.services import campaign as campaign_service
+from app.services import dispute as dispute_service
 from app.services import event as event_service
+from app.services import payout as payout_service
 from app.services.csv_export import csv_response
 
 router = APIRouter(tags=["admin"])
@@ -61,6 +67,7 @@ class Overview(BaseModel):
     payments_failed: int
     open_reports: int
     open_support_cases: int
+    open_disputes: int = 0
     is_simulated: bool = True
 
 
@@ -101,6 +108,11 @@ def overview(admin: CurrentAdmin, db: DbSession) -> dict:
         "open_support_cases": count(
             select(func.count(SupportCase.id)).where(SupportCase.status != CaseStatus.RESOLVED)
         ),
+        "open_disputes": count(
+            select(func.count(Dispute.id)).where(
+                Dispute.status.in_((DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW))
+            )
+        ),
     }
 
 
@@ -124,11 +136,7 @@ class Reason(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
 
 
-@router.get("/admin/users", response_model=list[AdminUser])
-def search_users(
-    admin: CurrentAdmin, db: DbSession, q: Search = None, limit: Limit = 50, offset: Offset = 0
-):
-    """§4.12 "Search for users": by email or name."""
+def _users(db: DbSession, q: str | None, user_status: UserStatus | None, limit: int, offset: int):
     query = select(User)
     if q:
         needle = _like(q)
@@ -139,7 +147,22 @@ def search_users(
                 User.last_name.ilike(needle, escape="\\"),
             )
         )
+    if user_status is not None:
+        query = query.where(User.status == user_status)
     return db.scalars(query.order_by(User.id.desc()).limit(limit).offset(offset)).all()
+
+
+@router.get("/admin/users", response_model=list[AdminUser])
+def search_users(
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    user_status: Annotated[UserStatus | None, Query(alias="status")] = None,
+    limit: Limit = 50,
+    offset: Offset = 0,
+):
+    """§4.12 "Search for users": by email, name, or account status."""
+    return _users(db, q, user_status, limit, offset)
 
 
 def _set_user_status(
@@ -230,7 +253,15 @@ def search_orders(
     db: DbSession,
     q: Search = None,
     order_status: Annotated[
-        Literal["pending", "confirmed", "cancelled", "refunded", "expired"] | None,
+        Literal[
+            "pending",
+            "confirmed",
+            "cancelled",
+            "refunded",
+            "partially_refunded",
+            "expired",
+        ]
+        | None,
         Query(alias="status"),
     ] = None,
     limit: Limit = 50,
@@ -322,18 +353,35 @@ class AdminRefund(BaseModel):
     created_at: datetime
 
 
+def _refunds(
+    db: DbSession, q: str | None, refund_status: RefundStatus | None, limit: int, offset: int
+):
+    query = select(Refund, Order.order_number, Order.event_id).join(
+        Order, Order.id == Refund.order_id
+    )
+    if q:
+        needle = _like(q)
+        query = query.where(
+            or_(
+                Order.order_number.ilike(needle, escape="\\"),
+                Refund.reason.ilike(needle, escape="\\"),
+            )
+        )
+    if refund_status is not None:
+        query = query.where(Refund.status == refund_status)
+    return db.execute(query.order_by(Refund.id.desc()).limit(limit).offset(offset)).all()
+
+
 @router.get("/admin/refunds", response_model=list[AdminRefund])
 def list_refunds(
-    admin: CurrentAdmin, db: DbSession, limit: Limit = 50, offset: Offset = 0
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    refund_status: Annotated[RefundStatus | None, Query(alias="status")] = None,
+    limit: Limit = 50,
+    offset: Offset = 0,
 ) -> list[dict]:
-    rows = db.execute(
-        select(Refund, Order.order_number, Order.event_id)
-        .join(Order, Order.id == Refund.order_id)
-        .order_by(Refund.id.desc())
-        .limit(limit)
-        .offset(offset)
-    ).all()
-    return [_refund_row(*row) for row in rows]
+    return [_refund_row(*row) for row in _refunds(db, q, refund_status, limit, offset)]
 
 
 def _refund_row(refund: Refund, order_number: str, event_id: int) -> dict:
@@ -442,18 +490,35 @@ class AdminActivation(BaseModel):
     suspension_reason: str | None
 
 
+def _activations(
+    db: DbSession,
+    q: str | None,
+    activation_status: ActivationStatus | None,
+    limit: int,
+    offset: int,
+):
+    query = select(EventActivation, Event.title).join(Event, Event.id == EventActivation.event_id)
+    if q:
+        needle = _like(q)
+        query = query.where(
+            or_(Event.title.ilike(needle, escape="\\"), Event.slug.ilike(needle, escape="\\"))
+        )
+    if activation_status is not None:
+        query = query.where(EventActivation.status == activation_status)
+    return db.execute(query.order_by(EventActivation.id.desc()).limit(limit).offset(offset)).all()
+
+
 @router.get("/admin/activations", response_model=list[AdminActivation])
 def list_activations(
-    admin: CurrentAdmin, db: DbSession, limit: Limit = 50, offset: Offset = 0
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    activation_status: Annotated[ActivationStatus | None, Query(alias="status")] = None,
+    limit: Limit = 50,
+    offset: Offset = 0,
 ) -> list[dict]:
     """§4.12 "Inspect paid-sales activation records", across all events."""
-    rows = db.execute(
-        select(EventActivation, Event.title)
-        .join(Event, Event.id == EventActivation.event_id)
-        .order_by(EventActivation.id.desc())
-        .limit(limit)
-        .offset(offset)
-    ).all()
+    rows = _activations(db, q, activation_status, limit, offset)
     return [
         {
             "event_id": activation.event_id,
@@ -483,16 +548,27 @@ class AdminCampaign(BaseModel):
 
 @router.get("/admin/campaigns", response_model=list[AdminCampaign])
 def promo_activity(
-    admin: CurrentAdmin, db: DbSession, limit: Limit = 50, offset: Offset = 0
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    is_active: bool | None = None,
+    limit: Limit = 50,
+    offset: Offset = 0,
 ) -> list[dict]:
     """§4.12 "Review ... promotional-code activity" across the platform."""
-    rows = db.execute(
-        select(Campaign, Event.title)
-        .join(Event, Event.id == Campaign.event_id)
-        .order_by(Campaign.id.desc())
-        .limit(limit)
-        .offset(offset)
-    ).all()
+    query = select(Campaign, Event.title).join(Event, Event.id == Campaign.event_id)
+    if q:
+        needle = _like(q)
+        query = query.where(
+            or_(
+                Campaign.name.ilike(needle, escape="\\"),
+                Campaign.code.ilike(needle, escape="\\"),
+                Event.title.ilike(needle, escape="\\"),
+            )
+        )
+    if is_active is not None:
+        query = query.where(Campaign.is_active.is_(is_active))
+    rows = db.execute(query.order_by(Campaign.id.desc()).limit(limit).offset(offset)).all()
     result = []
     for campaign, title in rows:
         stats = campaign_service.stats(db, campaign)
@@ -511,6 +587,100 @@ def promo_activity(
             }
         )
     return result
+
+
+# --- disputes (§4.12) ------------------------------------------------------------
+
+
+@router.get("/admin/disputes", response_model=list[DisputeRead])
+def list_disputes(
+    admin: CurrentAdmin,
+    db: DbSession,
+    dispute_status: Annotated[DisputeStatus | None, Query(alias="status")] = None,
+    q: Search = None,
+    limit: Limit = 50,
+    offset: Offset = 0,
+) -> list[dict]:
+    """§4.12: monitor payment and order disputes across the platform."""
+    return dispute_service.list_disputes(db, status=dispute_status, q=q, limit=limit, offset=offset)
+
+
+@router.post("/admin/disputes", response_model=DisputeRead, status_code=status.HTTP_201_CREATED)
+def create_dispute(data: DisputeCreate, admin: CurrentAdmin, db: DbSession) -> dict:
+    try:
+        return dispute_service.create_dispute(db, admin, data)
+    except dispute_service.DisputeOrderNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found") from None
+    except dispute_service.DisputePaymentMismatch:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Payment does not belong to this order"
+        ) from None
+    except dispute_service.DisputeAmountRequired:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Provide a positive amount_minor for disputes on zero-total orders",
+        ) from None
+
+
+@router.get("/admin/disputes/{dispute_id}", response_model=DisputeRead)
+def read_dispute(dispute_id: int, admin: CurrentAdmin, db: DbSession) -> dict:
+    row = dispute_service.get_dispute(db, dispute_id)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Dispute not found")
+    return dispute_service.serialize(*row)
+
+
+@router.patch("/admin/disputes/{dispute_id}", response_model=DisputeRead)
+def update_dispute(
+    dispute_id: int, data: DisputeUpdate, admin: CurrentAdmin, db: DbSession
+) -> dict:
+    updated = dispute_service.update_dispute(db, dispute_id, admin, data)
+    if updated is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Dispute not found")
+    return updated
+
+
+# --- simulated payouts (§4.10, §4.12) -------------------------------------------
+
+
+@router.get("/admin/payouts", response_model=list[PayoutRead])
+def list_payouts(
+    admin: CurrentAdmin,
+    db: DbSession,
+    payout_status: Annotated[PayoutStatus | None, Query(alias="status")] = None,
+    event_id: int | None = None,
+    q: Search = None,
+    limit: Limit = 50,
+    offset: Offset = 0,
+) -> list[dict]:
+    """List simulated organizer payout settlements across the platform."""
+    return payout_service.list_admin_payouts(
+        db, status=payout_status, event_id=event_id, q=q, limit=limit, offset=offset
+    )
+
+
+@router.post("/admin/payouts", response_model=PayoutRead, status_code=status.HTTP_201_CREATED)
+def trigger_payout(data: PayoutCreate, admin: CurrentAdmin, db: DbSession) -> dict:
+    """Initiate a simulated payout settlement for an event organizer."""
+    try:
+        return payout_service.create_payout(db, admin, data)
+    except payout_service.PayoutEventNotFound:
+        raise EVENT_NOT_FOUND from None
+    except payout_service.PayoutAmountUnavailable:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "No positive remaining payout balance for this event"
+        ) from None
+
+
+@router.patch("/admin/payouts/{payout_id}", response_model=PayoutRead)
+def update_payout(payout_id: int, data: PayoutUpdate, admin: CurrentAdmin, db: DbSession) -> dict:
+    try:
+        updated = payout_service.update_payout(db, payout_id, admin, data)
+    except payout_service.IllegalPayoutTransition as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    if updated is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payout not found")
+    return updated
 
 
 # --- settings --------------------------------------------------------------------
@@ -623,7 +793,10 @@ def list_reports(
     query = select(EventReport, Event).join(Event, Event.id == EventReport.event_id)
     if report_status:
         query = query.where(EventReport.status == report_status)
-    rows = db.execute(query.order_by(EventReport.id.desc()).limit(limit).offset(offset)).all()
+    open_first = case((EventReport.status == ReportStatus.OPEN, 0), else_=1)
+    rows = db.execute(
+        query.order_by(open_first, EventReport.id.desc()).limit(limit).offset(offset)
+    ).all()
     return [_report_row(report, event) for report, event in rows]
 
 
@@ -633,6 +806,8 @@ def resolve_report(report_id: int, data: ReportResolve, admin: CurrentAdmin, db:
     report = db.get(EventReport, report_id)
     if report is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Report not found")
+    if report.status != ReportStatus.OPEN:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Report is already resolved")
     report.status = ReportStatus(data.status)
     report.resolved_by_user_id = admin.id
     report.resolved_at = utcnow()
@@ -654,7 +829,23 @@ def resolve_report(report_id: int, data: ReportResolve, admin: CurrentAdmin, db:
 
 
 @router.get("/admin/exports/orders.csv", response_class=Response)
-def export_orders(admin: CurrentAdmin, db: DbSession) -> Response:
+def export_orders(
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    order_status: Annotated[
+        Literal[
+            "pending",
+            "confirmed",
+            "cancelled",
+            "refunded",
+            "partially_refunded",
+            "expired",
+        ]
+        | None,
+        Query(alias="status"),
+    ] = None,
+) -> Response:
     """§4.12 "Export basic operational reports". Capped at 10 000 rows."""
     return csv_response(
         "biletflow-orders",
@@ -670,13 +861,20 @@ def export_orders(admin: CurrentAdmin, db: DbSession) -> Response:
                 order.discount_minor / 100,
                 order.created_at.isoformat(),
             ]
-            for order, title in _orders(db, None, None, 10_000, 0)
+            for order, title in _orders(db, q, order_status, 10_000, 0)
         ),
     )
 
 
 @router.get("/admin/exports/payments.csv", response_class=Response)
-def export_payments(admin: CurrentAdmin, db: DbSession) -> Response:
+def export_payments(
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    payment_status: Annotated[
+        Literal["pending", "succeeded", "failed", "refunded"] | None, Query(alias="status")
+    ] = None,
+) -> Response:
     return csv_response(
         "biletflow-payments",
         ["id", "purpose", "status", "amount_kzt", "simulated", "order", "failure", "created_at"],
@@ -691,6 +889,148 @@ def export_payments(admin: CurrentAdmin, db: DbSession) -> Response:
                 payment.failure_reason or "",
                 payment.created_at.isoformat(),
             ]
-            for payment, order_number, _ in _payments(db, None, None, 10_000, 0)
+            for payment, order_number, _ in _payments(db, q, payment_status, 10_000, 0)
+        ),
+    )
+
+
+@router.get("/admin/exports/refunds.csv", response_class=Response)
+def export_refunds(
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    refund_status: Annotated[RefundStatus | None, Query(alias="status")] = None,
+) -> Response:
+    return csv_response(
+        "biletflow-refunds",
+        ["id", "order", "event_id", "status", "amount_kzt", "currency", "reason", "created_at"],
+        (
+            [
+                refund.id,
+                order_number,
+                event_id,
+                refund.status.value,
+                refund.amount_minor / 100,
+                refund.currency,
+                refund.reason,
+                refund.created_at.isoformat(),
+            ]
+            for refund, order_number, event_id in _refunds(db, q, refund_status, 10_000, 0)
+        ),
+    )
+
+
+@router.get("/admin/exports/users.csv", response_class=Response)
+def export_users(
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    user_status: Annotated[UserStatus | None, Query(alias="status")] = None,
+) -> Response:
+    return csv_response(
+        "biletflow-users",
+        [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "status",
+            "email_verified",
+            "platform_admin",
+            "created_at",
+        ],
+        (
+            [
+                user.id,
+                user.email,
+                user.first_name,
+                user.last_name,
+                user.status.value,
+                "yes" if user.is_email_verified else "no",
+                "yes" if user.is_platform_admin else "no",
+                user.created_at.isoformat(),
+            ]
+            for user in _users(db, q, user_status, 10_000, 0)
+        ),
+    )
+
+
+@router.get("/admin/exports/events.csv", response_class=Response)
+def export_events(
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    event_status: Annotated[EventStatus | None, Query(alias="status")] = None,
+) -> Response:
+    query = select(Event)
+    if q:
+        needle = _like(q)
+        query = query.where(
+            or_(Event.title.ilike(needle, escape="\\"), Event.slug.ilike(needle, escape="\\"))
+        )
+    if event_status is not None:
+        query = query.where(Event.status == event_status)
+    events = db.scalars(query.order_by(Event.id.desc()).limit(10_000)).all()
+    return csv_response(
+        "biletflow-events",
+        [
+            "id",
+            "slug",
+            "title",
+            "status",
+            "visibility",
+            "seating_mode",
+            "venue_name",
+            "capacity",
+            "starts_at",
+            "created_at",
+        ],
+        (
+            [
+                event.id,
+                event.slug,
+                event.title,
+                event.status.value,
+                event.visibility.value,
+                event.seating_mode.value,
+                event.venue_name,
+                event.capacity if event.capacity is not None else "",
+                event.starts_at.isoformat(),
+                event.created_at.isoformat(),
+            ]
+            for event in events
+        ),
+    )
+
+
+@router.get("/admin/exports/activations.csv", response_class=Response)
+def export_activations(
+    admin: CurrentAdmin,
+    db: DbSession,
+    q: Search = None,
+    activation_status: Annotated[ActivationStatus | None, Query(alias="status")] = None,
+) -> Response:
+    return csv_response(
+        "biletflow-activations",
+        [
+            "event_id",
+            "event_title",
+            "status",
+            "activation_fee_kzt",
+            "fee_paid",
+            "activated_at",
+            "suspension_reason",
+        ],
+        (
+            [
+                activation.event_id,
+                title,
+                activation.status.value,
+                activation.activation_fee_minor / 100,
+                "yes" if activation.payment_id is not None else "no",
+                activation.activated_at.isoformat() if activation.activated_at else "",
+                activation.suspension_reason or "",
+            ]
+            for activation, title in _activations(db, q, activation_status, 10_000, 0)
         ),
     )

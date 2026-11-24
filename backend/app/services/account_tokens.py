@@ -3,6 +3,10 @@
 The raw token goes out in the email; only its SHA-256 is stored
 (01-identity.md#why-a-hash-and-not-the-token), so a database leak hands
 nobody a working reset link.
+
+Emails are written to the transactional `notifications` outbox in the same
+transaction as the `UserToken` row, so an SMTP outage never causes a 500
+after commit.
 """
 
 from datetime import datetime, timedelta
@@ -15,7 +19,8 @@ from app.core.config import settings
 from app.core.security import generate_url_token, get_password_hash, hash_url_token
 from app.models.token import TokenPurpose, UserToken
 from app.models.user import User
-from app.services import mailer
+from app.services import auth as auth_service
+from app.services import notify
 from app.services import user as user_service
 
 
@@ -24,7 +29,7 @@ class InvalidToken(Exception):
 
 
 def request_password_reset(db: Session, email: str, now: datetime | None = None) -> None:
-    """Send a reset link if the account exists. Silent either way.
+    """Queue a reset link if the account exists. Silent either way.
 
     The route answers 202 whether or not the email has an account, so this
     endpoint cannot be used to find out who is registered.
@@ -40,20 +45,25 @@ def request_password_reset(db: Session, email: str, now: datetime | None = None)
         now,
     )
     link = f"{settings.PUBLIC_WEB_URL.rstrip('/')}/reset-password?token={raw}"
-    mailer.send(
-        user.email,
-        "Reset your BiletFlow password",
-        f"Open this link to choose a new password:\n{link}\n\n"
-        f"It works once and expires in {settings.PASSWORD_RESET_EXPIRE_MINUTES} minutes. "
-        "If you did not ask for this, ignore this email.",
+    notify.notify(
+        db,
+        "auth.password_reset",
+        {"link": link, "expire_minutes": settings.PASSWORD_RESET_EXPIRE_MINUTES},
+        email=user.email,
+        user_id=user.id,
+        in_app=False,
     )
+    db.commit()
 
 
 def reset_password(db: Session, raw_token: str, new_password: str, now=None) -> User:
+    now = now or utcnow()
     user = _consume(db, raw_token, TokenPurpose.PASSWORD_RESET, now)
     user.hashed_password = get_password_hash(new_password)
     # A completed reset proves the user reads this inbox.
     user.is_email_verified = True
+    # Revoke every active refresh session and invalidate existing access JWTs.
+    auth_service.revoke_all_user_sessions(db, user, bump_token_version=True, now=now)
     db.commit()
     return user
 
@@ -67,7 +77,15 @@ def send_verification(db: Session, user: User, now: datetime | None = None) -> N
         now,
     )
     link = f"{settings.PUBLIC_WEB_URL.rstrip('/')}/verify-email?token={raw}"
-    mailer.send(user.email, "Confirm your BiletFlow email", f"Confirm your address:\n{link}")
+    notify.notify(
+        db,
+        "auth.email_verification",
+        {"link": link, "expire_hours": settings.EMAIL_VERIFICATION_EXPIRE_HOURS},
+        email=user.email,
+        user_id=user.id,
+        in_app=False,
+    )
+    db.commit()
 
 
 def verify_email(db: Session, raw_token: str, now: datetime | None = None) -> User:
@@ -99,7 +117,7 @@ def _issue(db: Session, user: User, purpose: TokenPurpose, ttl: timedelta, now) 
             expires_at=now + ttl,
         )
     )
-    db.commit()
+    db.flush()
     return raw
 
 

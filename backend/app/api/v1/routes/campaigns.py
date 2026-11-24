@@ -4,7 +4,15 @@
 from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
 
-from app.api.deps import EVENT_NOT_FOUND, CurrentUser, DbSession, OwnedEvent
+from app.api.deps import (
+    EVENT_NOT_FOUND,
+    CurrentUser,
+    DbSession,
+    EventAccess,
+    OptionalUser,
+    OwnedEvent,
+    require_event_access,
+)
 from app.models.campaign import Campaign
 from app.models.event import Event
 from app.models.ticket_type import TicketType
@@ -115,7 +123,13 @@ def campaign_qr_image(event: OwnedEvent, campaign_id: int, db: DbSession) -> Res
 
 
 @router.post("/events/{slug}/promo", response_model=PromoQuote)
-def quote_promo(slug: str, data: PromoQuoteRequest, db: DbSession) -> dict:
+def quote_promo(
+    slug: str,
+    data: PromoQuoteRequest,
+    db: DbSession,
+    user: OptionalUser,
+    access: EventAccess,
+) -> dict:
     """Check a promo code (typed) or campaign token (from a QR link) against a
     basket and return the discount, so the attendee sees the new total before
     paying (§4.14). 409 with the specific reason if the code cannot be used.
@@ -125,6 +139,7 @@ def quote_promo(slug: str, data: PromoQuoteRequest, db: DbSession) -> dict:
     event = event_service.get_event_by_slug(db, slug)
     if event is None:
         raise EVENT_NOT_FOUND
+    require_event_access(db, event, user, access)
     ids = [line.ticket_type_id for line in data.items]
     types = {
         t.id: t

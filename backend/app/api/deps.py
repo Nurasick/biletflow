@@ -1,12 +1,12 @@
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.event import Event
+from app.models.event import Event, EventStatus
 from app.models.organizer import OrganizerProfile
 from app.models.user import User, UserStatus
 from app.services import check_in as check_in_service
@@ -59,6 +59,21 @@ def get_current_active_user(user: Annotated[User, Depends(get_current_user)]) ->
 
 
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
+
+EMAIL_NOT_VERIFIED_DETAIL = {
+    "code": "email_not_verified",
+    "message": "Please verify your email address before continuing",
+}
+
+
+def get_current_verified_user(user: CurrentUser) -> User:
+    """Require a verified email address (§4.1, UC1) for privileged organizer and paid flows."""
+    if not user.is_email_verified:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, EMAIL_NOT_VERIFIED_DETAIL)
+    return user
+
+
+VerifiedUser = Annotated[User, Depends(get_current_verified_user)]
 
 optional_bearer_scheme = HTTPBearer(bearerFormat="JWT", auto_error=False)
 
@@ -125,8 +140,7 @@ def get_staff_event(event_id: int, user: CurrentUser, db: DbSession) -> Event:
     """The event in the path, if the caller may check people in at it (§4.8).
 
     404 for an event that does not exist, 403 for one that does but is not
-    assigned: an event admin already knows which events exist, since their
-    app lists them, and a clear "not assigned" saves a confused call.
+    assigned, and 409 for draft or suspended events where check-in is blocked.
     """
     event = db.get(Event, event_id)
     if event is None:
@@ -136,7 +150,53 @@ def get_staff_event(event_id: int, user: CurrentUser, db: DbSession) -> Event:
     )
     if not check_in_service.can_staff(db, event, user, owner_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "You are not assigned to this event")
+    if event.status in (EventStatus.DRAFT, EventStatus.SUSPENDED):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"Check-in is not allowed for a {event.status.value} event"
+        )
     return event
 
 
 StaffEvent = Annotated[Event, Depends(get_staff_event)]
+
+
+class EventAccessCredentials:
+    def __init__(
+        self,
+        access_token: Annotated[
+            str | None, Query(description="Private event access or invite token")
+        ] = None,
+        invite: Annotated[
+            str | None, Query(description="Private event signed invite token")
+        ] = None,
+        access_code: Annotated[
+            str | None, Query(max_length=64, description="Private event access code")
+        ] = None,
+        x_event_access_token: Annotated[str | None, Header()] = None,
+        x_event_access_code: Annotated[str | None, Header(max_length=64)] = None,
+    ):
+        self.access_token = x_event_access_token or access_token or invite
+        self.access_code = x_event_access_code or access_code
+
+
+EventAccess = Annotated[EventAccessCredentials, Depends(EventAccessCredentials)]
+
+
+def require_event_access(
+    db: Session,
+    event: Event,
+    user: User | None,
+    creds: EventAccessCredentials | None = None,
+) -> None:
+    """Raise 403 when a private event is accessed without valid credentials or role."""
+    token = creds.access_token if creds is not None else None
+    code = creds.access_code if creds is not None else None
+    if not event_service.can_access_event(db, event, user, access_token=token, access_code=code):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            {
+                "code": "private_event_access_required",
+                "message": "This is a private event. Provide a valid access code or invite token.",
+                "has_access_code": event.has_access_code,
+            },
+        )

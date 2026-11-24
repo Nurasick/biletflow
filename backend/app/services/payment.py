@@ -105,7 +105,7 @@ def pay_order(
         )
         return payment
 
-    order_service.confirm_order(db, order, now)
+    order_service.confirm_order(db, order, now, actor=actor)
     return payment
 
 

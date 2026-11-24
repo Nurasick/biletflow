@@ -3,6 +3,7 @@ from enum import StrEnum
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    true,
 )
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
@@ -86,8 +88,12 @@ class Event(Base):
         _string_enum(SeatingMode, 20), server_default=SeatingMode.GENERAL_ADMISSION.value
     )
 
+    venue_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("venues.id"), index=True)
     venue_name: Mapped[str] = mapped_column(String(300))
     venue_address: Mapped[str] = mapped_column(Text)
+    venue_city: Mapped[str | None] = mapped_column(String(120))
+    # Hashed access code for private events (EventVisibility.PRIVATE); never returned.
+    access_code_hash: Mapped[str | None] = mapped_column(String(128))
 
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -99,10 +105,10 @@ class Event(Base):
     capacity: Mapped[int | None] = mapped_column(Integer)
     registration_opens_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     registration_closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Free text the organizer writes and attendees read before buying (§4.9
-    # "Organizers shall be able to define a refund policy"). Display only:
-    # refunds are always organizer-initiated, so nothing parses this.
+    # Free text + structured rules so refund eligibility is enforceable (§4.9).
     refund_policy: Mapped[str | None] = mapped_column(Text)
+    refunds_allowed: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    refund_cutoff_hours_before_start: Mapped[int | None] = mapped_column(Integer)
 
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -111,6 +117,10 @@ class Event(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    @property
+    def has_access_code(self) -> bool:
+        return bool(self.access_code_hash)
+
     __table_args__ = (
         CheckConstraint(f"status IN ({_check_list(EventStatus)})", name="status"),
         CheckConstraint(f"visibility IN ({_check_list(EventVisibility)})", name="visibility"),
@@ -118,6 +128,10 @@ class Event(Base):
         CheckConstraint(f"category IN ({_check_list(EventCategory)})", name="category"),
         CheckConstraint("ends_at > starts_at", name="ends_after_starts"),
         CheckConstraint("capacity IS NULL OR capacity > 0", name="capacity_positive"),
+        CheckConstraint(
+            "refund_cutoff_hours_before_start IS NULL OR refund_cutoff_hours_before_start >= 0",
+            name="refund_cutoff_non_negative",
+        ),
         CheckConstraint(
             "registration_opens_at IS NULL OR registration_closes_at IS NULL"
             " OR registration_closes_at > registration_opens_at",

@@ -7,7 +7,7 @@ follow the interface language.
 
 from datetime import datetime
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 
 from app.api.deps import CurrentUser, DbSession
@@ -40,3 +40,12 @@ def my_notifications(user: CurrentUser, db: DbSession) -> dict:
 def mark_read(user: CurrentUser, db: DbSession) -> None:
     """Mark everything read: the user opened the feed and saw it."""
     notify.mark_all_read(db, user)
+
+
+@router.post(
+    "/users/me/notifications/{notification_id}/read", status_code=status.HTTP_204_NO_CONTENT
+)
+def mark_one_read(notification_id: int, user: CurrentUser, db: DbSession) -> None:
+    """Mark a single in-app notification as read (§4.10)."""
+    if not notify.mark_one_read(db, user, notification_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Notification not found")

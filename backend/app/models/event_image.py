@@ -33,6 +33,7 @@ class EventImage(Base):
     content_type: Mapped[str] = mapped_column(String(32))
     size_bytes: Mapped[int] = mapped_column(Integer)
     position: Mapped[int] = mapped_column(Integer, server_default="0")
+    alt_text: Mapped[str | None] = mapped_column(String(300))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

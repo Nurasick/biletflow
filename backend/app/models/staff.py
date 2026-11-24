@@ -3,12 +3,14 @@ from enum import StrEnum
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Identity,
     UniqueConstraint,
     func,
+    true,
 )
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
@@ -35,6 +37,7 @@ class StaffAssignment(Base):
     event_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("events.id"))
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
     role: Mapped[StaffRole] = mapped_column(STAFF_ROLE, server_default=StaffRole.ADMIN)
+    can_reverse_check_in: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     assigned_by_user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

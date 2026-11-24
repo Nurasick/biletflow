@@ -84,13 +84,20 @@ class Order(Base):
 
 
 class OrderItem(Base):
-    """One line per ticket type purchased."""
+    """One line per ticket type (GA) or per seat (assigned seating) purchased."""
 
     __tablename__ = "order_items"
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     order_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("orders.id"), index=True)
     ticket_type_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("ticket_types.id"))
+    event_seat_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("event_seats.id"), index=True
+    )
+    # Snapshot of assigned seat location at checkout (§4.3.1).
+    section_name: Mapped[str | None] = mapped_column(String(100))
+    row_label: Mapped[str | None] = mapped_column(String(20))
+    seat_number: Mapped[str | None] = mapped_column(String(10))
     quantity: Mapped[int] = mapped_column(Integer)
     # A snapshot of ticket_types.price_minor at checkout, not a cache of it.
     # If receipts joined back to ticket_types, an organizer's price edit would
@@ -101,6 +108,7 @@ class OrderItem(Base):
 
     __table_args__ = (
         CheckConstraint("quantity > 0", name="quantity_positive"),
+        CheckConstraint("event_seat_id IS NULL OR quantity = 1", name="seat_quantity_one"),
         CheckConstraint(
             "unit_price_minor >= 0 AND discount_minor >= 0 AND subtotal_minor >= 0",
             name="amounts_non_negative",

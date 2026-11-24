@@ -56,6 +56,8 @@ Slug = Annotated[str, Field(min_length=3, max_length=200, pattern=SLUG_PATTERN)]
 Title = Annotated[str, Trimmed, Field(min_length=1, max_length=300)]
 VenueName = Annotated[str, Trimmed, Field(min_length=1, max_length=300)]
 VenueAddress = Annotated[str, Trimmed, Field(min_length=1, max_length=MAX_ADDRESS)]
+VenueCity = Annotated[str, Trimmed, Field(min_length=1, max_length=120)]
+AccessCode = Annotated[str, Trimmed, Field(min_length=4, max_length=64)]
 Description = Annotated[str, Trimmed, Field(max_length=MAX_DESCRIPTION)]
 RefundPolicy = Annotated[str, Trimmed, Field(max_length=MAX_REFUND_POLICY)]
 
@@ -103,12 +105,16 @@ class EventCreate(BaseModel):
     category: EventCategoryType | None = None
     cover_image_url: str | None = Field(default=None, max_length=512)
     refund_policy: RefundPolicy | None = None
+    refunds_allowed: bool = True
+    refund_cutoff_hours_before_start: int | None = Field(default=None, ge=0, le=8760)
 
     visibility: EventVisibilityType = "public"
+    access_code: AccessCode | None = None
     seating_mode: SeatingModeType = "general_admission"
 
     venue_name: VenueName
     venue_address: VenueAddress
+    venue_city: VenueCity | None = None
 
     starts_at: AwareDatetime
     ends_at: AwareDatetime
@@ -141,12 +147,16 @@ class EventUpdate(BaseModel):
     category: EventCategoryType | None = None
     cover_image_url: str | None = Field(default=None, max_length=512)
     refund_policy: RefundPolicy | None = None
+    refunds_allowed: bool | None = None
+    refund_cutoff_hours_before_start: int | None = Field(default=None, ge=0, le=8760)
 
     visibility: EventVisibilityType | None = None
+    access_code: AccessCode | None = None
     seating_mode: SeatingModeType | None = None
 
     venue_name: VenueName | None = None
     venue_address: VenueAddress | None = None
+    venue_city: VenueCity | None = None
 
     starts_at: AwareDatetime | None = None
     ends_at: AwareDatetime | None = None
@@ -187,6 +197,7 @@ _NOT_NULL_ON_UPDATE = frozenset(
         "starts_at",
         "ends_at",
         "timezone",
+        "refunds_allowed",
     }
 )
 
@@ -203,10 +214,13 @@ class EventRead(BaseModel):
 
     status: EventStatusType
     visibility: EventVisibilityType
+    has_access_code: bool = False
     seating_mode: SeatingModeType
 
+    venue_id: int | None = None
     venue_name: str
     venue_address: str
+    venue_city: str | None = None
 
     starts_at: datetime
     ends_at: datetime
@@ -217,6 +231,8 @@ class EventRead(BaseModel):
     registration_closes_at: datetime | None
 
     refund_policy: str | None
+    refunds_allowed: bool = True
+    refund_cutoff_hours_before_start: int | None = None
 
     published_at: datetime | None
     cancelled_at: datetime | None
@@ -245,6 +261,16 @@ class EventImageRead(BaseModel):
     id: int
     url: str
     position: int
+    alt_text: str | None = None
+
+
+class CalendarLinks(BaseModel):
+    """One-click external calendar links plus the RFC 5545 .ics download URL (§4.11)."""
+
+    ics: str
+    google: str
+    outlook: str
+    yahoo: str
 
 
 class EventDetail(EventRead):
@@ -255,6 +281,7 @@ class EventDetail(EventRead):
     # False while the paid types of this event cannot be bought yet (§4.5), so
     # the page can say so instead of letting checkout fail.
     paid_sales_active: bool
+    calendar_links: CalendarLinks | None = None
 
 
 class Requirement(BaseModel):
@@ -278,3 +305,18 @@ class CancelRequest(BaseModel):
 
 class SuspendRequest(BaseModel):
     reason: Annotated[str, Trimmed, Field(min_length=1, max_length=500)]
+
+
+class EventUnlockRequest(BaseModel):
+    access_code: str | None = Field(default=None, max_length=64)
+    invite_token: str | None = Field(default=None, max_length=512)
+
+
+class EventUnlockResponse(BaseModel):
+    event_slug: str
+    access_token: str
+
+
+class EventInviteLinkRead(BaseModel):
+    invite_token: str
+    invite_url: str

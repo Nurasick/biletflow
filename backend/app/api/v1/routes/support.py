@@ -11,13 +11,23 @@ Polling these endpoints is the specified delivery (§9): no WebSockets.
 from collections.abc import Sequence
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi.responses import RedirectResponse
 
 from app.api.deps import CurrentUser, DbSession, OptionalUser
-from app.models.support import CaseCategory, CaseStatus, SupportCase
+from app.models.support import (
+    CaseAudience,
+    CaseCategory,
+    CaseStatus,
+    SupportAttachment,
+    SupportCase,
+)
 from app.schemas.support import (
+    AttachmentCreate,
+    AttachmentRead,
     CaseCreate,
     CaseCreated,
+    CaseEscalate,
     CaseUpdate,
     MessageCreate,
     RequesterCaseRead,
@@ -26,6 +36,7 @@ from app.schemas.support import (
     StaffCaseSummary,
     StaffMessageCreate,
 )
+from app.services import storage
 from app.services import support as support_service
 
 router = APIRouter(tags=["support"])
@@ -34,26 +45,78 @@ MAX_PAGE_SIZE = 100
 
 # Missing and not-yours are the same 404, so case numbers cannot be probed.
 CASE_NOT_FOUND = HTTPException(status.HTTP_404_NOT_FOUND, "Support case not found")
+ATTACHMENT_NOT_FOUND = HTTPException(status.HTTP_404_NOT_FOUND, "Support attachment not found")
 
 CaseToken = Annotated[str | None, Query(description="The signed link token for guests")]
 
 
-def _requester_read(db: DbSession, support_case: SupportCase) -> dict:
+def _attachment_read(
+    attachment: SupportAttachment, case_number: str, *, staff: bool, token: str | None = None
+) -> dict:
+    prefix = "/api/v1/staff/support/cases" if staff else "/api/v1/support/cases"
+    url = f"{prefix}/{case_number}/attachments/{attachment.id}"
+    if not staff and token:
+        url = f"{url}?token={token}"
+    return AttachmentRead(
+        id=attachment.id,
+        support_message_id=attachment.support_message_id,
+        filename=attachment.filename,
+        content_type=attachment.content_type,
+        size_bytes=attachment.size_bytes,
+        created_at=attachment.created_at,
+        download_url=url,
+    ).model_dump()
+
+
+def _download_attachment(attachment: SupportAttachment) -> Response:
+    if attachment.storage_key.startswith(storage.S3_PREFIX):
+        try:
+            url = storage.s3_read_url(attachment.storage_key)
+        except storage.StorageUnavailable:
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE, "Attachment storage unavailable"
+            ) from None
+        return RedirectResponse(url=url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+    content = storage.read_local_bytes(attachment.storage_key)
+    if content is None:
+        raise ATTACHMENT_NOT_FOUND
+    safe_name = attachment.filename.replace('"', "")
+    return Response(
+        content=content,
+        media_type=attachment.content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+def _requester_read(db: DbSession, support_case: SupportCase, *, token: str | None = None) -> dict:
+    attachments = [
+        _attachment_read(att, support_case.case_number, staff=False, token=token)
+        for att in support_service.list_attachments(db, support_case, include_internal=False)
+    ]
     return RequesterCaseRead.model_validate(
         {
             **RequesterCaseSummary.model_validate(support_case).model_dump(),
             "context": support_service.context(db, support_case),
             "messages": support_service.requester_thread(db, support_case),
+            "attachments": attachments,
         }
     ).model_dump()
 
 
 def _staff_read(db: DbSession, support_case: SupportCase) -> dict:
+    attachments = [
+        _attachment_read(att, support_case.case_number, staff=True)
+        for att in support_service.list_attachments(db, support_case, include_internal=True)
+    ]
     return StaffCaseRead.model_validate(
         {
             **StaffCaseSummary.model_validate(support_case).model_dump(),
             "context": support_service.context(db, support_case),
             "messages": support_service.staff_thread(db, support_case),
+            "attachments": attachments,
         }
     ).model_dump()
 
@@ -94,7 +157,7 @@ def read_my_case(case_number: str, user: OptionalUser, db: DbSession, token: Cas
     support_case = support_service.get_requester_case(db, case_number, user, token)
     if support_case is None:
         raise CASE_NOT_FOUND
-    return _requester_read(db, support_case)
+    return _requester_read(db, support_case, token=token)
 
 
 @router.post("/support/cases/{case_number}/messages", response_model=RequesterCaseRead)
@@ -109,7 +172,65 @@ def reply_to_my_case(
     if support_case is None:
         raise CASE_NOT_FOUND
     support_service.add_requester_message(db, support_case, user, data.body)
-    return _requester_read(db, support_case)
+    return _requester_read(db, support_case, token=token)
+
+
+@router.post(
+    "/support/cases/{case_number}/attachments",
+    response_model=AttachmentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def upload_requester_attachment(
+    case_number: str,
+    data: AttachmentCreate,
+    user: OptionalUser,
+    db: DbSession,
+    token: CaseToken = None,
+):
+    """Upload a JPEG, PNG, WebP, or PDF attachment to a support case (Bonus §4.13)."""
+    support_case = support_service.get_requester_case(db, case_number, user, token, lock=True)
+    if support_case is None:
+        raise CASE_NOT_FOUND
+    try:
+        attachment = support_service.add_attachment(
+            db,
+            support_case,
+            user,
+            data.filename,
+            data.data_url,
+            support_message_id=data.support_message_id,
+            is_staff=False,
+        )
+    except support_service.AttachmentMessageNotFound:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Support message not found in this case"
+        ) from None
+    except storage.InvalidImage as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, exc.reason) from None
+    except storage.StorageUnavailable:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Attachment storage unavailable"
+        ) from None
+    return _attachment_read(attachment, support_case.case_number, staff=False, token=token)
+
+
+@router.get("/support/cases/{case_number}/attachments/{attachment_id}")
+def download_requester_attachment(
+    case_number: str,
+    attachment_id: int,
+    user: OptionalUser,
+    db: DbSession,
+    token: CaseToken = None,
+) -> Response:
+    support_case = support_service.get_requester_case(db, case_number, user, token)
+    if support_case is None:
+        raise CASE_NOT_FOUND
+    attachment = support_service.get_attachment(
+        db, support_case, attachment_id, include_internal=False
+    )
+    if attachment is None:
+        raise ATTACHMENT_NOT_FOUND
+    return _download_attachment(attachment)
 
 
 # --- the staff side -----------------------------------------------------------
@@ -122,6 +243,9 @@ def list_staff_cases(
     case_status: Annotated[CaseStatus | None, Query(alias="status")] = None,
     category: CaseCategory | None = None,
     event_id: int | None = None,
+    escalated: bool | None = None,
+    audience: CaseAudience | None = None,
+    q: Annotated[str | None, Query(max_length=100)] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Sequence[SupportCase]:
@@ -133,6 +257,9 @@ def list_staff_cases(
         status=case_status,
         category=category,
         event_id=event_id,
+        escalated=escalated,
+        audience=audience,
+        q=q,
         limit=limit,
         offset=offset,
     )
@@ -174,3 +301,66 @@ def update_staff_case(case_number: str, data: CaseUpdate, user: CurrentUser, db:
             status.HTTP_422_UNPROCESSABLE_CONTENT, "That user cannot work on this case"
         ) from None
     return _staff_read(db, support_case)
+
+
+@router.post("/staff/support/cases/{case_number}/escalate", response_model=StaffCaseRead)
+def escalate_staff_case(case_number: str, data: CaseEscalate, user: CurrentUser, db: DbSession):
+    """Escalate an attendee support case to Platform Admins (§4.13)."""
+    support_case = support_service.get_staff_case(db, user, case_number, lock=True)
+    if support_case is None:
+        raise CASE_NOT_FOUND
+    try:
+        support_service.escalate_case(db, support_case, user, data.reason)
+    except support_service.CannotEscalate as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    return _staff_read(db, support_case)
+
+
+@router.post(
+    "/staff/support/cases/{case_number}/attachments",
+    response_model=AttachmentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def upload_staff_attachment(
+    case_number: str, data: AttachmentCreate, user: CurrentUser, db: DbSession
+):
+    """Upload a JPEG, PNG, WebP, or PDF attachment as staff (Bonus §4.13)."""
+    support_case = support_service.get_staff_case(db, user, case_number, lock=True)
+    if support_case is None:
+        raise CASE_NOT_FOUND
+    try:
+        attachment = support_service.add_attachment(
+            db,
+            support_case,
+            user,
+            data.filename,
+            data.data_url,
+            support_message_id=data.support_message_id,
+            is_staff=True,
+        )
+    except support_service.AttachmentMessageNotFound:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Support message not found in this case"
+        ) from None
+    except storage.InvalidImage as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, exc.reason) from None
+    except storage.StorageUnavailable:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Attachment storage unavailable"
+        ) from None
+    return _attachment_read(attachment, support_case.case_number, staff=True)
+
+
+@router.get("/staff/support/cases/{case_number}/attachments/{attachment_id}")
+def download_staff_attachment(
+    case_number: str, attachment_id: int, user: CurrentUser, db: DbSession
+) -> Response:
+    support_case = support_service.get_staff_case(db, user, case_number)
+    if support_case is None:
+        raise CASE_NOT_FOUND
+    attachment = support_service.get_attachment(
+        db, support_case, attachment_id, include_internal=True
+    )
+    if attachment is None:
+        raise ATTACHMENT_NOT_FOUND
+    return _download_attachment(attachment)

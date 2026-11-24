@@ -6,7 +6,13 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import select
 
-from app.api.deps import EVENT_NOT_FOUND, DbSession, OptionalUser
+from app.api.deps import (
+    EVENT_NOT_FOUND,
+    DbSession,
+    EventAccess,
+    OptionalUser,
+    require_event_access,
+)
 from app.core import qr
 from app.models.attendee import Attendee
 from app.models.event import Event
@@ -16,6 +22,7 @@ from app.models.ticket_type import TicketType
 from app.services import calendar as calendar_service
 from app.services import event as event_service
 from app.services import order as order_service
+from app.services import seating as seating_service
 from app.services import ticket_pdf
 
 router = APIRouter(tags=["documents"])
@@ -54,6 +61,9 @@ def _printable(db: DbSession, order: Order, public_code: str | None) -> list:
             ticket_type_name=type_name,
             attendee_name=attendee_name,
             order_number=order.order_number,
+            seat_label=seating_service.format_seat_label(
+                ticket.section_name, ticket.row_label, ticket.seat_number
+            ),
         )
         for ticket, attendee_name, type_name in db.execute(query)
     ]
@@ -61,8 +71,18 @@ def _printable(db: DbSession, order: Order, public_code: str | None) -> list:
 
 def _pdf(db: DbSession, order_number: str, user, token: str | None, code: str | None) -> Response:
     order = order_service.get_order_by_number(db, order_number)
-    # Same rule and same 404 as reading the order: owner or signed link.
-    if order is None or not order_service.can_view(order, user, token):
+    if order is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+    # Order owner/token can download any ticket of the order; a linked attendee
+    # (gifted/group ticket) can download their own single-ticket PDF.
+    allowed = order_service.can_view(order, user, token)
+    if not allowed and code is not None and user is not None:
+        ticket = db.scalar(
+            select(Ticket).where(Ticket.order_id == order.id, Ticket.public_code == code.upper())
+        )
+        if ticket is not None and order_service.can_view_ticket(db, order, ticket, user, token):
+            allowed = True
+    if not allowed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
     tickets = _printable(db, order, code)
     if not tickets:
@@ -98,12 +118,13 @@ def ticket_pdf_download(
     response_class=Response,
     responses={200: {"content": {"text/calendar": {}}}},
 )
-def event_calendar(slug: str, db: DbSession) -> Response:
+def event_calendar(slug: str, db: DbSession, user: OptionalUser, access: EventAccess) -> Response:
     """The event as an iCalendar file (§4.11). Public, like the event page;
     for a cancelled event it is the cancellation that replaces the entry."""
     event = event_service.get_event_by_slug(db, slug)
     if event is None:
         raise EVENT_NOT_FOUND
+    require_event_access(db, event, user, access)
     return Response(
         calendar_service.build(event),
         media_type="text/calendar; charset=utf-8",

@@ -39,7 +39,13 @@ from app.core.security import get_password_hash  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 from app.models.activation import ActivationStatus, EventActivation  # noqa: E402
-from app.models.event import Event, EventCategory, EventStatus, EventVisibility  # noqa: E402
+from app.models.event import (  # noqa: E402
+    Event,
+    EventCategory,
+    EventStatus,
+    EventVisibility,
+    SeatingMode,
+)
 from app.models.event_image import EventImage  # noqa: E402
 from app.models.order import Order  # noqa: E402
 from app.models.organizer import (  # noqa: E402
@@ -61,6 +67,7 @@ from app.services import campaign as campaign_service  # noqa: E402
 from app.services import event_lifecycle as lifecycle  # noqa: E402
 from app.services import order as order_service  # noqa: E402
 from app.services import payment as payment_service  # noqa: E402
+from app.services import seating as seating_service  # noqa: E402
 
 PASSWORD = os.environ.get("DEMO_PASSWORD", "Demo12345!")
 TZ = "Asia/Almaty"
@@ -438,7 +445,7 @@ def seed(db: Session) -> None:
     db.commit()
     past_orders = []
     for i in range(30):
-        when = now - (55 - i) * day - timedelta(hours=i % 9)
+        when = now - (60 - i) * day - timedelta(hours=i % 9 + 1)
         past_orders.append(
             buy(db, past, floor if i % 3 == 0 else balcony, 1 + i % 2, when, 400 + i)
         )
@@ -504,6 +511,85 @@ def seed(db: Session) -> None:
             reason="fraud",
             details="Promises a prize to every buyer and names no venue.",
         )
+    )
+    db.commit()
+
+    # 8. Assigned-seating gala at the predefined Kazakhstan venue (§4.3.1, §8 Bonus).
+    venue = seating_service.ensure_predefined_venues(db)
+    db.commit()
+    gala = add_event(
+        db,
+        profile,
+        slug="palace-symphony-gala",
+        title="Palace Symphony Gala (Assigned Seating)",
+        description=(
+            "Classical symphony evening at the Palace of the Republic with full "
+            "assigned seating across VIP Parterre, Main Parterre, and Balcony."
+        ),
+        category=EventCategory.CONCERT,
+        venue=(venue.name, venue.address),
+        starts_at=now + 18 * day,
+        hours=2.5,
+        colours=((34, 48, 92), (217, 165, 32)),
+        refund_policy="Refunds available up to 24 hours before the concert.",
+    )
+    gala.seating_mode = SeatingMode.ASSIGNED
+    gala.venue_city = venue.city
+    gala.refund_cutoff_hours_before_start = 24
+    gala_vip = add_type(db, gala, "VIP Parterre", 25_000, 16)
+    gala_prem = add_type(db, gala, "Main Parterre", 15_000, 30)
+    gala_std = add_type(db, gala, "Balcony", 8_000, 20)
+    activate(db, gala, now - 5 * day)
+    db.add(StaffAssignment(event_id=gala.id, user_id=staff.id, assigned_by_user_id=owner.id))
+    db.commit()
+    seat_map = seating_service.configure_event_seating(
+        db,
+        gala,
+        venue_id=venue.id,
+        category_ticket_type_map={
+            "VIP": gala_vip.id,
+            "Premium": gala_prem.id,
+            "Standard": gala_std.id,
+        },
+        unavailable_seat_ids=[],
+        actor=owner,
+    )
+    # Mark a couple of sample seats as sold so the map shows available + sold + accessible states.
+    vip_seats = seat_map["sections"][0]["rows"][0]["seats"]
+    prem_seats = seat_map["sections"][1]["rows"][0]["seats"]
+    gala_order = order_service.checkout(
+        db,
+        gala,
+        CheckoutRequest(
+            contact_name=f"{attendee.first_name} {attendee.last_name}",
+            contact_email=attendee.email,
+            items=[
+                {
+                    "ticket_type_id": gala_vip.id,
+                    "attendees": [
+                        {
+                            "full_name": f"{attendee.first_name} {attendee.last_name}",
+                            "email": attendee.email,
+                            "event_seat_id": vip_seats[1]["event_seat_id"],
+                        }
+                    ],
+                },
+                {
+                    "ticket_type_id": gala_prem.id,
+                    "attendees": [
+                        {
+                            "full_name": "Dana Nurlanova",
+                            "event_seat_id": prem_seats[2]["event_seat_id"],
+                        }
+                    ],
+                },
+            ],
+        ),
+        attendee,
+        now - 1 * day,
+    )
+    payment_service.pay_order(
+        db, gala_order, "succeed", f"seed-{gala_order.id}", attendee, now - 1 * day
     )
     db.commit()
 

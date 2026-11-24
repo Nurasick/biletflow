@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -39,15 +40,27 @@ def _create_token(
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
-def create_access_token(subject: str | int, expires_delta: timedelta | None = None) -> str:
+def create_access_token(
+    subject: str | int,
+    expires_delta: timedelta | None = None,
+    *,
+    token_version: int = 0,
+) -> str:
     delta = expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    return _create_token(subject, "access", delta)
+    return _create_token(
+        subject,
+        "access",
+        delta,
+        {"jti": secrets.token_hex(16), "tv": token_version},
+    )
 
 
 def create_refresh_token(
     subject: str | int,
     expires_delta: timedelta | None = None,
     csrf: str | None = None,
+    *,
+    token_version: int = 0,
 ) -> str:
     """A refresh token, optionally bound to a CSRF value.
 
@@ -56,7 +69,10 @@ def create_refresh_token(
     from our own frontend rather than from a cross-site form.
     """
     delta = expires_delta or timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    return _create_token(subject, "refresh", delta, {"csrf": csrf} if csrf else None)
+    claims: dict = {"jti": secrets.token_hex(16), "tv": token_version}
+    if csrf:
+        claims["csrf"] = csrf
+    return _create_token(subject, "refresh", delta, claims)
 
 
 def create_order_token(order_id: int) -> str:
@@ -87,3 +103,27 @@ def generate_url_token() -> str:
 
 def hash_url_token(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode()).hexdigest()
+
+
+def hash_event_access_code(code: str) -> str:
+    """Keyed SHA-256 digest of a private event access code."""
+    normalized = code.strip()
+    return hmac.new(
+        settings.SECRET_KEY.encode("utf-8"),
+        f"event-access:{normalized}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def verify_event_access_code(code: str, stored_hash: str) -> bool:
+    return hmac.compare_digest(hash_event_access_code(code), stored_hash)
+
+
+def create_event_access_token(event_id: int) -> str:
+    """Short-lived access token minted after unlocking a private event."""
+    return _create_token(event_id, "event_access", timedelta(days=7))
+
+
+def create_event_invite_token(event_id: int) -> str:
+    """Long-lived signed invite token an organizer shares for a private event."""
+    return _create_token(event_id, "event_invite", timedelta(days=365))

@@ -5,6 +5,7 @@ event and stop further sales") plus inspecting activations and timelines.
 """
 
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -13,7 +14,7 @@ from sqlalchemy import or_, select
 from app.api.deps import EVENT_NOT_FOUND, CurrentAdmin, DbSession
 from app.api.v1.routes.activation import activation_body
 from app.models.activation import EventActivation
-from app.models.event import Event
+from app.models.event import Event, EventStatus
 from app.schemas.activation import ActivationRead
 from app.schemas.event import CancelRequest, EventRead, SuspendRequest
 from app.schemas.reporting import TimelineEntry
@@ -43,6 +44,7 @@ def search_events(
     admin: CurrentAdmin,
     db: DbSession,
     q: Annotated[str | None, Query(max_length=100)] = None,
+    event_status: Annotated[EventStatus | None, Query(alias="status")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Sequence[Event]:
@@ -53,6 +55,8 @@ def search_events(
         query = query.where(
             or_(Event.title.ilike(needle, escape="\\"), Event.slug.ilike(needle, escape="\\"))
         )
+    if event_status is not None:
+        query = query.where(Event.status == event_status)
     return db.scalars(query.order_by(Event.id.desc()).limit(limit).offset(offset)).all()
 
 
@@ -123,6 +127,8 @@ def event_timeline(
     event_id: int,
     admin: CurrentAdmin,
     db: DbSession,
+    since: datetime | None = None,
+    until: datetime | None = None,
     action: Annotated[list[str] | None, Query(description="Repeat to filter by several")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -136,6 +142,8 @@ def event_timeline(
         db,
         _event(db, event_id).id,
         scope=support.timeline_scope(admin),
+        since=since,
+        until=until,
         actions=action or (),
         limit=limit,
         offset=offset,

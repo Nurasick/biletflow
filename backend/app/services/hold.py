@@ -15,6 +15,7 @@ from app.models.event import Event, EventStatus
 from app.models.hold import Hold
 from app.models.order import Order, OrderStatus
 from app.models.ticket_type import TicketType
+from app.services import seating as seating_service
 
 # How long a buyer has between choosing tickets and paying. The contract
 # says 10 minutes; the frontend shows it as a countdown from `expires_at`.
@@ -57,7 +58,13 @@ def reserve(
 
 
 def claim(
-    db: Session, event: Event, ticket_type: TicketType, quantity: int, now: datetime | None = None
+    db: Session,
+    event: Event,
+    ticket_type: TicketType,
+    quantity: int,
+    now: datetime | None = None,
+    *,
+    event_seat_id: int | None = None,
 ) -> Hold:
     """Like reserve(), but inside the caller's transaction: nothing is committed.
 
@@ -91,14 +98,19 @@ def claim(
     # Same transaction as the counter bump: if this insert fails, the
     # rollback hands the units back, so the counter never runs ahead of the
     # hold rows.
-    hold = Hold(ticket_type_id=ticket_type.id, quantity=quantity, expires_at=now + HOLD_TTL)
+    hold = Hold(
+        ticket_type_id=ticket_type.id,
+        event_seat_id=event_seat_id,
+        quantity=quantity,
+        expires_at=now + HOLD_TTL,
+    )
     db.add(hold)
     db.flush()
     return hold
 
 
 def release_expired_holds(db: Session, now: datetime | None = None) -> int:
-    """Release every lapsed hold and return its units. Returns how many holds.
+    """Release every lapsed hold and return its units (and assigned seats). Returns hold count.
 
     Meant to run on a timer (see app.main). The browser that abandoned
     checkout is exactly the one that will never tell us, so nothing else
@@ -115,13 +127,16 @@ def release_expired_holds(db: Session, now: datetime | None = None) -> int:
         update(Hold)
         .where(Hold.released_at.is_(None), Hold.expires_at <= now)
         .values(released_at=now)
-        .returning(Hold.ticket_type_id, Hold.quantity)
+        .returning(Hold.ticket_type_id, Hold.quantity, Hold.event_seat_id)
         .execution_options(synchronize_session=False)
     ).all()
 
     units = Counter()
-    for ticket_type_id, quantity in released:
+    seat_ids: list[int] = []
+    for ticket_type_id, quantity, event_seat_id in released:
         units[ticket_type_id] += quantity
+        if event_seat_id is not None:
+            seat_ids.append(event_seat_id)
 
     # Sorted, so two sweepers lock ticket types in the same order and cannot
     # deadlock on each other.
@@ -132,6 +147,8 @@ def release_expired_holds(db: Session, now: datetime | None = None) -> int:
             .values(quantity_reserved=TicketType.quantity_reserved - units[ticket_type_id])
             .execution_options(synchronize_session=False)
         )
+
+    seating_service.release_held_seats(db, seat_ids)
 
     # A pending order lives exactly as long as its holds (same expires_at), so
     # it expires in the same sweep. Confirmation flips status with a
@@ -178,6 +195,8 @@ def _ensure_on_sale(event: Event, ticket_type: TicketType, now: datetime) -> Non
         raise NotOnSale("ticket type does not belong to this event")
     if event.status != EventStatus.PUBLISHED:
         raise NotOnSale("event is not published")
+    if _not_before(now, event.ends_at):
+        raise NotOnSale("event has already ended")
     if ticket_type.is_hidden:
         raise NotOnSale("ticket type is hidden")
     if _before(now, event.registration_opens_at) or _before(now, ticket_type.sales_start_at):

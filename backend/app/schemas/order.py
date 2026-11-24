@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from app.models.order import OrderStatus
 from app.models.ticket import TicketStatus
+from app.schemas.event import CalendarLinks
 
 # A sanity bound on one request, separate from each type's max_per_order.
 MAX_TICKETS_PER_ORDER = 20
@@ -14,6 +15,8 @@ class AttendeeIn(BaseModel):
     full_name: str = Field(min_length=1, max_length=200)
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=32)
+    # Required when event.seating_mode == "assigned"; omitted for general admission.
+    event_seat_id: int | None = None
 
 
 class OrderLineIn(BaseModel):
@@ -40,6 +43,14 @@ class CheckoutRequest(BaseModel):
             raise ValueError("each ticket type may appear only once; list all its attendees there")
         if sum(len(item.attendees) for item in self.items) > MAX_TICKETS_PER_ORDER:
             raise ValueError(f"at most {MAX_TICKETS_PER_ORDER} tickets per order")
+        seat_ids = [
+            attendee.event_seat_id
+            for item in self.items
+            for attendee in item.attendees
+            if attendee.event_seat_id is not None
+        ]
+        if len(seat_ids) != len(set(seat_ids)):
+            raise ValueError("the same seat cannot be selected more than once in an order")
         return self
 
 
@@ -48,6 +59,10 @@ class OrderItemRead(BaseModel):
 
     id: int
     ticket_type_id: int
+    event_seat_id: int | None = None
+    section_name: str | None = None
+    row_label: str | None = None
+    seat_number: str | None = None
     quantity: int
     unit_price_minor: int
     discount_minor: int
@@ -62,6 +77,11 @@ class TicketRead(BaseModel):
     ticket_type_name: str
     status: TicketStatus
     attendee_name: str
+    event_seat_id: int | None = None
+    section_name: str | None = None
+    row_label: str | None = None
+    seat_number: str | None = None
+    seat_label: str | None = None
     # The signed admission payload (app/core/qr.py) for the client to draw as
     # a QR code. Built by the server: a client that could build payloads could
     # build tickets (qr-codes.md, For the frontend).
@@ -81,6 +101,7 @@ class OrderEvent(BaseModel):
     ends_at: datetime
     timezone: str
     status: str
+    calendar_links: CalendarLinks | None = None
 
 
 class OrderRead(BaseModel):
@@ -102,8 +123,8 @@ class OrderRead(BaseModel):
     created_at: datetime
     # The promo code that was applied, for "code STUDENT20: −20 %" (§4.14).
     promo_code: str | None = None
-    # §4.6: demonstration payments are never presented as real.
-    is_simulated: bool = True
+    # §4.6: demonstration payments are never presented as real; False for free orders.
+    is_simulated: bool = False
     items: list[OrderItemRead]
     # Empty until the order is confirmed: tickets do not exist before that.
     tickets: list[TicketRead]
@@ -113,3 +134,12 @@ class CheckoutResponse(OrderRead):
     # The signed link token. Shown once, here; a guest has no other way back
     # to this order until it is emailed (notifications slice).
     access_token: str
+
+
+class MyTicketRead(TicketRead):
+    """A ticket in GET /users/me/tickets, including gifted/group tickets."""
+
+    order_number: str
+    event_id: int
+    event: OrderEvent
+    issued_at: datetime

@@ -1,8 +1,9 @@
 from dataclasses import asdict
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, status
 
-from app.api.deps import CurrentUser, DbSession, OwnedEvent
+from app.api.deps import DbSession, OwnedEvent, VerifiedUser
 from app.models.activation import EventActivation
 from app.models.event import Event
 from app.schemas.activation import ActivationRead, SimulatedPayment
@@ -35,20 +36,40 @@ def read_activation(event: OwnedEvent, db: DbSession) -> dict:
 
 
 @router.post("/organizer/events/{event_id}/activation/terms", response_model=ActivationRead)
-def accept_terms(event: OwnedEvent, user: CurrentUser, db: DbSession) -> dict:
+def accept_terms(event: OwnedEvent, user: VerifiedUser, db: DbSession) -> dict:
     """§3.2 step 5: accept the paid-event terms."""
     activation = activation_service.get_or_start(db, event)
-    activation_service.accept_terms(db, activation, user)
+    try:
+        activation_service.accept_terms(db, activation, user)
+    except activation_service.IllegalActivationTransition as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, exc.reason) from None
     db.commit()
     return activation_body(db, event, activation)
 
 
 @router.post("/organizer/events/{event_id}/activation/fee", response_model=ActivationRead)
-def pay_fee(event: OwnedEvent, data: SimulatedPayment, user: CurrentUser, db: DbSession) -> dict:
-    """§3.2 step 3: pay the activation fee, simulated. A decline answers 402."""
+def pay_fee(
+    event: OwnedEvent,
+    data: SimulatedPayment,
+    user: VerifiedUser,
+    db: DbSession,
+    idempotency_key: Annotated[str | None, Header(max_length=64)] = None,
+) -> dict:
+    """§3.2 step 3: pay the activation fee, simulated. A decline answers 402.
+
+    Supports `Idempotency-Key` so retries return the original result without double-charging.
+    """
     activation = activation_service.get_or_start(db, event)
     try:
-        payment = activation_service.pay_fee(db, activation, user, data.outcome)
+        payment = activation_service.pay_fee(
+            db, activation, user, data.outcome, idempotency_key=idempotency_key
+        )
+    except activation_service.IdempotencyKeyReused:
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "This Idempotency-Key was used for another payment"
+        ) from None
     except activation_service.IllegalActivationTransition as exc:
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, exc.reason) from None
@@ -59,7 +80,7 @@ def pay_fee(event: OwnedEvent, data: SimulatedPayment, user: CurrentUser, db: Db
 
 
 @router.post("/organizer/events/{event_id}/activation/activate", response_model=ActivationRead)
-def activate(event: OwnedEvent, user: CurrentUser, db: DbSession) -> dict:
+def activate(event: OwnedEvent, user: VerifiedUser, db: DbSession) -> dict:
     """pending -> active once every checklist item holds. Paid checkout opens
     for this event only (§4.5)."""
     activation = activation_service.get_or_start(db, event)

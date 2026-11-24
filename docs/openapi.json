@@ -89,6 +89,15 @@
         "title": "ActivationRead",
         "type": "object"
       },
+      "ActivationStatus": {
+        "enum": [
+          "pending",
+          "active",
+          "suspended"
+        ],
+        "title": "ActivationStatus",
+        "type": "string"
+      },
       "AdminActivation": {
         "properties": {
           "activated_at": {
@@ -583,6 +592,89 @@
         "title": "AdminUser",
         "type": "object"
       },
+      "AttachmentCreate": {
+        "properties": {
+          "data_url": {
+            "minLength": 1,
+            "title": "Data Url",
+            "type": "string"
+          },
+          "filename": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Filename",
+            "type": "string"
+          },
+          "support_message_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support Message Id"
+          }
+        },
+        "required": [
+          "filename",
+          "data_url"
+        ],
+        "title": "AttachmentCreate",
+        "type": "object"
+      },
+      "AttachmentRead": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "download_url": {
+            "title": "Download Url",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "support_message_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support Message Id"
+          }
+        },
+        "required": [
+          "id",
+          "support_message_id",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "created_at",
+          "download_url"
+        ],
+        "title": "AttachmentRead",
+        "type": "object"
+      },
       "AttendanceRead": {
         "properties": {
           "absent": {
@@ -624,6 +716,17 @@
               }
             ],
             "title": "Email"
+          },
+          "event_seat_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Seat Id"
           },
           "full_name": {
             "maxLength": 200,
@@ -725,6 +828,35 @@
           "quantity"
         ],
         "title": "BasketLine",
+        "type": "object"
+      },
+      "CalendarLinks": {
+        "description": "One-click external calendar links plus the RFC 5545 .ics download URL (\u00a74.11).",
+        "properties": {
+          "google": {
+            "title": "Google",
+            "type": "string"
+          },
+          "ics": {
+            "title": "Ics",
+            "type": "string"
+          },
+          "outlook": {
+            "title": "Outlook",
+            "type": "string"
+          },
+          "yahoo": {
+            "title": "Yahoo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ics",
+          "google",
+          "outlook",
+          "yahoo"
+        ],
+        "title": "CalendarLinks",
         "type": "object"
       },
       "CampaignAnalytics": {
@@ -1203,6 +1335,7 @@
           "event_info",
           "check_in",
           "account",
+          "activation",
           "technical"
         ],
         "title": "CaseCategory",
@@ -1360,6 +1493,13 @@
             ],
             "title": "Access Token"
           },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentRead"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
           "audience": {
             "$ref": "#/components/schemas/CaseAudience"
           },
@@ -1419,6 +1559,21 @@
           "access_token"
         ],
         "title": "CaseCreated",
+        "type": "object"
+      },
+      "CaseEscalate": {
+        "properties": {
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "CaseEscalate",
         "type": "object"
       },
       "CaseStatus": {
@@ -1628,7 +1783,7 @@
             "type": "integer"
           },
           "is_simulated": {
-            "default": true,
+            "default": false,
             "title": "Is Simulated",
             "type": "boolean"
           },
@@ -1713,6 +1868,259 @@
         "title": "DeviceInfo",
         "type": "object"
       },
+      "DisputeCreate": {
+        "properties": {
+          "amount_minor": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
+          },
+          "evidence_notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Notes"
+          },
+          "order_number": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Order Number",
+            "type": "string"
+          },
+          "payment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Id"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_number",
+          "reason"
+        ],
+        "title": "DisputeCreate",
+        "type": "object"
+      },
+      "DisputeRead": {
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "event_title": {
+            "title": "Event Title",
+            "type": "string"
+          },
+          "evidence_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Notes"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "opened_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened By User Id"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "integer"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "payment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Id"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "resolution_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Notes"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By User Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DisputeStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "order_number",
+          "event_id",
+          "event_title",
+          "payment_id",
+          "status",
+          "reason",
+          "amount_minor",
+          "currency",
+          "evidence_notes",
+          "resolution_notes",
+          "opened_by_user_id",
+          "resolved_by_user_id",
+          "resolved_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DisputeRead",
+        "type": "object"
+      },
+      "DisputeStatus": {
+        "enum": [
+          "open",
+          "under_review",
+          "resolved_organizer",
+          "resolved_attendee",
+          "closed"
+        ],
+        "title": "DisputeStatus",
+        "type": "string"
+      },
+      "DisputeUpdate": {
+        "properties": {
+          "evidence_notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Notes"
+          },
+          "resolution_notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Notes"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "open",
+                  "under_review",
+                  "resolved_organizer",
+                  "resolved_attendee",
+                  "closed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "DisputeUpdate",
+        "type": "object"
+      },
       "EmailVerificationConfirm": {
         "properties": {
           "token": {
@@ -1760,6 +2168,16 @@
             "title": "Discounts Minor",
             "type": "integer"
           },
+          "estimated_payout_minor": {
+            "default": 0,
+            "title": "Estimated Payout Minor",
+            "type": "integer"
+          },
+          "fees_minor": {
+            "default": 0,
+            "title": "Fees Minor",
+            "type": "integer"
+          },
           "filter_scope": {
             "additionalProperties": {
               "items": {
@@ -1801,6 +2219,11 @@
             "title": "Tickets Remaining",
             "type": "integer"
           },
+          "tickets_reserved": {
+            "default": 0,
+            "title": "Tickets Reserved",
+            "type": "integer"
+          },
           "tickets_sold": {
             "title": "Tickets Sold",
             "type": "integer"
@@ -1829,6 +2252,19 @@
       "EventCreate": {
         "description": "What an organizer sends to create a draft.\n\nNo organizer id and no status: the owner comes from the access token, and\nevery event starts as a draft. Status changes go through dedicated actions.\n`slug` is optional: left out, one is made from the title.\n\ndescription and category stay optional here although the web form\nrequires them: a draft saved through the API may be incomplete. The\nlength limits are the same as the form's.",
         "properties": {
+          "access_code": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Code"
+          },
           "capacity": {
             "anyOf": [
               {
@@ -1889,6 +2325,19 @@
             "title": "Ends At",
             "type": "string"
           },
+          "refund_cutoff_hours_before_start": {
+            "anyOf": [
+              {
+                "maximum": 8760.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Cutoff Hours Before Start"
+          },
           "refund_policy": {
             "anyOf": [
               {
@@ -1900,6 +2349,11 @@
               }
             ],
             "title": "Refund Policy"
+          },
+          "refunds_allowed": {
+            "default": true,
+            "title": "Refunds Allowed",
+            "type": "boolean"
           },
           "registration_closes_at": {
             "anyOf": [
@@ -1970,6 +2424,19 @@
             "title": "Venue Address",
             "type": "string"
           },
+          "venue_city": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue City"
+          },
           "venue_name": {
             "maxLength": 300,
             "minLength": 1,
@@ -2001,6 +2468,16 @@
       "EventDetail": {
         "description": "GET /events/{slug}: what an attendee's event page needs in one request.",
         "properties": {
+          "calendar_links": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalendarLinks"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "cancelled_at": {
             "anyOf": [
               {
@@ -2074,6 +2551,11 @@
             "title": "Ends At",
             "type": "string"
           },
+          "has_access_code": {
+            "default": false,
+            "title": "Has Access Code",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -2123,6 +2605,17 @@
             ],
             "title": "Published At"
           },
+          "refund_cutoff_hours_before_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Cutoff Hours Before Start"
+          },
           "refund_policy": {
             "anyOf": [
               {
@@ -2133,6 +2626,11 @@
               }
             ],
             "title": "Refund Policy"
+          },
+          "refunds_allowed": {
+            "default": true,
+            "title": "Refunds Allowed",
+            "type": "boolean"
           },
           "registration_closes_at": {
             "anyOf": [
@@ -2202,6 +2700,28 @@
             "title": "Venue Address",
             "type": "string"
           },
+          "venue_city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue City"
+          },
+          "venue_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue Id"
+          },
           "venue_name": {
             "title": "Venue Name",
             "type": "string"
@@ -2250,6 +2770,17 @@
       },
       "EventImageRead": {
         "properties": {
+          "alt_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alt Text"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -2269,6 +2800,24 @@
           "position"
         ],
         "title": "EventImageRead",
+        "type": "object"
+      },
+      "EventInviteLinkRead": {
+        "properties": {
+          "invite_token": {
+            "title": "Invite Token",
+            "type": "string"
+          },
+          "invite_url": {
+            "title": "Invite Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invite_token",
+          "invite_url"
+        ],
+        "title": "EventInviteLinkRead",
         "type": "object"
       },
       "EventPreview": {
@@ -2388,6 +2937,11 @@
             "title": "Ends At",
             "type": "string"
           },
+          "has_access_code": {
+            "default": false,
+            "title": "Has Access Code",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -2422,6 +2976,17 @@
             ],
             "title": "Published At"
           },
+          "refund_cutoff_hours_before_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Cutoff Hours Before Start"
+          },
           "refund_policy": {
             "anyOf": [
               {
@@ -2432,6 +2997,11 @@
               }
             ],
             "title": "Refund Policy"
+          },
+          "refunds_allowed": {
+            "default": true,
+            "title": "Refunds Allowed",
+            "type": "boolean"
           },
           "registration_closes_at": {
             "anyOf": [
@@ -2501,6 +3071,28 @@
             "title": "Venue Address",
             "type": "string"
           },
+          "venue_city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue City"
+          },
+          "venue_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue Id"
+          },
           "venue_name": {
             "title": "Venue Name",
             "type": "string"
@@ -2543,6 +3135,137 @@
         ],
         "title": "EventRead",
         "type": "object"
+      },
+      "EventSeatMapRead": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/SeatMapCounts"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "seating_mode": {
+            "title": "Seating Mode",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SeatMapSectionRead"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "venue_address": {
+            "title": "Venue Address",
+            "type": "string"
+          },
+          "venue_city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue City"
+          },
+          "venue_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue Id"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "seating_mode",
+          "venue_id",
+          "venue_name",
+          "venue_city",
+          "venue_address",
+          "counts",
+          "sections"
+        ],
+        "title": "EventSeatMapRead",
+        "type": "object"
+      },
+      "EventSeatStatusUpdate": {
+        "properties": {
+          "status": {
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "ticket_type_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Type Id"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "EventSeatStatusUpdate",
+        "type": "object"
+      },
+      "EventSeatingConfigureRequest": {
+        "properties": {
+          "category_ticket_type_map": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "minProperties": 1,
+            "title": "Category Ticket Type Map",
+            "type": "object"
+          },
+          "unavailable_seat_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Unavailable Seat Ids",
+            "type": "array"
+          },
+          "venue_id": {
+            "title": "Venue Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "venue_id",
+          "category_ticket_type_map"
+        ],
+        "title": "EventSeatingConfigureRequest",
+        "type": "object"
+      },
+      "EventStatus": {
+        "enum": [
+          "draft",
+          "published",
+          "cancelled",
+          "suspended"
+        ],
+        "title": "EventStatus",
+        "type": "string"
       },
       "EventSummary": {
         "properties": {
@@ -2629,9 +3352,70 @@
         "title": "EventSummary",
         "type": "object"
       },
+      "EventUnlockRequest": {
+        "properties": {
+          "access_code": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Code"
+          },
+          "invite_token": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invite Token"
+          }
+        },
+        "title": "EventUnlockRequest",
+        "type": "object"
+      },
+      "EventUnlockResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "event_slug": {
+            "title": "Event Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_slug",
+          "access_token"
+        ],
+        "title": "EventUnlockResponse",
+        "type": "object"
+      },
       "EventUpdate": {
         "description": "A partial update. Omitted fields are left alone.\n\nThe window checks here only see the fields in the request; the service\nre-checks them against the stored values after merging.",
         "properties": {
+          "access_code": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Code"
+          },
           "capacity": {
             "anyOf": [
               {
@@ -2699,6 +3483,19 @@
             ],
             "title": "Ends At"
           },
+          "refund_cutoff_hours_before_start": {
+            "anyOf": [
+              {
+                "maximum": 8760.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Cutoff Hours Before Start"
+          },
           "refund_policy": {
             "anyOf": [
               {
@@ -2710,6 +3507,17 @@
               }
             ],
             "title": "Refund Policy"
+          },
+          "refunds_allowed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunds Allowed"
           },
           "registration_closes_at": {
             "anyOf": [
@@ -2800,6 +3608,19 @@
             ],
             "title": "Venue Address"
           },
+          "venue_city": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venue City"
+          },
           "venue_name": {
             "anyOf": [
               {
@@ -2869,8 +3690,56 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "ImageReorder": {
+        "properties": {
+          "image_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Image Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "image_ids"
+        ],
+        "title": "ImageReorder",
+        "type": "object"
+      },
+      "ImageUpdate": {
+        "properties": {
+          "alt_text": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alt Text"
+          }
+        },
+        "title": "ImageUpdate",
+        "type": "object"
+      },
       "ImageUpload": {
         "properties": {
+          "alt_text": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alt Text"
+          },
           "data_url": {
             "maxLength": 2796266,
             "title": "Data Url",
@@ -3005,6 +3874,119 @@
         "title": "MessageSender",
         "type": "string"
       },
+      "MyTicketRead": {
+        "description": "A ticket in GET /users/me/tickets, including gifted/group tickets.",
+        "properties": {
+          "attendee_name": {
+            "title": "Attendee Name",
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/OrderEvent"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "event_seat_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Seat Id"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "order_number": {
+            "title": "Order Number",
+            "type": "string"
+          },
+          "public_code": {
+            "title": "Public Code",
+            "type": "string"
+          },
+          "qr_payload": {
+            "title": "Qr Payload",
+            "type": "string"
+          },
+          "row_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Label"
+          },
+          "seat_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seat Label"
+          },
+          "seat_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seat Number"
+          },
+          "section_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "ticket_type_id": {
+            "title": "Ticket Type Id",
+            "type": "integer"
+          },
+          "ticket_type_name": {
+            "title": "Ticket Type Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "public_code",
+          "ticket_type_id",
+          "ticket_type_name",
+          "status",
+          "attendee_name",
+          "qr_payload",
+          "order_number",
+          "event_id",
+          "event",
+          "issued_at"
+        ],
+        "title": "MyTicketRead",
+        "type": "object"
+      },
       "NotificationFeed": {
         "properties": {
           "items": {
@@ -3072,6 +4054,16 @@
       "OrderEvent": {
         "description": "Enough of the event to render an order without a second request.",
         "properties": {
+          "calendar_links": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalendarLinks"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "ends_at": {
             "format": "date-time",
             "title": "Ends At",
@@ -3126,6 +4118,17 @@
             "title": "Discount Minor",
             "type": "integer"
           },
+          "event_seat_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Seat Id"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -3133,6 +4136,39 @@
           "quantity": {
             "title": "Quantity",
             "type": "integer"
+          },
+          "row_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Label"
+          },
+          "seat_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seat Number"
+          },
+          "section_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Name"
           },
           "subtotal_minor": {
             "title": "Subtotal Minor",
@@ -3239,7 +4275,7 @@
             "type": "integer"
           },
           "is_simulated": {
-            "default": true,
+            "default": false,
             "title": "Is Simulated",
             "type": "boolean"
           },
@@ -3316,6 +4352,193 @@
         ],
         "title": "OrderStatus",
         "type": "string"
+      },
+      "OrganizerAnalytics": {
+        "description": "GET /organizer/analytics (\u00a74.15): cross-event summary for one organizer.",
+        "properties": {
+          "attendance": {
+            "$ref": "#/components/schemas/AttendanceRead"
+          },
+          "capacity": {
+            "title": "Capacity",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "discounts_minor": {
+            "title": "Discounts Minor",
+            "type": "integer"
+          },
+          "estimated_payout_minor": {
+            "title": "Estimated Payout Minor",
+            "type": "integer"
+          },
+          "event_count": {
+            "title": "Event Count",
+            "type": "integer"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizerEventAnalyticsRow"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "fees_minor": {
+            "title": "Fees Minor",
+            "type": "integer"
+          },
+          "gross_minor": {
+            "title": "Gross Minor",
+            "type": "integer"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "net_minor": {
+            "title": "Net Minor",
+            "type": "integer"
+          },
+          "percent_sold": {
+            "title": "Percent Sold",
+            "type": "number"
+          },
+          "refunds_minor": {
+            "title": "Refunds Minor",
+            "type": "integer"
+          },
+          "sales_over_time": {
+            "items": {
+              "$ref": "#/components/schemas/SalesPoint"
+            },
+            "title": "Sales Over Time",
+            "type": "array"
+          },
+          "tickets_remaining": {
+            "title": "Tickets Remaining",
+            "type": "integer"
+          },
+          "tickets_reserved": {
+            "title": "Tickets Reserved",
+            "type": "integer"
+          },
+          "tickets_sold": {
+            "title": "Tickets Sold",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "currency",
+          "is_simulated",
+          "event_count",
+          "capacity",
+          "tickets_sold",
+          "tickets_reserved",
+          "tickets_remaining",
+          "percent_sold",
+          "gross_minor",
+          "discounts_minor",
+          "refunds_minor",
+          "fees_minor",
+          "net_minor",
+          "estimated_payout_minor",
+          "attendance",
+          "sales_over_time",
+          "events"
+        ],
+        "title": "OrganizerAnalytics",
+        "type": "object"
+      },
+      "OrganizerEventAnalyticsRow": {
+        "properties": {
+          "attendance": {
+            "$ref": "#/components/schemas/AttendanceRead"
+          },
+          "capacity": {
+            "title": "Capacity",
+            "type": "integer"
+          },
+          "discounts_minor": {
+            "title": "Discounts Minor",
+            "type": "integer"
+          },
+          "estimated_payout_minor": {
+            "title": "Estimated Payout Minor",
+            "type": "integer"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "fees_minor": {
+            "title": "Fees Minor",
+            "type": "integer"
+          },
+          "gross_minor": {
+            "title": "Gross Minor",
+            "type": "integer"
+          },
+          "net_minor": {
+            "title": "Net Minor",
+            "type": "integer"
+          },
+          "refunds_minor": {
+            "title": "Refunds Minor",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tickets_remaining": {
+            "title": "Tickets Remaining",
+            "type": "integer"
+          },
+          "tickets_reserved": {
+            "title": "Tickets Reserved",
+            "type": "integer"
+          },
+          "tickets_sold": {
+            "title": "Tickets Sold",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "slug",
+          "title",
+          "status",
+          "starts_at",
+          "capacity",
+          "tickets_sold",
+          "tickets_reserved",
+          "tickets_remaining",
+          "gross_minor",
+          "discounts_minor",
+          "refunds_minor",
+          "fees_minor",
+          "net_minor",
+          "estimated_payout_minor",
+          "attendance"
+        ],
+        "title": "OrganizerEventAnalyticsRow",
+        "type": "object"
       },
       "OrganizerOrderRow": {
         "properties": {
@@ -3435,6 +4658,11 @@
             "title": "Updated At",
             "type": "string"
           },
+          "verification_is_simulated": {
+            "default": true,
+            "title": "Verification Is Simulated",
+            "type": "boolean"
+          },
           "verification_status": {
             "title": "Verification Status",
             "type": "string"
@@ -3545,6 +4773,11 @@
             "default": true,
             "title": "Is Simulated",
             "type": "boolean"
+          },
+          "open_disputes": {
+            "default": 0,
+            "title": "Open Disputes",
+            "type": "integer"
           },
           "open_reports": {
             "title": "Open Reports",
@@ -3768,6 +5001,216 @@
         "title": "PayoutAccountRead",
         "type": "object"
       },
+      "PayoutCreate": {
+        "properties": {
+          "amount_minor": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "event_id"
+        ],
+        "title": "PayoutCreate",
+        "type": "object"
+      },
+      "PayoutRead": {
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "integer"
+          },
+          "event_title": {
+            "title": "Event Title",
+            "type": "string"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "initiated_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initiated By User Id"
+          },
+          "is_simulated": {
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "organizer_profile_id": {
+            "title": "Organizer Profile Id",
+            "type": "integer"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "payout_account_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payout Account Id"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PayoutStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organizer_profile_id",
+          "event_id",
+          "event_title",
+          "payout_account_id",
+          "amount_minor",
+          "currency",
+          "status",
+          "is_simulated",
+          "reference",
+          "failure_reason",
+          "initiated_by_user_id",
+          "paid_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PayoutRead",
+        "type": "object"
+      },
+      "PayoutStatus": {
+        "enum": [
+          "pending",
+          "processing",
+          "paid",
+          "failed"
+        ],
+        "title": "PayoutStatus",
+        "type": "string"
+      },
+      "PayoutUpdate": {
+        "properties": {
+          "failure_reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "processing",
+              "paid",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "PayoutUpdate",
+        "type": "object"
+      },
       "PromoQuote": {
         "description": "What the attendee is shown before paying (\u00a74.14): the code, the\ndiscount and the new total. Computed by the server, and computed again at\ncheckout; nothing here is trusted back.",
         "properties": {
@@ -3899,6 +5342,11 @@
       },
       "RefundRequest": {
         "properties": {
+          "override_policy": {
+            "default": false,
+            "title": "Override Policy",
+            "type": "boolean"
+          },
           "reason": {
             "maxLength": 500,
             "minLength": 1,
@@ -3911,6 +5359,15 @@
         ],
         "title": "RefundRequest",
         "type": "object"
+      },
+      "RefundStatus": {
+        "enum": [
+          "pending",
+          "succeeded",
+          "failed"
+        ],
+        "title": "RefundStatus",
+        "type": "string"
       },
       "ReportIn": {
         "properties": {
@@ -4037,6 +5494,13 @@
       },
       "RequesterCaseRead": {
         "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentRead"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
           "audience": {
             "$ref": "#/components/schemas/CaseAudience"
           },
@@ -4311,6 +5775,230 @@
         "title": "ScannedTicket",
         "type": "object"
       },
+      "SeatMapCounts": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "integer"
+          },
+          "held": {
+            "title": "Held",
+            "type": "integer"
+          },
+          "sellable": {
+            "title": "Sellable",
+            "type": "integer"
+          },
+          "sold": {
+            "title": "Sold",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unavailable": {
+            "title": "Unavailable",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "sellable",
+          "available",
+          "held",
+          "sold",
+          "unavailable"
+        ],
+        "title": "SeatMapCounts",
+        "type": "object"
+      },
+      "SeatMapRowRead": {
+        "properties": {
+          "display_order": {
+            "title": "Display Order",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "row_id": {
+            "title": "Row Id",
+            "type": "integer"
+          },
+          "seats": {
+            "items": {
+              "$ref": "#/components/schemas/SeatMapSeatRead"
+            },
+            "title": "Seats",
+            "type": "array"
+          }
+        },
+        "required": [
+          "row_id",
+          "name",
+          "display_order",
+          "seats"
+        ],
+        "title": "SeatMapRowRead",
+        "type": "object"
+      },
+      "SeatMapSeatRead": {
+        "properties": {
+          "accessible_label": {
+            "title": "Accessible Label",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "event_seat_id": {
+            "title": "Event Seat Id",
+            "type": "integer"
+          },
+          "hold_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Expires At"
+          },
+          "is_accessible": {
+            "title": "Is Accessible",
+            "type": "boolean"
+          },
+          "price_category": {
+            "title": "Price Category",
+            "type": "string"
+          },
+          "price_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Minor"
+          },
+          "row_label": {
+            "title": "Row Label",
+            "type": "string"
+          },
+          "seat_id": {
+            "title": "Seat Id",
+            "type": "integer"
+          },
+          "seat_label": {
+            "title": "Seat Label",
+            "type": "string"
+          },
+          "seat_number": {
+            "title": "Seat Number",
+            "type": "string"
+          },
+          "section_name": {
+            "title": "Section Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "available",
+              "held",
+              "sold",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "ticket_type_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Type Id"
+          },
+          "ticket_type_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Type Name"
+          }
+        },
+        "required": [
+          "event_seat_id",
+          "seat_id",
+          "section_name",
+          "row_label",
+          "seat_number",
+          "status",
+          "is_accessible",
+          "price_category",
+          "ticket_type_id",
+          "ticket_type_name",
+          "price_minor",
+          "currency",
+          "seat_label",
+          "accessible_label"
+        ],
+        "title": "SeatMapSeatRead",
+        "type": "object"
+      },
+      "SeatMapSectionRead": {
+        "properties": {
+          "display_order": {
+            "title": "Display Order",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/SeatMapRowRead"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "section_id": {
+            "title": "Section Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "section_id",
+          "name",
+          "display_order",
+          "rows"
+        ],
+        "title": "SeatMapSectionRead",
+        "type": "object"
+      },
       "Settings": {
         "properties": {
           "activation_fee_minor": {
@@ -4377,6 +6065,11 @@
       },
       "StaffAssign": {
         "properties": {
+          "can_reverse_check_in": {
+            "default": true,
+            "title": "Can Reverse Check In",
+            "type": "boolean"
+          },
           "email": {
             "format": "email",
             "title": "Email",
@@ -4402,6 +6095,13 @@
             ],
             "title": "Assigned To User Id"
           },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentRead"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
           "audience": {
             "$ref": "#/components/schemas/CaseAudience"
           },
@@ -4424,6 +6124,40 @@
             "title": "Created At",
             "type": "string"
           },
+          "escalated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalated At"
+          },
+          "escalated_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalated By User Id"
+          },
+          "escalation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation Reason"
+          },
           "event_id": {
             "anyOf": [
               {
@@ -4434,6 +6168,11 @@
               }
             ],
             "title": "Event Id"
+          },
+          "is_escalated": {
+            "default": false,
+            "title": "Is Escalated",
+            "type": "boolean"
           },
           "messages": {
             "items": {
@@ -4524,6 +6263,40 @@
             "title": "Created At",
             "type": "string"
           },
+          "escalated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalated At"
+          },
+          "escalated_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalated By User Id"
+          },
+          "escalation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation Reason"
+          },
           "event_id": {
             "anyOf": [
               {
@@ -4534,6 +6307,11 @@
               }
             ],
             "title": "Event Id"
+          },
+          "is_escalated": {
+            "default": false,
+            "title": "Is Escalated",
+            "type": "boolean"
           },
           "opened_by_user_id": {
             "anyOf": [
@@ -4709,6 +6487,11 @@
       },
       "StaffRead": {
         "properties": {
+          "can_reverse_check_in": {
+            "default": true,
+            "title": "Can Reverse Check In",
+            "type": "boolean"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -4746,6 +6529,19 @@
         "title": "StaffRead",
         "type": "object"
       },
+      "StaffUpdate": {
+        "properties": {
+          "can_reverse_check_in": {
+            "title": "Can Reverse Check In",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "can_reverse_check_in"
+        ],
+        "title": "StaffUpdate",
+        "type": "object"
+      },
       "SuspendRequest": {
         "properties": {
           "reason": {
@@ -4767,6 +6563,17 @@
             "title": "Attendee Name",
             "type": "string"
           },
+          "event_seat_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Seat Id"
+          },
           "public_code": {
             "title": "Public Code",
             "type": "string"
@@ -4774,6 +6581,50 @@
           "qr_payload": {
             "title": "Qr Payload",
             "type": "string"
+          },
+          "row_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Label"
+          },
+          "seat_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seat Label"
+          },
+          "seat_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seat Number"
+          },
+          "section_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Name"
           },
           "status": {
             "$ref": "#/components/schemas/TicketStatus"
@@ -4810,12 +6661,27 @@
       },
       "TicketTypeAnalytics": {
         "properties": {
+          "available": {
+            "default": 0,
+            "title": "Available",
+            "type": "integer"
+          },
           "name": {
             "title": "Name",
             "type": "string"
           },
           "price_minor": {
             "title": "Price Minor",
+            "type": "integer"
+          },
+          "quantity_checked_in": {
+            "default": 0,
+            "title": "Quantity Checked In",
+            "type": "integer"
+          },
+          "quantity_refunded": {
+            "default": 0,
+            "title": "Quantity Refunded",
             "type": "integer"
           },
           "quantity_reserved": {
@@ -4864,8 +6730,9 @@
       "TicketTypeCreate": {
         "properties": {
           "currency": {
-            "const": "KZT",
             "default": "KZT",
+            "maxLength": 3,
+            "minLength": 3,
             "title": "Currency",
             "type": "string"
           },
@@ -5037,6 +6904,11 @@
       },
       "TicketTypeRead": {
         "properties": {
+          "available": {
+            "default": 0,
+            "title": "Available",
+            "type": "integer"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -5090,6 +6962,16 @@
           },
           "price_minor": {
             "title": "Price Minor",
+            "type": "integer"
+          },
+          "quantity_checked_in": {
+            "default": 0,
+            "title": "Quantity Checked In",
+            "type": "integer"
+          },
+          "quantity_refunded": {
+            "default": 0,
+            "title": "Quantity Refunded",
             "type": "integer"
           },
           "quantity_reserved": {
@@ -5157,12 +7039,27 @@
       },
       "TicketTypeSales": {
         "properties": {
+          "available": {
+            "default": 0,
+            "title": "Available",
+            "type": "integer"
+          },
           "name": {
             "title": "Name",
             "type": "string"
           },
           "price_minor": {
             "title": "Price Minor",
+            "type": "integer"
+          },
+          "quantity_checked_in": {
+            "default": 0,
+            "title": "Quantity Checked In",
+            "type": "integer"
+          },
+          "quantity_refunded": {
+            "default": 0,
+            "title": "Quantity Refunded",
             "type": "integer"
           },
           "quantity_reserved": {
@@ -5203,7 +7100,8 @@
           "currency": {
             "anyOf": [
               {
-                "const": "KZT",
+                "maxLength": 3,
+                "minLength": 3,
                 "type": "string"
               },
               {
@@ -5551,6 +7449,14 @@
         "title": "UserRead",
         "type": "object"
       },
+      "UserStatus": {
+        "enum": [
+          "active",
+          "suspended"
+        ],
+        "title": "UserStatus",
+        "type": "string"
+      },
       "UserUpdate": {
         "description": "PATCH /users/me. Omitted fields are left alone; email and password\nhave their own flows.",
         "properties": {
@@ -5651,6 +7557,101 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "VenueSectionSummary": {
+        "properties": {
+          "display_order": {
+            "title": "Display Order",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Price Categories",
+            "type": "array"
+          },
+          "seat_count": {
+            "title": "Seat Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "display_order",
+          "seat_count",
+          "price_categories"
+        ],
+        "title": "VenueSectionSummary",
+        "type": "object"
+      },
+      "VenueSummaryRead": {
+        "properties": {
+          "accessible_seats": {
+            "title": "Accessible Seats",
+            "type": "integer"
+          },
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Price Categories",
+            "type": "array"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/VenueSectionSummary"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "total_seats": {
+            "title": "Total Seats",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "city",
+          "address",
+          "total_seats",
+          "accessible_seats",
+          "price_categories",
+          "sections"
+        ],
+        "title": "VenueSummaryRead",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -5672,6 +7673,39 @@
         "description": "\u00a74.12 \"Inspect paid-sales activation records\", across all events.",
         "operationId": "list_activations_api_v1_admin_activations_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ActivationStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
           {
             "in": "query",
             "name": "limit",
@@ -5740,6 +7774,39 @@
         "parameters": [
           {
             "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
@@ -5799,6 +7866,251 @@
         ]
       }
     },
+    "/api/v1/admin/disputes": {
+      "get": {
+        "description": "\u00a74.12: monitor payment and order disputes across the platform.",
+        "operationId": "list_disputes_api_v1_admin_disputes_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DisputeStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DisputeRead"
+                  },
+                  "title": "Response List Disputes Api V1 Admin Disputes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Disputes",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "create_dispute_api_v1_admin_disputes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Dispute",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/disputes/{dispute_id}": {
+      "get": {
+        "operationId": "read_dispute_api_v1_admin_disputes__dispute_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dispute_id",
+            "required": true,
+            "schema": {
+              "title": "Dispute Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Dispute",
+        "tags": [
+          "admin"
+        ]
+      },
+      "patch": {
+        "operationId": "update_dispute_api_v1_admin_disputes__dispute_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dispute_id",
+            "required": true,
+            "schema": {
+              "title": "Dispute Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Dispute",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/events": {
       "get": {
         "description": "Every event in any status, by title or slug (\u00a74.12 \"search for events\").",
@@ -5819,6 +8131,22 @@
                 }
               ],
               "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EventStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
             }
           },
           {
@@ -6172,6 +8500,40 @@
             }
           },
           {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
             "description": "Repeat to filter by several",
             "in": "query",
             "name": "action",
@@ -6300,13 +8662,194 @@
         ]
       }
     },
+    "/api/v1/admin/exports/activations.csv": {
+      "get": {
+        "operationId": "export_activations_api_v1_admin_exports_activations_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ActivationStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Activations",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/exports/events.csv": {
+      "get": {
+        "operationId": "export_events_api_v1_admin_exports_events_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EventStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Events",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/exports/orders.csv": {
       "get": {
         "description": "\u00a74.12 \"Export basic operational reports\". Capped at 10 000 rows.",
         "operationId": "export_orders_api_v1_admin_exports_orders_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "confirmed",
+                    "cancelled",
+                    "refunded",
+                    "partially_refunded",
+                    "expired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -6323,9 +8866,60 @@
     "/api/v1/admin/exports/payments.csv": {
       "get": {
         "operationId": "export_payments_api_v1_admin_exports_payments_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "succeeded",
+                    "failed",
+                    "refunded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -6334,6 +8928,134 @@
           }
         ],
         "summary": "Export Payments",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/exports/refunds.csv": {
+      "get": {
+        "operationId": "export_refunds_api_v1_admin_exports_refunds_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RefundStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Refunds",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/exports/users.csv": {
+      "get": {
+        "operationId": "export_users_api_v1_admin_exports_users_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/UserStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Users",
         "tags": [
           "admin"
         ]
@@ -6373,6 +9095,7 @@
                     "confirmed",
                     "cancelled",
                     "refunded",
+                    "partially_refunded",
                     "expired"
                   ],
                   "type": "string"
@@ -6625,10 +9348,260 @@
         ]
       }
     },
+    "/api/v1/admin/payouts": {
+      "get": {
+        "description": "List simulated organizer payout settlements across the platform.",
+        "operationId": "list_payouts_api_v1_admin_payouts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PayoutStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PayoutRead"
+                  },
+                  "title": "Response List Payouts Api V1 Admin Payouts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Payouts",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "Initiate a simulated payout settlement for an event organizer.",
+        "operationId": "trigger_payout_api_v1_admin_payouts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Trigger Payout",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payouts/{payout_id}": {
+      "patch": {
+        "operationId": "update_payout_api_v1_admin_payouts__payout_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payout_id",
+            "required": true,
+            "schema": {
+              "title": "Payout Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Payout",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/refunds": {
       "get": {
         "operationId": "list_refunds_api_v1_admin_refunds_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RefundStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
           {
             "in": "query",
             "name": "limit",
@@ -6908,7 +9881,7 @@
     },
     "/api/v1/admin/users": {
       "get": {
-        "description": "\u00a74.12 \"Search for users\": by email or name.",
+        "description": "\u00a74.12 \"Search for users\": by email, name, or account status.",
         "operationId": "search_users_api_v1_admin_users_get",
         "parameters": [
           {
@@ -6926,6 +9899,22 @@
                 }
               ],
               "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/UserStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
             }
           },
           {
@@ -7156,11 +10145,38 @@
     },
     "/api/v1/auth/logout": {
       "post": {
-        "description": "Clear the refresh cookie; the caller discards its in-memory access token.\n\nFor a browser this genuinely ends the session, because the refresh token\nonly ever existed as the cookie being deleted here. For a client in bearer\nmode nothing is revoked: that refresh token stays valid until it expires,\nand this codebase has no store of issued tokens to mark as spent. Real\nrevocation would be added here, without changing any client.",
+        "description": "Revoke active refresh token(s) for both cookie and bearer clients and clear cookie.",
         "operationId": "logout_api_v1_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RefreshRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Data"
+              }
+            }
+          }
+        },
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -7255,7 +10271,7 @@
     },
     "/api/v1/auth/refresh": {
       "post": {
-        "description": "Trade a refresh token for a fresh pair.\n\nThe token comes from the body for clients in bearer mode and from the\nhttpOnly cookie for browsers. A cookie-borne token additionally has to pass\nthe CSRF check, because unlike a body it is sent without the caller asking.\n\nThe status is re-read here rather than trusted from the token, so suspending\nan account takes effect at the next refresh instead of at the token's expiry.",
+        "description": "Trade a refresh token for a fresh pair, rotating and invalidating the old token.\n\nThe token comes from the body for clients in bearer mode and from the\nhttpOnly cookie for browsers. A cookie-borne token additionally has to pass\nthe CSRF check, because unlike a body it is sent without the caller asking.\n\nThe status is re-read here rather than trusted from the token, so suspending\nan account takes effect at the next refresh instead of at the token's expiry.",
         "operationId": "refresh_api_v1_auth_refresh_post",
         "parameters": [
           {
@@ -7426,7 +10442,7 @@
             }
           },
           {
-            "description": "Title or venue contains",
+            "description": "Title, venue or city contains",
             "in": "query",
             "name": "q",
             "required": false,
@@ -7440,7 +10456,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Title or venue contains",
+              "description": "Title, venue or city contains",
               "title": "Q"
             }
           },
@@ -7465,6 +10481,58 @@
                 }
               ],
               "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "city",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "City"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "free",
+                    "paid"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Price Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "soonest",
+              "enum": [
+                "soonest",
+                "newest",
+                "title"
+              ],
+              "title": "Sort",
+              "type": "string"
             }
           },
           {
@@ -7590,6 +10658,94 @@
               "title": "Slug",
               "type": "string"
             }
+          },
+          {
+            "description": "Private event access or invite token",
+            "in": "query",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access or invite token",
+              "title": "Access Token"
+            }
+          },
+          {
+            "description": "Private event signed invite token",
+            "in": "query",
+            "name": "invite",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event signed invite token",
+              "title": "Invite"
+            }
+          },
+          {
+            "description": "Private event access code",
+            "in": "query",
+            "name": "access_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access code",
+              "title": "Access Code"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Code"
+            }
           }
         ],
         "responses": {
@@ -7614,6 +10770,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Read Event",
         "tags": [
           "events"
@@ -7632,6 +10793,94 @@
             "schema": {
               "title": "Slug",
               "type": "string"
+            }
+          },
+          {
+            "description": "Private event access or invite token",
+            "in": "query",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access or invite token",
+              "title": "Access Token"
+            }
+          },
+          {
+            "description": "Private event signed invite token",
+            "in": "query",
+            "name": "invite",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event signed invite token",
+              "title": "Invite"
+            }
+          },
+          {
+            "description": "Private event access code",
+            "in": "query",
+            "name": "access_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access code",
+              "title": "Access Code"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Code"
             }
           }
         ],
@@ -7653,6 +10902,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Event Calendar",
         "tags": [
           "documents"
@@ -7671,6 +10925,94 @@
             "schema": {
               "title": "Slug",
               "type": "string"
+            }
+          },
+          {
+            "description": "Private event access or invite token",
+            "in": "query",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access or invite token",
+              "title": "Access Token"
+            }
+          },
+          {
+            "description": "Private event signed invite token",
+            "in": "query",
+            "name": "invite",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event signed invite token",
+              "title": "Invite"
+            }
+          },
+          {
+            "description": "Private event access code",
+            "in": "query",
+            "name": "access_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access code",
+              "title": "Access Code"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Code"
             }
           }
         ],
@@ -7730,6 +11072,94 @@
               "title": "Slug",
               "type": "string"
             }
+          },
+          {
+            "description": "Private event access or invite token",
+            "in": "query",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access or invite token",
+              "title": "Access Token"
+            }
+          },
+          {
+            "description": "Private event signed invite token",
+            "in": "query",
+            "name": "invite",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event signed invite token",
+              "title": "Invite"
+            }
+          },
+          {
+            "description": "Private event access code",
+            "in": "query",
+            "name": "access_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access code",
+              "title": "Access Code"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Code"
+            }
           }
         ],
         "requestBody": {
@@ -7764,6 +11194,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Quote Promo",
         "tags": [
           "campaigns"
@@ -7830,6 +11265,142 @@
         ]
       }
     },
+    "/api/v1/events/{slug}/seats": {
+      "get": {
+        "description": "Live seat map for an assigned-seating event (\u00a74.3.1).",
+        "operationId": "read_event_seats_api_v1_events__slug__seats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Private event access or invite token",
+            "in": "query",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access or invite token",
+              "title": "Access Token"
+            }
+          },
+          {
+            "description": "Private event signed invite token",
+            "in": "query",
+            "name": "invite",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event signed invite token",
+              "title": "Invite"
+            }
+          },
+          {
+            "description": "Private event access code",
+            "in": "query",
+            "name": "access_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access code",
+              "title": "Access Code"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventSeatMapRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Event Seats",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/api/v1/events/{slug}/ticket-types": {
       "get": {
         "operationId": "list_public_ticket_types_api_v1_events__slug__ticket_types_get",
@@ -7841,6 +11412,94 @@
             "schema": {
               "title": "Slug",
               "type": "string"
+            }
+          },
+          {
+            "description": "Private event access or invite token",
+            "in": "query",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access or invite token",
+              "title": "Access Token"
+            }
+          },
+          {
+            "description": "Private event signed invite token",
+            "in": "query",
+            "name": "invite",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event signed invite token",
+              "title": "Invite"
+            }
+          },
+          {
+            "description": "Private event access code",
+            "in": "query",
+            "name": "access_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Private event access code",
+              "title": "Access Code"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-event-access-code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Access-Code"
             }
           }
         ],
@@ -7870,9 +11529,67 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Public Ticket Types",
         "tags": [
           "ticket-types"
+        ]
+      }
+    },
+    "/api/v1/events/{slug}/unlock": {
+      "post": {
+        "description": "Exchange a private event's access code or invite token for a reusable access token.",
+        "operationId": "unlock_event_api_v1_events__slug__unlock_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventUnlockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventUnlockResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unlock Event",
+        "tags": [
+          "events"
         ]
       }
     },
@@ -7964,7 +11681,7 @@
     },
     "/api/v1/orders/{order_number}/cancel": {
       "post": {
-        "description": "The buyer abandons a pending order; its tickets go back on sale now\ninstead of when the hold times out. Confirmed orders are cancelled or\nrefunded by the organizer (\u00a74.9), not here.",
+        "description": "Cancel a pending order (abandoning checkout) OR self-cancel a confirmed\nfree registration (\u00a74.9). Confirmed paid orders are refunded by the organizer.",
         "operationId": "cancel_order_api_v1_orders__order_number__cancel_post",
         "parameters": [
           {
@@ -8254,9 +11971,124 @@
         ]
       }
     },
+    "/api/v1/organizer/analytics": {
+      "get": {
+        "description": "\u00a74.15: cross-event summary & analytics across an organizer's events.",
+        "operationId": "organizer_analytics_api_v1_organizer_analytics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "event_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerAnalytics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Organizer Analytics",
+        "tags": [
+          "organizer reports"
+        ]
+      }
+    },
     "/api/v1/organizer/events": {
       "get": {
         "operationId": "list_my_events_api_v1_organizer_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "phase",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "upcoming",
+                    "active",
+                    "completed",
+                    "cancelled",
+                    "suspended"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phase"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -8271,6 +12103,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -8484,7 +12326,7 @@
     },
     "/api/v1/organizer/events/{event_id}/activation/fee": {
       "post": {
-        "description": "\u00a73.2 step 3: pay the activation fee, simulated. A decline answers 402.",
+        "description": "\u00a73.2 step 3: pay the activation fee, simulated. A decline answers 402.\n\nSupports `Idempotency-Key` so retries return the original result without double-charging.",
         "operationId": "pay_fee_api_v1_organizer_events__event_id__activation_fee_post",
         "parameters": [
           {
@@ -8494,6 +12336,23 @@
             "schema": {
               "title": "Event Id",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
             }
           }
         ],
@@ -9248,6 +13107,68 @@
         ]
       }
     },
+    "/api/v1/organizer/events/{event_id}/images/order": {
+      "put": {
+        "description": "Reorder gallery images; position 0 becomes the cover image.",
+        "operationId": "reorder_images_api_v1_organizer_events__event_id__images_order_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageReorder"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventImageRead"
+                  },
+                  "title": "Response Reorder Images Api V1 Organizer Events  Event Id  Images Order Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reorder Images",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/api/v1/organizer/events/{event_id}/images/{image_id}": {
       "delete": {
         "operationId": "delete_image_api_v1_organizer_events__event_id__images__image_id__delete",
@@ -9292,6 +13213,118 @@
           }
         ],
         "summary": "Delete Image",
+        "tags": [
+          "events"
+        ]
+      },
+      "patch": {
+        "operationId": "update_image_api_v1_organizer_events__event_id__images__image_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventImageRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Image",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/invite-link": {
+      "post": {
+        "description": "Generate a signed invite link for accessing a private event (\u00a74.2).",
+        "operationId": "create_invite_link_api_v1_organizer_events__event_id__invite_link_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventInviteLinkRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Invite Link",
         "tags": [
           "events"
         ]
@@ -9590,6 +13623,179 @@
         ]
       }
     },
+    "/api/v1/organizer/events/{event_id}/seating": {
+      "put": {
+        "description": "Pick a predefined venue layout and map seat price categories to TicketTypes.",
+        "operationId": "configure_event_seating_api_v1_organizer_events__event_id__seating_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventSeatingConfigureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventSeatMapRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Configure Event Seating",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/seats": {
+      "get": {
+        "description": "Organizer view of the event's configured seat map (works on drafts too).",
+        "operationId": "read_organizer_event_seats_api_v1_organizer_events__event_id__seats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventSeatMapRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Organizer Event Seats",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/organizer/events/{event_id}/seats/{event_seat_id}": {
+      "patch": {
+        "description": "Toggle an individual seat between `available` and `unavailable`.",
+        "operationId": "update_event_seat_api_v1_organizer_events__event_id__seats__event_seat_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_seat_id",
+            "required": true,
+            "schema": {
+              "title": "Event Seat Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventSeatStatusUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventSeatMapRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Event Seat",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/api/v1/organizer/events/{event_id}/staff": {
       "get": {
         "operationId": "list_staff_api_v1_organizer_events__event_id__staff_get",
@@ -9745,6 +13951,74 @@
           }
         ],
         "summary": "Remove Staff",
+        "tags": [
+          "organizer"
+        ]
+      },
+      "patch": {
+        "operationId": "update_staff_api_v1_organizer_events__event_id__staff__user_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffRead"
+                  },
+                  "title": "Response Update Staff Api V1 Organizer Events  Event Id  Staff  User Id  Patch",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Staff",
         "tags": [
           "organizer"
         ]
@@ -10147,6 +14421,88 @@
         ]
       }
     },
+    "/api/v1/organizer/payouts": {
+      "get": {
+        "description": "Simulated payout settlement history for the organizer's events (\u00a74.10).",
+        "operationId": "list_my_payouts_api_v1_organizer_payouts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "event_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PayoutRead"
+                  },
+                  "title": "Response List My Payouts Api V1 Organizer Payouts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Payouts",
+        "tags": [
+          "organizer"
+        ]
+      }
+    },
     "/api/v1/organizer/profile": {
       "get": {
         "description": "404 until the user has saved a profile: that is what \"not an organizer\nyet\" looks like (01-identity.md, roles are relationships).",
@@ -10522,7 +14878,7 @@
     },
     "/api/v1/staff/events/{event_id}/tickets/{public_code}/reverse": {
       "post": {
-        "description": "Undo an accidental check-in (\u00a74.8). For the MVP every event admin who\nmay check in may also reverse; the record says who did.",
+        "description": "Undo an accidental check-in (\u00a74.8). Requires organizer role or\n`can_reverse_check_in` permission on StaffAssignment.",
         "operationId": "reverse_check_in_api_v1_staff_events__event_id__tickets__public_code__reverse_post",
         "parameters": [
           {
@@ -10645,6 +15001,55 @@
                 }
               ],
               "title": "Event Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "escalated",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Escalated"
+            }
+          },
+          {
+            "in": "query",
+            "name": "audience",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CaseAudience"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Audience"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
             }
           },
           {
@@ -10806,6 +15211,176 @@
           }
         ],
         "summary": "Update Staff Case",
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/staff/support/cases/{case_number}/attachments": {
+      "post": {
+        "description": "Upload a JPEG, PNG, WebP, or PDF attachment as staff (Bonus \u00a74.13).",
+        "operationId": "upload_staff_attachment_api_v1_staff_support_cases__case_number__attachments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Staff Attachment",
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/staff/support/cases/{case_number}/attachments/{attachment_id}": {
+      "get": {
+        "operationId": "download_staff_attachment_api_v1_staff_support_cases__case_number__attachments__attachment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Download Staff Attachment",
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/staff/support/cases/{case_number}/escalate": {
+      "post": {
+        "description": "Escalate an attendee support case to Platform Admins (\u00a74.13).",
+        "operationId": "escalate_staff_case_api_v1_staff_support_cases__case_number__escalate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseEscalate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffCaseRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Escalate Staff Case",
         "tags": [
           "support"
         ]
@@ -11008,6 +15583,154 @@
         ]
       }
     },
+    "/api/v1/support/cases/{case_number}/attachments": {
+      "post": {
+        "description": "Upload a JPEG, PNG, WebP, or PDF attachment to a support case (Bonus \u00a74.13).",
+        "operationId": "upload_requester_attachment_api_v1_support_cases__case_number__attachments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Requester Attachment",
+        "tags": [
+          "support"
+        ]
+      }
+    },
+    "/api/v1/support/cases/{case_number}/attachments/{attachment_id}": {
+      "get": {
+        "operationId": "download_requester_attachment_api_v1_support_cases__case_number__attachments__attachment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_number",
+            "required": true,
+            "schema": {
+              "title": "Case Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Download Requester Attachment",
+        "tags": [
+          "support"
+        ]
+      }
+    },
     "/api/v1/support/cases/{case_number}/messages": {
       "post": {
         "operationId": "reply_to_my_case_api_v1_support_cases__case_number__messages_post",
@@ -11200,6 +15923,47 @@
         ]
       }
     },
+    "/api/v1/users/me/notifications/{notification_id}/read": {
+      "post": {
+        "description": "Mark a single in-app notification as read (\u00a74.10).",
+        "operationId": "mark_one_read_api_v1_users_me_notifications__notification_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark One Read",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/users/me/orders": {
       "get": {
         "operationId": "list_my_orders_api_v1_users_me_orders_get",
@@ -11225,6 +15989,37 @@
           }
         ],
         "summary": "List My Orders",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/users/me/tickets": {
+      "get": {
+        "description": "Every ticket belonging to the signed-in user, including gifted/group tickets.",
+        "operationId": "list_my_tickets_api_v1_users_me_tickets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MyTicketRead"
+                  },
+                  "title": "Response List My Tickets Api V1 Users Me Tickets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Tickets",
         "tags": [
           "orders"
         ]
@@ -11256,6 +16051,32 @@
         "summary": "Resend Verification",
         "tags": [
           "users"
+        ]
+      }
+    },
+    "/api/v1/venues": {
+      "get": {
+        "description": "Predefined venue layouts available for assigned-seating events (\u00a74.3.1, \u00a78).",
+        "operationId": "list_venues_api_v1_venues_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VenueSummaryRead"
+                  },
+                  "title": "Response List Venues Api V1 Venues Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Venues",
+        "tags": [
+          "events"
         ]
       }
     }

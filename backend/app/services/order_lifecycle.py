@@ -10,12 +10,12 @@ fails half way leaves every order as it was.
 """
 
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from app.core.clock import utcnow
+from app.core.clock import as_utc, utcnow
 from app.models.event import Event
 from app.models.hold import Hold
 from app.models.order import Order, OrderStatus
@@ -25,6 +25,7 @@ from app.models.ticket_type import TicketType
 from app.models.user import User
 from app.services import audit, notify
 from app.services import payment_provider as provider
+from app.services import seating as seating_service
 
 # Tickets that still admit someone. Cancelling or refunding voids exactly these.
 LIVE_TICKETS = (TicketStatus.VALID, TicketStatus.CHECKED_IN)
@@ -62,7 +63,14 @@ def cancel_pending(db: Session, order: Order, actor: User | None, now: datetime 
     )
 
 
-def cancel_registration(db: Session, order: Order, actor: User, now: datetime | None = None):
+def cancel_registration(
+    db: Session,
+    order: Order,
+    actor: User | None,
+    now: datetime | None = None,
+    *,
+    self_cancelled: bool = False,
+):
     """confirmed -> cancelled, for free orders only (§4.9).
 
     A paid order cannot take this path: cancelling it without a refund would
@@ -73,6 +81,7 @@ def cancel_registration(db: Session, order: Order, actor: User, now: datetime | 
         raise IllegalOrderTransition("a paid order is refunded, not cancelled")
     _flip(db, order, OrderStatus.CONFIRMED, OrderStatus.CANCELLED, cancelled_at=now)
     voided = void_tickets(db, order.id, TicketStatus.CANCELLED)
+    who = "the buyer" if self_cancelled else "the organizer"
     audit.record(
         db,
         action="order.cancelled",
@@ -80,24 +89,60 @@ def cancel_registration(db: Session, order: Order, actor: User, now: datetime | 
         entity_id=order.id,
         event_id=order.event_id,
         actor=actor,
-        summary=f"Registration {order.order_number} cancelled by the organizer",
-        payload={"tickets_voided": voided},
+        summary=f"Registration {order.order_number} cancelled by {who}",
+        payload={"tickets_voided": voided, "self_cancelled": self_cancelled},
     )
-    _tell_buyer(db, order, "order.cancelled")
+    _tell_buyer(
+        db,
+        order,
+        "order.cancelled",
+        cancelled_by="buyer" if self_cancelled else "organizer",
+    )
 
 
-def refund(db: Session, order: Order, actor: User, reason: str, now: datetime | None = None):
+def check_refund_eligibility(event: Event, now: datetime | None = None) -> str | None:
+    """Return a refusal reason if the event's structured refund rules forbid refunding now."""
+    now = now or utcnow()
+    if event.refunds_allowed is False:
+        return "Refunds are not permitted by this event's refund policy"
+    if event.refund_cutoff_hours_before_start is not None:
+        cutoff = as_utc(event.starts_at) - timedelta(hours=event.refund_cutoff_hours_before_start)
+        if now > cutoff:
+            return (
+                "The refund deadline has passed "
+                f"({event.refund_cutoff_hours_before_start}h before event start)"
+            )
+    return None
+
+
+def refund(
+    db: Session,
+    order: Order,
+    actor: User,
+    reason: str,
+    now: datetime | None = None,
+    *,
+    override_policy: bool = False,
+):
     """A full refund of a confirmed paid order (§4.9 "full refunds").
 
-    Partial refunds are excluded from the MVP (§8 "advanced refund
-    workflows"); the refunds table already allows several per payment, so
-    adding them later is a new function, not a schema change.
+    Acquires SELECT ... FOR UPDATE on the Order row before checking status or
+    calling the payment provider so concurrent refund requests cannot refund
+    the same order twice.
     """
     now = now or utcnow()
+    # Serialize concurrent refund requests on this order before talking to provider.
+    db.refresh(order, with_for_update=True)
     if order.status != OrderStatus.CONFIRMED:
         raise IllegalOrderTransition(
             f"only a confirmed order can be refunded; this is {order.status}"
         )
+    if not override_policy:
+        event = db.get(Event, order.event_id)
+        if event is not None:
+            policy_refusal = check_refund_eligibility(event, now)
+            if policy_refusal is not None:
+                raise IllegalOrderTransition(policy_refusal)
     payment = db.scalar(
         select(Payment).where(
             Payment.order_id == order.id,
@@ -137,6 +182,20 @@ def refund(db: Session, order: Order, actor: User, reason: str, now: datetime | 
     entry.provider_ref = result.provider_ref
     if not result.succeeded:
         entry.status = RefundStatus.FAILED
+        audit.record(
+            db,
+            action="refund.failed",
+            entity_type="refund",
+            entity_id=entry.id,
+            event_id=order.event_id,
+            actor=actor,
+            summary=f"Refund failed for order {order.order_number}",
+            payload={
+                "amount_minor": entry.amount_minor,
+                "currency": entry.currency,
+                "reason": result.failure_reason,
+            },
+        )
         raise RefundFailed
 
     entry.status = RefundStatus.SUCCEEDED
@@ -177,17 +236,20 @@ def _tell_buyer(db: Session, order: Order, template_key: str, **extra) -> None:
 
 
 def release_holds(db: Session, order_id: int, now: datetime) -> None:
-    """Hand an order's live holds back to inventory. Same shape as the sweeper."""
+    """Hand an order's live holds (and held assigned seats) back to inventory."""
     released = db.execute(
         update(Hold)
         .where(Hold.order_id == order_id, Hold.released_at.is_(None))
         .values(released_at=now)
-        .returning(Hold.ticket_type_id, Hold.quantity)
+        .returning(Hold.ticket_type_id, Hold.quantity, Hold.event_seat_id)
         .execution_options(synchronize_session=False)
     ).all()
     units = Counter()
-    for ticket_type_id, quantity in released:
+    seat_ids: list[int] = []
+    for ticket_type_id, quantity, event_seat_id in released:
         units[ticket_type_id] += quantity
+        if event_seat_id is not None:
+            seat_ids.append(event_seat_id)
     for ticket_type_id in sorted(units):
         db.execute(
             update(TicketType)
@@ -195,24 +257,27 @@ def release_holds(db: Session, order_id: int, now: datetime) -> None:
             .values(quantity_reserved=TicketType.quantity_reserved - units[ticket_type_id])
             .execution_options(synchronize_session=False)
         )
+    seating_service.release_held_seats(db, seat_ids)
 
 
 def void_tickets(db: Session, order_id: int, to: TicketStatus) -> int:
-    """Move every live ticket of an order to `to` and return the seats to sale.
+    """Move every live ticket of an order to `to` and return inventory and assigned seats.
 
     Returns how many tickets were voided. A voided ticket is no longer sold,
     so quantity_sold drops by the same count; otherwise a cancelled
     registration would keep its seat off the market forever.
     """
-    per_type = Counter(
-        dict(
-            db.execute(
-                select(Ticket.ticket_type_id, func.count())
-                .where(Ticket.order_id == order_id, Ticket.status.in_(LIVE_TICKETS))
-                .group_by(Ticket.ticket_type_id)
-            ).all()
+    live_rows = db.execute(
+        select(Ticket.ticket_type_id, Ticket.event_seat_id).where(
+            Ticket.order_id == order_id, Ticket.status.in_(LIVE_TICKETS)
         )
-    )
+    ).all()
+    per_type: Counter[int] = Counter()
+    seat_ids: list[int] = []
+    for ticket_type_id, event_seat_id in live_rows:
+        per_type[ticket_type_id] += 1
+        if event_seat_id is not None:
+            seat_ids.append(event_seat_id)
     db.execute(
         update(Ticket)
         .where(Ticket.order_id == order_id, Ticket.status.in_(LIVE_TICKETS))
@@ -226,6 +291,7 @@ def void_tickets(db: Session, order_id: int, to: TicketStatus) -> int:
             .values(quantity_sold=TicketType.quantity_sold - per_type[ticket_type_id])
             .execution_options(synchronize_session=False)
         )
+    seating_service.release_sold_seats(db, seat_ids)
     return sum(per_type.values())
 
 

@@ -24,9 +24,11 @@ from app.models.audit import AuditLog
 from app.models.check_in import CheckInRecord
 from app.models.event import Event, EventStatus
 from app.models.hold import Hold
+from app.models.notification import Notification
 from app.models.order import Order, OrderItem
 from app.models.organizer import OrganizerProfile
 from app.models.payment import Payment, Refund
+from app.models.seat import EventSeat
 from app.models.staff import StaffAssignment
 from app.models.ticket import Ticket
 from app.models.ticket_type import TicketType
@@ -40,7 +42,12 @@ from app.services import order as order_service
 def pg() -> Iterator[sessionmaker]:
     if not settings.DATABASE_URL.startswith("postgresql"):
         pytest.skip("needs Postgres")
-    engine = create_engine(settings.DATABASE_URL, pool_size=25, max_overflow=0)
+    engine = create_engine(
+        settings.DATABASE_URL,
+        pool_size=25,
+        max_overflow=0,
+        connect_args={"connect_timeout": 3},
+    )
     try:
         engine.connect().close()
     except OperationalError:
@@ -103,6 +110,23 @@ def purge_event(db, event_id: int) -> None:
     """
     types = select(TicketType.id).where(TicketType.event_id == event_id)
     orders = select(Order.id).where(Order.event_id == event_id)
+    order_emails = select(Order.contact_email).where(Order.event_id == event_id)
+    attendee_emails = select(Attendee.email).where(
+        Attendee.order_id.in_(orders), Attendee.email.is_not(None)
+    )
+    owner_email = (
+        select(User.email)
+        .join(OrganizerProfile, OrganizerProfile.user_id == User.id)
+        .join(Event, Event.organizer_profile_id == OrganizerProfile.id)
+        .where(Event.id == event_id)
+    )
+    db.execute(
+        delete(Notification).where(
+            Notification.email.in_(order_emails)
+            | Notification.email.in_(attendee_emails)
+            | Notification.email.in_(owner_email)
+        )
+    )
     db.execute(delete(AuditLog).where(AuditLog.event_id == event_id))
     db.execute(delete(CheckInRecord).where(CheckInRecord.event_id == event_id))
     db.execute(delete(Refund).where(Refund.order_id.in_(orders)))
@@ -113,6 +137,7 @@ def purge_event(db, event_id: int) -> None:
     db.execute(delete(Hold).where(Hold.ticket_type_id.in_(types)))
     db.execute(delete(OrderItem).where(OrderItem.order_id.in_(orders)))
     db.execute(delete(Order).where(Order.event_id == event_id))
+    db.execute(delete(EventSeat).where(EventSeat.event_id == event_id))
     db.execute(delete(StaffAssignment).where(StaffAssignment.event_id == event_id))
     db.execute(delete(TicketType).where(TicketType.event_id == event_id))
     db.execute(delete(Event).where(Event.id == event_id))
