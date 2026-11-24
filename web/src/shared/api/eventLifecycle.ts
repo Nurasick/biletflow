@@ -15,6 +15,9 @@ export type OrganizerTicketType = {
   quantity_total: number;
   quantity_sold: number;
   quantity_reserved: number;
+  available: number;
+  quantity_refunded: number;
+  quantity_checked_in: number;
   sales_start_at: string | null;
   sales_end_at: string | null;
   max_per_order: number | null;
@@ -33,13 +36,14 @@ export type PreviewTicketType = {
 
 export type EventPreview = {
   event: OrganizerEventRecord;
-  gallery_images: string[];
+  cover_alt: string | null;
+  gallery_images: { url: string; alt: string | null }[];
   ticket_types: PreviewTicketType[];
   publish_requirements: { code: PublishRequirementCode; met: boolean }[];
   allowed_actions: EventAction[];
 };
 
-type PreviewResponse = Omit<EventPreview, "gallery_images" | "ticket_types"> & { images: ServerImage[] };
+type PreviewResponse = Omit<EventPreview, "cover_alt" | "gallery_images" | "ticket_types"> & { images: ServerImage[] };
 
 export type WorkflowErrorCode = "load" | "save" | "notFound" | "conflict" | "requirements";
 
@@ -89,10 +93,13 @@ export const eventLifecycleApi = {
         api.get<PreviewResponse>(`${base(eventId)}/preview`),
         api.get<OrganizerTicketType[]>(`${base(eventId)}/ticket-types`),
       ]);
+      const isCover = (image: ServerImage, index: number) => preview.event.cover_image_url
+        ? image.url === preview.event.cover_image_url : index === 0;
       return {
         event: preview.event,
-        gallery_images: preview.images.filter((image, index) => preview.event.cover_image_url
-          ? image.url !== preview.event.cover_image_url : index > 0).map((image) => image.url),
+        cover_alt: preview.images.find(isCover)?.alt_text ?? null,
+        gallery_images: preview.images.filter((image, index) => !isCover(image, index))
+          .map((image) => ({ url: image.url, alt: image.alt_text ?? null })),
         ticket_types: toPreviewTypes(types),
         publish_requirements: preview.publish_requirements,
         allowed_actions: preview.allowed_actions,

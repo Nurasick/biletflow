@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useLocale } from "../../../i18n/useLocale";
 import type { EventPreview } from "../../../shared/api/eventLifecycle";
 import { eventImageSrc } from "../../../shared/api/urls";
+import { formatMinorCurrency } from "../../../shared/lib/formatPrice";
 
 export const EventPreviewContent = ({ snapshot }: { snapshot: EventPreview }) => {
   const { t } = useTranslation();
@@ -15,11 +16,12 @@ export const EventPreviewContent = ({ snapshot }: { snapshot: EventPreview }) =>
 
   return (
     <article aria-label={t("eventWorkflow.previewContent")} className="overflow-hidden rounded-xl border border-line bg-white">
-      {event.cover_image_url && <img src={eventImageSrc(event.cover_image_url)} alt={t("a11y.eventCover", { title: event.title })} className="max-h-80 w-full object-cover" />}
+      {event.cover_image_url && <img src={eventImageSrc(event.cover_image_url)}
+        alt={snapshot.cover_alt || t("a11y.eventCover", { title: event.title })} className="max-h-80 w-full object-cover" />}
       <div className="space-y-7 p-5 sm:p-8">
         {snapshot.gallery_images.length > 0 && <div className="grid grid-cols-2 gap-3">
-          {snapshot.gallery_images.map((source, index) => <img key={index} src={eventImageSrc(source)}
-            alt={t("a11y.eventPhoto", { title: event.title, number: index + 1 })}
+          {snapshot.gallery_images.map((image, index) => <img key={image.url} src={eventImageSrc(image.url)}
+            alt={image.alt || t("a11y.eventPhoto", { title: event.title, number: index + 1 })}
             className="h-36 w-full rounded-lg object-cover sm:h-44" />)}
         </div>}
         <div>
@@ -43,6 +45,7 @@ export const EventPreviewContent = ({ snapshot }: { snapshot: EventPreview }) =>
             <div className="min-w-0 break-words">
               <p className="font-semibold">{event.venue_name}</p>
               <p className="mt-1 text-muted">{event.venue_address}</p>
+              {event.venue_city && <p className="mt-1 text-muted">{event.venue_city}</p>}
             </div>
           </div>
         </div>
@@ -67,9 +70,8 @@ export const EventPreviewContent = ({ snapshot }: { snapshot: EventPreview }) =>
                   {ticket.description && <p className="mt-1 whitespace-pre-wrap text-sm text-muted">{ticket.description}</p>}
                   <p className="mt-2 text-xs text-muted">{t("eventWorkflow.available", { count: ticket.available })}</p>
                 </div>
-                <p className="text-sm font-semibold">{ticket.price_minor === 0 ? t("eventWorkflow.free") : new Intl.NumberFormat(locale, {
-                  style: "currency", currency: ticket.currency,
-                }).format(ticket.price_minor / 100)}</p>
+                <p className="text-sm font-semibold">{ticket.price_minor === 0 ? t("eventWorkflow.free")
+                  : formatMinorCurrency(ticket.price_minor, ticket.currency, locale)}</p>
               </li>)}
             </ul>
           )}
@@ -77,6 +79,8 @@ export const EventPreviewContent = ({ snapshot }: { snapshot: EventPreview }) =>
         <dl className="grid gap-4 border-t border-line-soft pt-6 text-sm sm:grid-cols-2">
           <div><dt className="text-xs text-muted">{t("organizerEvent.visibility")}</dt>
             <dd className="mt-1">{t(`organizerEvent.visibility.${event.visibility}`)}</dd></div>
+          <div><dt className="text-xs text-muted">{t("organizerEvent.seatingMode")}</dt>
+            <dd className="mt-1">{t(`organizerEvent.seating.${event.seating_mode}`)}</dd></div>
           <div><dt className="text-xs text-muted">{t("organizerEvent.capacity")}</dt>
             <dd className="mt-1">{event.capacity === null ? t("organizerEvent.unlimited") : new Intl.NumberFormat(locale).format(event.capacity)}</dd></div>
           {event.registration_opens_at && <div><dt className="text-xs text-muted">{t("organizerEvent.registrationOpens")}</dt>

@@ -16,6 +16,7 @@ export type TimelineEntry = {
   id: number;
   created_at: string;
   actor_user_id: number | null;
+  actor_name: string | null;
   action: string;
   entity_type: string;
   entity_id: number;
@@ -34,7 +35,9 @@ export type EventAnalytics = {
   gross_minor: number;
   discounts_minor: number;
   refunds_minor: number;
+  fees_minor: number;
   net_minor: number;
+  estimated_payout_minor: number;
   sales_over_time: { date: string; tickets: number; revenue_minor: number }[];
   by_ticket_type: {
     ticket_type_id: number;
@@ -42,11 +45,52 @@ export type EventAnalytics = {
     quantity_total: number;
     quantity_sold: number;
     quantity_reserved: number;
+    available: number;
+    quantity_refunded: number;
+    quantity_checked_in: number;
     tickets_in_range: number;
     revenue_minor: number;
   }[];
   campaigns: (CampaignStats & { id: number; name: string; code: string; is_active: boolean })[];
   attendance: Attendance;
+};
+export type OrganizerAnalyticsFilters = { eventId?: number; since?: string; until?: string };
+export type OrganizerAnalyticsEventRow = {
+  event_id: number;
+  slug: string;
+  title: string;
+  status: string;
+  starts_at: string;
+  capacity: number;
+  tickets_sold: number;
+  tickets_reserved: number;
+  tickets_remaining: number;
+  gross_minor: number;
+  discounts_minor: number;
+  refunds_minor: number;
+  fees_minor: number;
+  net_minor: number;
+  estimated_payout_minor: number;
+  attendance: Attendance;
+};
+export type OrganizerAnalytics = {
+  currency: string;
+  is_simulated: boolean;
+  event_count: number;
+  capacity: number;
+  tickets_sold: number;
+  tickets_reserved: number;
+  tickets_remaining: number;
+  percent_sold: number;
+  gross_minor: number;
+  discounts_minor: number;
+  refunds_minor: number;
+  fees_minor: number;
+  net_minor: number;
+  estimated_payout_minor: number;
+  attendance: Attendance;
+  sales_over_time: { date: string; tickets: number; revenue_minor: number }[];
+  events: OrganizerAnalyticsEventRow[];
 };
 export type PageOptions = { limit: number; offset: number; signal?: AbortSignal };
 
@@ -65,6 +109,13 @@ export const eventReportsApi = {
     if (filters.until) params.set("until", filters.until);
     if (filters.ticketTypeId !== undefined) params.set("ticket_type_id", String(filters.ticketTypeId));
     return api.get<EventAnalytics>(`/organizer/events/${eventId}/analytics${params.size ? `?${params}` : ""}`, { signal });
+  },
+  overview: (filters: OrganizerAnalyticsFilters, signal?: AbortSignal) => {
+    const params = new URLSearchParams();
+    if (filters.eventId !== undefined) params.set("event_id", String(filters.eventId));
+    if (filters.since) params.set("since", filters.since);
+    if (filters.until) params.set("until", filters.until);
+    return api.get<OrganizerAnalytics>(`/organizer/analytics${params.size ? `?${params}` : ""}`, { signal });
   },
   timeline: (eventId: number, filters: TimelineFilters, options: PageOptions) => {
     const params = pageParams(options);

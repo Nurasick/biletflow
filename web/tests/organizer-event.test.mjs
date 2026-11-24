@@ -159,10 +159,11 @@ test('an instant from the API is shown as wall-clock time in the event zone', ()
 
 test('creating sends UTC instants resolved in the event zone, then uploads new images', async () => {
   const fake = scriptApi([[201, record()], [200, []], [201, { id: 1, url: 'http://x/1.png', position: 0 }],
-    [200, record({ cover_image_url: 'http://x/1.png' })]]);
+    [201, { id: 2, url: 'http://x/2.png', position: 1 }]]);
   const id = await organizerEventApi.create({
-    ...validDraft(), timeZone: 'Asia/Almaty',
-    images: [{ id: 'new', name: 'cover.png', dataUrl: 'data:image/png;base64,AAAA' }],
+    ...validDraft(), timeZone: 'Asia/Almaty', venueCity: ' Almaty ', seatingMode: 'assigned',
+    images: [{ id: 'new', name: 'cover.png', dataUrl: 'data:image/png;base64,AAAA' },
+      { id: 'new-2', name: 'stage.png', dataUrl: 'data:image/png;base64,BBBB', alt: '  The main stage ' }],
   });
   assert.equal(id, 7);
   const [create, list, upload] = fake.calls;
@@ -171,8 +172,12 @@ test('creating sends UTC instants resolved in the event zone, then uploads new i
   assert.equal(create.body.capacity, 250);
   assert.equal(create.body.registration_opens_at, '2027-04-01T04:00:00.000Z');
   assert.deepEqual([list.method, list.path], ['GET', '/organizer/events/7/images']);
+  assert.equal(create.body.venue_city, 'Almaty');
+  assert.equal(create.body.seating_mode, 'assigned');
   assert.deepEqual(upload.body, { data_url: 'data:image/png;base64,AAAA' });
-  assert.deepEqual(fake.calls[3].body, { cover_image_url: 'http://x/1.png' });
+  assert.deepEqual(fake.calls[3].body, { data_url: 'data:image/png;base64,BBBB', alt_text: 'The main stage' });
+  // Uploads land in form order and the server moves the cover itself: no reorder call.
+  assert.equal(fake.calls.length, 4);
 });
 
 test('loading maps stored images to server ids so a save keeps or deletes them', async () => {
@@ -184,13 +189,14 @@ test('loading maps stored images to server ids so a save keeps or deletes them',
   assert.equal(eventSchema.safeParse(values).success, true);
 
   const saved = record({ cover_image_url: images[0].url });
-  const fake = scriptApi([[200, saved], [200, images], [204, null], [200, saved], [200, saved], [200, [images[0]]]]);
+  const fake = scriptApi([[200, saved], [200, images], [204, null], [200, saved], [200, [images[0]]]]);
   await organizerEventApi.update(7, { ...values, images: [values.images[0]] });
   assert.deepEqual(fake.calls.map((c) => [c.method, c.path]), [
     ['PATCH', '/organizer/events/7'], ['GET', '/organizer/events/7/images'],
-    ['DELETE', '/organizer/events/7/images/12'], ['PATCH', '/organizer/events/7'],
+    ['DELETE', '/organizer/events/7/images/12'],
     ['GET', '/organizer/events/7'], ['GET', '/organizer/events/7/images'],
   ]);
+  assert.equal(fake.calls[0].body.venue_city, null);
 });
 
 test('not found and frozen events surface as typed errors', async () => {
@@ -205,17 +211,31 @@ test('editing persists the selected existing cover and refund policy without re-
   const images = [{ id: 11, url: 'http://x/a.png', position: 0 }, { id: 12, url: 'http://x/b.png', position: 1 }];
   const original = record({ status: 'published', cover_image_url: images[0].url });
   const saved = record({ ...original, refund_policy: 'Full refund until one week before the event.', cover_image_url: images[1].url });
-  const fake = scriptApi([[200, original], [200, images], [200, saved], [200, saved], [200, images]]);
+  const reordered = [{ ...images[1], position: 0 }, { ...images[0], position: 1 }];
+  const fake = scriptApi([[200, original], [200, images], [200, reordered], [200, saved], [200, reordered]]);
   const values = await organizerEventApi.update(7, {
     ...validDraft(), refundPolicy: '  Full refund until one week before the event.  ',
     images: [images[1], images[0]].map((image) => ({ id: `server-${image.id}`, name: 'image.png', dataUrl: image.url })),
   });
   assert.equal(fake.calls[0].body.refund_policy, saved.refund_policy);
   assert.equal(Object.hasOwn(fake.calls[0].body, 'status'), false);
-  assert.deepEqual(fake.calls[2], { method: 'PATCH', path: '/organizer/events/7', body: { cover_image_url: images[1].url } });
+  assert.deepEqual(fake.calls[2], { method: 'PUT', path: '/organizer/events/7/images/order', body: { image_ids: [12, 11] } });
   assert.equal(fake.calls.some((call) => call.method === 'POST' || call.method === 'DELETE'), false);
   assert.equal(values.images[0].id, 'server-12');
   assert.equal(values.refundPolicy, saved.refund_policy);
+});
+
+test('alt text edits on stored images are saved, and a stale legacy cover is resynced', async () => {
+  const images = [{ id: 11, url: 'http://x/a.png', position: 0, alt_text: 'Old' }, { id: 12, url: 'http://x/b.png', position: 1, alt_text: null }];
+  const original = record({ cover_image_url: 'http://legacy/cover.png' });
+  const fake = scriptApi([[200, original], [200, images], [200, images[0]], [200, images], [200, original], [200, images]]);
+  await organizerEventApi.update(7, { ...validDraft(), images: [
+    { id: 'server-11', name: 'a', dataUrl: images[0].url, alt: ' New ' },
+    { id: 'server-12', name: 'b', dataUrl: images[1].url, alt: '' },
+  ] });
+  assert.deepEqual(fake.calls[2], { method: 'PATCH', path: '/organizer/events/7/images/11', body: { alt_text: 'New' } });
+  assert.deepEqual(fake.calls[3], { method: 'PUT', path: '/organizer/events/7/images/order', body: { image_ids: [11, 12] } });
+  assert.equal(fake.calls.filter((call) => call.method === 'PATCH').length, 2);
 });
 
 test('refund policy can be cleared, and overlong policy text is rejected before saving', async () => {

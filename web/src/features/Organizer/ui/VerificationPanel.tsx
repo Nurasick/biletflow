@@ -18,19 +18,24 @@ export const VerificationPanel = ({ userId }: { userId: number }) => {
     onSuccess: (profile) => queryClient.setQueryData(queryKey, profile),
   });
   if (!record.data) return null;
-  const verified = record.data.verification_status === "verified";
+  const status = record.data.verification_status;
+  const verified = status === "verified";
+  const tone = { verified: "bg-[#ECFDF3] text-[#027A48]", pending: "bg-[#FFFAEB] text-[#B54708]",
+    rejected: "bg-[#FEF3F2] text-[#B42318]", unverified: "bg-soft text-muted-strong" }[status];
 
   return (
     <section aria-labelledby="verification" className="mt-6 rounded-xl border border-line bg-white p-5">
-      <h2 id="verification" className="flex items-center gap-2 font-semibold">
-        <ShieldCheck size={18} aria-hidden="true" className={verified ? "text-green-700" : "text-muted"} />
-        {t("organizer.verification")}
-      </h2>
-      <p className="mt-2 text-sm text-muted">
-        {t(verified ? "organizer.verified" : "organizer.notVerified")}
-      </p>
-      {!verified && <Button className="mt-4" loading={verify.isPending} onClick={() => verify.mutate()}>
-        {t("organizer.verifySimulated")}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="verification" className="flex items-center gap-2 font-semibold">
+          <ShieldCheck size={18} aria-hidden="true" className={verified ? "text-green-700" : "text-muted"} />
+          {t("organizer.verification")}
+        </h2>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{t(`organizer.verificationStatus.${status}`)}</span>
+      </div>
+      <p className="mt-2 text-sm text-muted">{t(`organizer.verificationHint.${status}`)}</p>
+      {record.data.verification_is_simulated && <p className="mt-1 text-xs text-muted">{t("organizer.verificationSimulated")}</p>}
+      {(status === "unverified" || status === "rejected") && <Button className="mt-4" loading={verify.isPending} onClick={() => verify.mutate()}>
+        {t(status === "rejected" ? "organizer.verifyAgain" : "organizer.verifySimulated")}
       </Button>}
       {verify.isError && <p role="alert" className="mt-2 text-sm text-primary-hover">{t("organizer.saveError")}</p>}
     </section>

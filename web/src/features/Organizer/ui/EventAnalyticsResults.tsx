@@ -5,7 +5,7 @@ import { useLocale } from "../../../i18n/useLocale";
 import type { EventAnalytics } from "../../../shared/api/eventReports";
 import { formatMinor } from "../../../shared/lib/formatPrice";
 
-const card = "min-w-0 rounded-xl border border-line bg-white p-4 sm:p-5";
+export const analyticsCard = "min-w-0 rounded-xl border border-line bg-white p-4 sm:p-5";
 
 export const EventAnalyticsResults = ({ report, filteredByType }: { report: EventAnalytics; filteredByType: boolean }) => {
   const { t } = useTranslation();
@@ -19,18 +19,20 @@ export const EventAnalyticsResults = ({ report, filteredByType }: { report: Even
   const { attendance } = report;
 
   return <div className="space-y-5">
-    <section className={card} aria-labelledby="analytics-revenue">
+    <section className={analyticsCard} aria-labelledby="analytics-revenue">
       <h2 id="analytics-revenue" className="font-semibold">{t("analytics.salesTotals")}</h2>
       <Metrics wide entries={[
         [t("sales.gross"), money(report.gross_minor)],
         [t("promo.discount"), money(report.discounts_minor)],
         [t("campaigns.refunds"), money(report.refunds_minor)],
         [t("campaigns.net"), money(report.net_minor)],
+        [t("sales.fees"), money(report.fees_minor)],
+        [t("sales.payout"), money(report.estimated_payout_minor)],
       ]} />
       {report.is_simulated && <p className="mt-3 text-xs text-muted">{t("analytics.simulated")}</p>}
       {filteredByType && report.refunds_minor > 0 && <p className="mt-2 text-xs text-muted">{t("analytics.refundScope")}</p>}
     </section>
-    <section className={card} aria-labelledby="analytics-daily-sales">
+    <section className={analyticsCard} aria-labelledby="analytics-daily-sales">
       <h2 id="analytics-daily-sales" className="font-semibold">{t("analytics.dailySales")}</h2>
       <AnalyticsTable label={t("analytics.dailySales")} headers={[t("analytics.day"), t("sales.sold"), t("analytics.afterDiscounts")]}
         empty={t("analytics.noSales")} rows={report.sales_over_time.map((point) => ({
@@ -48,7 +50,7 @@ export const EventAnalyticsResults = ({ report, filteredByType }: { report: Even
         }))} />
     </section>
     <div className="grid gap-5 lg:grid-cols-2">
-      <section className={card} aria-labelledby="analytics-inventory">
+      <section className={analyticsCard} aria-labelledby="analytics-inventory">
         <h2 id="analytics-inventory" className="font-semibold">{t("analytics.currentInventory")}</h2>
         <Metrics entries={[
           [t("analytics.capacity"), count(report.capacity)],
@@ -57,7 +59,7 @@ export const EventAnalyticsResults = ({ report, filteredByType }: { report: Even
           [t("analytics.soldPercent"), percent(report.percent_sold / 100)],
         ]} />
       </section>
-      <section className={card} aria-labelledby="analytics-attendance">
+      <section className={analyticsCard} aria-labelledby="analytics-attendance">
         <h2 id="analytics-attendance" className="font-semibold">{t("analytics.currentAttendance")}</h2>
         <Metrics entries={[
           [t("ops.registered"), count(attendance.registered)],
@@ -67,19 +69,21 @@ export const EventAnalyticsResults = ({ report, filteredByType }: { report: Even
         ]} />
       </section>
     </div>
-    <section className={card} aria-labelledby="analytics-ticket-types">
+    <section className={analyticsCard} aria-labelledby="analytics-ticket-types">
       <h2 id="analytics-ticket-types" className="font-semibold">{t("analytics.salesByType")}</h2>
       <AnalyticsTable label={t("analytics.salesByType")} empty={t("eventWorkflow.noTickets")}
         headers={[t("reports.ticketType"), t("analytics.soldInRange"), t("analytics.afterDiscounts"),
-          t("analytics.soldNow"), t("analytics.heldNow"), t("analytics.typeQuantity")]}
+          t("ticketTypes.available"), t("analytics.heldNow"), t("analytics.soldNow"), t("ticketTypes.refunded"),
+          t("ticketTypes.checkedIn"), t("analytics.typeQuantity")]}
         rows={report.by_ticket_type.map((type) => ({
           key: type.ticket_type_id,
           title: type.name,
-          cells: [count(type.tickets_in_range), money(type.revenue_minor), count(type.quantity_sold),
-            count(type.quantity_reserved), count(type.quantity_total)],
+          cells: [count(type.tickets_in_range), money(type.revenue_minor), count(type.available),
+            count(type.quantity_reserved), count(type.quantity_sold), count(type.quantity_refunded),
+            count(type.quantity_checked_in), count(type.quantity_total)],
         }))} />
     </section>
-    <section className={card} aria-labelledby="analytics-campaigns">
+    <section className={analyticsCard} aria-labelledby="analytics-campaigns">
       <h2 id="analytics-campaigns" className="font-semibold">{t("analytics.campaignResults")}</h2>
       {report.campaigns.length > 0 && <p className="mt-2 text-xs text-muted">{t("analytics.campaignScope")}</p>}
       <AnalyticsTable label={t("analytics.campaignResults")} empty={t("campaigns.empty")}
@@ -95,7 +99,7 @@ export const EventAnalyticsResults = ({ report, filteredByType }: { report: Even
   </div>;
 };
 
-const Metrics = ({ entries, wide = false }: { entries: [string, string][]; wide?: boolean }) => (
+export const Metrics = ({ entries, wide = false }: { entries: [string, string][]; wide?: boolean }) => (
   <dl className={`mt-3 grid grid-cols-2 gap-3 ${wide ? "sm:grid-cols-4" : ""}`}>
     {entries.map(([label, value]) => <div key={label} className="min-w-0 rounded-lg bg-paper p-3">
       <dt className="text-xs leading-5 text-muted-strong">{label}</dt>
@@ -104,7 +108,7 @@ const Metrics = ({ entries, wide = false }: { entries: [string, string][]; wide?
   </dl>
 );
 
-const AnalyticsTable = ({ label, headers, rows, empty }: {
+export const AnalyticsTable = ({ label, headers, rows, empty }: {
   label: string; headers: string[]; rows: { key: number | string; title: ReactNode; cells: ReactNode[] }[]; empty: string;
 }) => rows.length === 0 ? <p className="mt-3 text-sm text-muted">{empty}</p> : (
   <div role="region" aria-label={label} tabIndex={0}

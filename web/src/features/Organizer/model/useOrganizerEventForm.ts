@@ -9,7 +9,8 @@ import type { OrganizerEventValues } from "./eventSchema";
 
 const serverFields: Record<string, keyof OrganizerEventValues> = {
   title: "title", description: "description", category: "category", refund_policy: "refundPolicy",
-  venue_name: "venueName", venue_address: "venueAddress", timezone: "timeZone",
+  venue_name: "venueName", venue_address: "venueAddress", venue_city: "venueCity", seating_mode: "seatingMode",
+  timezone: "timeZone",
   starts_at: "startsAt", ends_at: "endsAt", capacity: "capacity", visibility: "visibility",
   registration_opens_at: "registrationOpensAt", registration_closes_at: "registrationClosesAt",
 };

@@ -7,17 +7,22 @@ const apiUrl = await moduleUrl('../src/shared/api/eventReports.ts', { '"./auth"'
 const managementUrl = await moduleUrl('../src/shared/api/eventManagement.ts', {
   '"./auth"': JSON.stringify(fakeAuthUrl), '"./eventReports"': JSON.stringify(apiUrl),
 });
-const modelUrl = await moduleUrl('../src/features/Organizer/model/eventReportModel.ts');
 const apiTimeUrl = await moduleUrl('../src/shared/lib/parseApiInstant.ts');
 const eventTimeUrl = await moduleUrl('../src/features/Organizer/model/eventDateTime.ts', {
   '"../../../shared/lib/parseApiInstant"': JSON.stringify(apiTimeUrl),
+});
+const modelUrl = await moduleUrl('../src/features/Organizer/model/eventReportModel.ts', {
+  '"./eventDateTime"': JSON.stringify(eventTimeUrl),
 });
 const { analyticsFilters } = await import(await moduleUrl('../src/features/Organizer/model/eventAnalyticsModel.ts', {
   '"./eventDateTime"': JSON.stringify(eventTimeUrl),
 }));
 const { eventReportsApi } = await import(apiUrl);
 const { salesApi } = await import(managementUrl);
-const { EVENT_AUDIT_ACTIONS, eventReportKeys, reportPage, timelineFilters, REPORT_PAGE_SIZE } = await import(modelUrl);
+const {
+  EVENT_AUDIT_ACTIONS, eventReportKeys, reportPage, timelineFilters, REPORT_PAGE_SIZE,
+  REPORT_BATCH_SIZE, REPORT_MAX_ROWS, fetchAllRows, matchesSearch, clientPage,
+} = await import(modelUrl);
 
 test('attendee reads preserve one row per ticket, null contacts, order and ticket status', async () => {
   const attendee = { public_code: 'BF-A', ticket_status: 'valid', ticket_type_name: 'General',
@@ -87,27 +92,52 @@ test('both report requests forward the cancellation signal to authenticated tran
   delete globalThis.__reportRequest;
 });
 
-test('local date filters convert to UTC, allow open bounds and reject invalid or reversed ranges', () => {
+test('timeline date filters are read in the event zone, whatever the browser zone is', () => {
   const previousTimezone = process.env.TZ;
-  process.env.TZ = 'Asia/Almaty';
+  process.env.TZ = 'America/Los_Angeles';
   try {
-    assert.deepEqual(timelineFilters('2026-10-29T09:15', '2026-10-30T09:15', ['ticket.checked_in', 'event.published', 'event.published']), {
+    const zone = 'Asia/Almaty';
+    assert.deepEqual(timelineFilters('2026-10-29T09:15', '2026-10-30T09:15', ['ticket.checked_in', 'event.published', 'event.published'], zone), {
       filters: { since: '2026-10-29T04:15:00.000Z', until: '2026-10-30T04:15:00.000Z', actions: ['event.published', 'ticket.checked_in'] },
     });
-    assert.deepEqual(timelineFilters('', '', []), { filters: { since: undefined, until: undefined, actions: [] } });
-    assert.equal(timelineFilters('', '2026-10-29T09:15', []).error, undefined);
-    assert.equal(timelineFilters('2026-10-29T09:15', '', []).error, undefined);
+    assert.equal(timelineFilters('2026-10-29T09:15', '', [], 'Asia/Kathmandu').filters.since, '2026-10-29T03:30:00.000Z');
+    assert.deepEqual(timelineFilters('', '', [], zone), { filters: { since: undefined, until: undefined, actions: [] } });
+    assert.equal(timelineFilters('', '2026-10-29T09:15', [], zone).error, undefined);
+    assert.equal(timelineFilters('2026-10-29T09:15', '', [], zone).error, undefined);
     for (const invalid of ['2026-02-30T10:00', '2026-13-01T10:00', '2026-10-29T24:00', '2026-10-29T10:60', '2026-10-29', 'invalid']) {
-      assert.equal(timelineFilters(invalid, '', []).error, 'invalidDate', invalid);
+      assert.equal(timelineFilters(invalid, '', [], zone).error, 'invalidDate', invalid);
     }
-    assert.equal(timelineFilters('2026-10-29T09:15', '2026-10-29T09:15', []).error, 'invalidRange');
-    assert.equal(timelineFilters('2026-10-30T09:15', '2026-10-29T09:15', []).error, 'invalidRange');
-    process.env.TZ = 'America/New_York';
-    assert.equal(timelineFilters('2026-03-08T02:30', '', []).error, 'invalidDate');
+    assert.equal(timelineFilters('2026-10-29T09:15', '2026-10-29T09:15', [], zone).error, 'invalidRange');
+    assert.equal(timelineFilters('2026-10-30T09:15', '2026-10-29T09:15', [], zone).error, 'invalidRange');
+    // A daylight-saving gap in the event zone, not the browser's.
+    assert.equal(timelineFilters('2026-03-08T02:30', '', [], 'America/New_York').error, 'invalidDate');
+    assert.equal(timelineFilters('2026-03-08T02:30', '', [], zone).error, undefined);
   } finally {
     if (previousTimezone === undefined) delete process.env.TZ;
     else process.env.TZ = previousTimezone;
   }
+});
+
+test('client-side search reads every page, then filters and pages locally', async () => {
+  const offsets = [];
+  const result = await fetchAllRows(async ({ limit, offset }) => {
+    offsets.push([limit, offset]);
+    return Array.from({ length: offset === 0 ? REPORT_BATCH_SIZE : 3 }, (_, index) => offset + index);
+  });
+  assert.deepEqual(offsets, [[REPORT_BATCH_SIZE, 0], [REPORT_BATCH_SIZE, REPORT_BATCH_SIZE]]);
+  assert.equal(result.rows.length, REPORT_BATCH_SIZE + 3);
+  assert.equal(result.truncated, false);
+  const capped = await fetchAllRows(async ({ limit }) => Array(limit).fill(0));
+  assert.equal(capped.truncated, true);
+  assert.equal(capped.rows.length, REPORT_MAX_ROWS);
+
+  assert.equal(matchesSearch('', ['x']), true);
+  assert.equal(matchesSearch('  ALEX ', ['alex@example.com', null]), true);
+  assert.equal(matchesSearch('bf-9', [null, undefined, 'BF-1']), false);
+  const page = clientPage(Array.from({ length: REPORT_PAGE_SIZE + 1 }, (_, i) => i), 0);
+  assert.equal(page.rows.length, REPORT_PAGE_SIZE);
+  assert.equal(page.hasNext, true);
+  assert.deepEqual(clientPage([1, 2], 1), { rows: [], hasNext: false });
 });
 
 test('report cache keys isolate accounts, events, pages and applied filters', () => {

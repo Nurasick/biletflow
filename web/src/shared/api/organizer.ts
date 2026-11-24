@@ -5,7 +5,7 @@ import { ApiError, api } from "./auth";
 export type PayoutAccount = {
   provider: "sandbox_bank" | "sandbox_wallet";
   external_account_ref: string;
-  status: string;
+  status: "pending" | "active" | "rejected" | "inactive";
   is_simulated: boolean;
 };
 
@@ -16,6 +16,7 @@ export type OrganizerProfile = {
   contact_phone: string | null;
   description: string | null;
   verification_status: "unverified" | "pending" | "verified" | "rejected";
+  verification_is_simulated: boolean;
   payout_account: PayoutAccount | null;
 };
 
@@ -36,6 +37,23 @@ const toBody = (values: ProfileValues) => ({
   payout_provider: values.payoutProvider || null,
   payout_reference: values.payoutReference || null,
 });
+
+export type PayoutStatus = "pending" | "processing" | "paid" | "failed";
+
+export type Payout = {
+  id: number;
+  event_id: number;
+  event_title: string;
+  amount_minor: number;
+  currency: string;
+  status: PayoutStatus;
+  is_simulated: boolean;
+  reference: string | null;
+  failure_reason: string | null;
+  paid_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 // Being an organizer is having a profile (01-identity.md): the first save
 // creates it, and with it access to the organizer workspace.
@@ -60,4 +78,6 @@ export const organizerApi = {
     toValues(await api.put<OrganizerProfile>("/organizer/profile", toBody(profileSchema.parse(values)))),
   /** Simulated identity verification (§3.2); real KYC is out of scope. */
   verify: () => api.post<OrganizerProfile>("/organizer/profile/verify"),
+  /** Simulated payout settlements for this organizer's events, newest first. */
+  payouts: (signal?: AbortSignal) => api.get<Payout[]>("/organizer/payouts", { signal }),
 };

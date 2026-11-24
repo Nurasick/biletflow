@@ -14,9 +14,9 @@ import { FileDownloadButton } from "../../../shared/ui/FileDownloadButton";
 import { organizerEventKeys } from "../model/useEventLifecycle";
 import { CampaignForm } from "./CampaignForm";
 
-type Props = { eventId: number; userId: number; timeZone: string };
+type Props = { eventId: number; userId: number; timeZone: string; editable?: boolean };
 
-export const CampaignsPanel = ({ eventId, userId, timeZone }: Props) => {
+export const CampaignsPanel = ({ eventId, userId, timeZone, editable = true }: Props) => {
   const { t } = useTranslation();
   const locale = useLocale();
   const errorMessage = useAuthErrorMessage();
@@ -59,9 +59,9 @@ export const CampaignsPanel = ({ eventId, userId, timeZone }: Props) => {
       </h2>
       <div className="flex flex-wrap gap-2">
         <Button size="small" loading={campaigns.isFetching} onClick={() => void campaigns.refetch()}>{t("reports.refresh")}</Button>
-        <Button size="small" type="primary" icon={<Plus size={15} aria-hidden="true" />} onClick={(e) => open("new", e.currentTarget)}>
+        {editable && <Button size="small" type="primary" icon={<Plus size={15} aria-hidden="true" />} onClick={(e) => open("new", e.currentTarget)}>
           {t("campaigns.create")}
-        </Button>
+        </Button>}
       </div>
     </div>
     {campaigns.isPending && <div role="status" className="mt-4 flex items-center gap-2 text-sm text-muted">
@@ -115,16 +115,42 @@ export const CampaignsPanel = ({ eventId, userId, timeZone }: Props) => {
             copyable={{ text: campaign.link, tooltips: [t("campaigns.copyLink"), t("campaigns.copied")] }}>
             {campaign.link}
           </Typography.Paragraph>
-          <div className="flex flex-wrap items-start gap-2">
+          <CampaignQrPreview eventId={eventId} campaign={campaign} />
+          <div className="mt-3 flex flex-wrap items-start gap-2">
             <FileDownloadButton label={t("campaigns.downloadQr")} filename={`promo-${campaign.code}.svg`}
               getFile={() => campaignsApi.qr(eventId, campaign.id)} />
-            <Button size="small" onClick={(e) => open(campaign, e.currentTarget)}>{t("campaigns.edit")}</Button>
+            {editable && <Button size="small" onClick={(e) => open(campaign, e.currentTarget)}>{t("campaigns.edit")}</Button>}
           </div>
         </li>;
       })}
     </ul>}
-    {editing && <CampaignForm campaign={editing === "new" ? null : editing} eventId={eventId}
+    {editable && editing && <CampaignForm campaign={editing === "new" ? null : editing} eventId={eventId}
       timeZone={timeZone} ticketTypes={types.data ?? []} loadingTypes={types.isFetching && !types.data}
       retryTypes={types.isError && !types.data ? () => void types.refetch() : undefined} onClose={close} onSaved={saved} />}
   </section>;
+};
+
+// The branded promo QR the backend renders, shown inline so the organizer can
+// check it before printing. It only opens the event page: never an admission ticket.
+const CampaignQrPreview = ({ eventId, campaign }: { eventId: number; campaign: Campaign }) => {
+  const { t } = useTranslation();
+  const qr = useQuery({
+    queryKey: ["organizer", "campaign-qr", eventId, campaign.id, campaign.code],
+    // A data URL needs no object-URL lifecycle and survives remounts.
+    queryFn: async () => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(await (await campaignsApi.qr(eventId, campaign.id)).text())}`,
+    retry: false, staleTime: Infinity,
+  });
+  const source = qr.data;
+
+  return <figure className="mt-4 flex flex-wrap items-center gap-4 rounded-lg border border-line-soft p-3">
+    {source ? <img src={source} width={112} height={112} className="size-28 shrink-0 rounded bg-white"
+      alt={t("campaigns.qrAlt", { name: campaign.name })} />
+      : <div className="flex size-28 shrink-0 items-center justify-center rounded bg-paper text-xs text-muted">
+        {qr.isError ? t("campaigns.qrError") : <Spin size="small" />}
+      </div>}
+    <figcaption className="min-w-0 flex-1 text-xs leading-5 text-muted">
+      <span className="block font-semibold text-ink">{t("campaigns.qrPreview")}</span>
+      {t("campaigns.qrNotTicket")}
+    </figcaption>
+  </figure>;
 };
