@@ -162,7 +162,9 @@ def find_ticket(db: Session, event: Event, public_code: str) -> Ticket:
     return ticket
 
 
-def offline_snapshot(db: Session, event: Event, limit: int = 100, offset: int = 0) -> list[dict[str, str]]:
+def offline_snapshot(
+    db: Session, event: Event, limit: int = 100, offset: int = 0
+) -> list[dict[str, str]]:
     """Signed QR snapshots for currently valid tickets, scoped to assigned event access."""
     rows = db.scalars(
         select(Ticket)

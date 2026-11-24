@@ -141,7 +141,16 @@ def test_offline_snapshot_and_sync_revalidate_on_server(api, db, setup):
     synced = api.post(
         OFFLINE_SYNC.format(event_id=event.id),
         headers=auth(admin),
-        json={"scans": [{"client_scan_id": scan_id, "public_code": ticket["public_code"], "qr_payload": ticket["qr_payload"], "scanned_at": scanned_at}]},
+        json={
+            "scans": [
+                {
+                    "client_scan_id": scan_id,
+                    "public_code": ticket["public_code"],
+                    "qr_payload": ticket["qr_payload"],
+                    "scanned_at": scanned_at,
+                }
+            ]
+        },
     )
     assert synced.status_code == 200
     assert synced.json()[0]["client_scan_id"] == scan_id
@@ -153,7 +162,16 @@ def test_offline_snapshot_and_sync_revalidate_on_server(api, db, setup):
     retried = api.post(
         OFFLINE_SYNC.format(event_id=event.id),
         headers=auth(admin),
-        json={"scans": [{"client_scan_id": scan_id, "public_code": ticket["public_code"], "qr_payload": ticket["qr_payload"], "scanned_at": scanned_at}]},
+        json={
+            "scans": [
+                {
+                    "client_scan_id": scan_id,
+                    "public_code": ticket["public_code"],
+                    "qr_payload": ticket["qr_payload"],
+                    "scanned_at": scanned_at,
+                }
+            ]
+        },
     )
     assert retried.status_code == 200
     assert retried.json()[0]["outcome"] == "valid"

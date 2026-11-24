@@ -102,18 +102,29 @@ def offline_sync(
     """Revalidate queued offline codes sequentially; every admission decision remains server-side."""
     ids = [item.client_scan_id for item in data.scans]
     if len(ids) != len(set(ids)):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "client_scan_id values must be unique")
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "client_scan_id values must be unique"
+        )
     results = []
     for item in data.scans:
         sync_marker = f"offline:{item.client_scan_id}:{item.scanned_at.isoformat()}"
         claims = qr.verify(item.qr_payload)
-        if claims is None or claims.typ != qr.ADMISSION or claims.event_id != event.id or claims.public_code != item.public_code:
-            results.append({"client_scan_id": item.client_scan_id, "outcome": "invalid", "ticket": None})
+        if (
+            claims is None
+            or claims.typ != qr.ADMISSION
+            or claims.event_id != event.id
+            or claims.public_code != item.public_code
+        ):
+            results.append(
+                {"client_scan_id": item.client_scan_id, "outcome": "invalid", "ticket": None}
+            )
             continue
         try:
             ticket = check_in.find_ticket(db, event, item.public_code)
         except check_in.TicketNotFound:
-            results.append({"client_scan_id": item.client_scan_id, "outcome": "invalid", "ticket": None})
+            results.append(
+                {"client_scan_id": item.client_scan_id, "outcome": "invalid", "ticket": None}
+            )
             continue
         previously_synced = db.scalar(
             select(CheckInRecord).where(
