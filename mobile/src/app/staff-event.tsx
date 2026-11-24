@@ -7,6 +7,7 @@ import { Action, FormField, Info, Panel, useWorkspaceColors, WorkspaceScreen } f
 import { useAuth } from '@/hooks/use-auth';
 import { useI18n } from '@/i18n';
 import { createScanSession } from '@/lib/scan-session';
+import { findCachedAdmission, listQueuedAdmissions, markQueuedConflict, queueOfflineAdmission, removeQueuedAdmission, storeAdmissionSnapshot, type QueuedAdmission } from '@/lib/offline-checkin';
 import { staffApi, StaffApiError, type Attendance, type ScanOutcome, type ScanResult, type StaffEvent, type StaffTicket } from '@/shared/api/staff';
 
 const outcomeLabels: Record<ScanOutcome, string> = {
@@ -47,11 +48,59 @@ function StaffEventWorkspace({ eventId }: { eventId: number }) {
   const [searchError, setSearchError] = useState('');
   const [searched, setSearched] = useState(false);
   const [tickets, setTickets] = useState<StaffTicket[]>([]);
+  const [offlineQueue,setOfflineQueue]=useState<QueuedAdmission[]>([]);
+  const [offlineBusy,setOfflineBusy]=useState(false);
+  const [offlineNotice,setOfflineNotice]=useState('');
+  const [offlineError,setOfflineError]=useState('');
   const [confirmReverse, setConfirmReverse] = useState<StaffTicket | null>(null);
   const lifecycle = useRef<AbortController | null>(null);
   const gate = useRef(createScanSession());
   const refreshData = useRef<() => Promise<void>>(async () => {});
   const searchVersion = useRef(0);
+  const offlineScanBusy=useRef(false);
+
+  const refreshOfflineQueue=async()=>setOfflineQueue(await listQueuedAdmissions(eventId));
+  const syncOfflineQueue=async()=>{
+    const entries=(await listQueuedAdmissions(eventId)).filter(item=>item.state==='pending');
+    for(let offset=0;offset<entries.length;offset+=50){
+      const batch=entries.slice(offset,offset+50);
+      try{
+        const results=await staffApi.offlineSync(authenticatedFetch,eventId,batch.map(({client_scan_id,public_code,qr_payload,scanned_at})=>({client_scan_id,public_code,qr_payload,scanned_at})));
+        for(const result of results){
+          if(result.outcome==='valid')await removeQueuedAdmission(eventId,result.client_scan_id);
+          else await markQueuedConflict(eventId,result.client_scan_id,`Server result: ${result.outcome}`);
+        }
+      }catch{break;}
+    }
+    await refreshOfflineQueue();
+  };
+  const cacheOfflineTickets=async()=>{
+    if(!Number.isSafeInteger(eventId)||eventId<1||!online||offlineBusy)return;
+    setOfflineBusy(true);setOfflineError('');setOfflineNotice('');
+    try{
+      const all=[];
+      for(let offset=0;offset<2000;offset+=100){const page=await staffApi.offlineSnapshot(authenticatedFetch,eventId,offset);all.push(...page);if(page.length<100)break;}
+      if(all.length===2000&&(await staffApi.offlineSnapshot(authenticatedFetch,eventId,2000)).length)throw new Error('Offline cache is limited to 2,000 tickets per event.');
+      await storeAdmissionSnapshot(eventId,all);setOfflineNotice(t('Cached {count} valid tickets securely on this device.',{count:all.length}));
+    }catch(failure){setOfflineError(failure instanceof Error?failure.message:'Could not cache tickets for offline verification.');}
+    finally{setOfflineBusy(false);}
+  };
+  const handleScan=async(raw:string)=>{
+    if(canVerify){await perform('scan',raw);return;}
+    if(!event||online||working||!ready||offlineScanBusy.current)return;
+    offlineScanBusy.current=true;
+    setActionError('');setActionMessage('');
+    try{
+      const cached=await findCachedAdmission(eventId,raw);
+      if(!cached)throw new Error('This QR is not in the secure offline snapshot. Do not admit this attendee.');
+      const existing=await listQueuedAdmissions(eventId);
+      if(existing.some(item=>item.public_code===cached.public_code))throw new Error('This ticket is already waiting for online verification. Do not admit twice.');
+      await queueOfflineAdmission(eventId,cached.public_code,raw);
+      await refreshOfflineQueue();
+      setActionMessage('Offline check-in queued for server verification. Do not admit until it syncs.');
+    }catch(failure){setActionError(failure instanceof Error?failure.message:'Could not queue offline check-in.');}
+    finally{offlineScanBusy.current=false;}
+  };
 
   useFocusEffect(useCallback(() => {
     const controller = new AbortController();
@@ -74,6 +123,7 @@ function StaffEventWorkspace({ eventId }: { eventId: number }) {
     setSearchError('');
     setLastSync(null);
     setSearched(false);
+    void refreshOfflineQueue();
     let pending = false;
     let refreshAfterPending = false;
     const load = async () => {
@@ -96,6 +146,7 @@ function StaffEventWorkspace({ eventId }: { eventId: number }) {
           setAccessDenied(false);
           setSyncError('');
           setLastSync(new Date().toISOString());
+          await syncOfflineQueue();
         }
       } catch (failure) {
         if (!controller.signal.aborted) {
@@ -214,7 +265,7 @@ function StaffEventWorkspace({ eventId }: { eventId: number }) {
     setCameraError(false);
     try {
       const granted = permission?.granted ? permission : await requestPermission();
-      if (granted.granted && lifecycle.current === controller && !controller.signal.aborted) setCameraEnabled(true);
+      if (granted.granted && lifecycle.current === controller && !controller.signal.aborted && (canVerify||(!online&&!!event))) setCameraEnabled(true);
     } catch {
       if (!controller.signal.aborted) setCameraError(true);
     }
@@ -233,6 +284,8 @@ function StaffEventWorkspace({ eventId }: { eventId: number }) {
       </Panel>
       {!!(event && event.status !== 'published') && <Info tone="error">{t('Event is not open for check-in.')}</Info>}
       {!online && <Info tone="error">{t('Online verification is required. No ticket has been approved.')}</Info>}
+      {!!event&&<Panel><Info>{t('Offline check-in')}</Info><Info tone="muted">{t('Cache current valid admission QR codes before doors open. Offline scans are only queued; the server must verify them after connection returns.')}</Info><Action secondary label={t(offlineBusy?'Caching secure snapshot...':'Cache valid tickets for offline use')} disabled={!online||offlineBusy||Platform.OS==='web'} onPress={()=>void cacheOfflineTickets()}/>{Platform.OS==='web'&&<Info tone="muted">{t('Secure offline cache is available on iOS and Android only.')}</Info>}{!!offlineNotice&&<Info tone="success">{offlineNotice}</Info>}{!!offlineError&&<Info tone="error">{t(offlineError)}</Info>}</Panel>}
+      {!!offlineQueue.length&&<Panel><Info>{t('Offline queue')} · {offlineQueue.length}</Info>{offlineQueue.map(item=><View key={item.client_scan_id} style={{borderTopWidth:1,borderTopColor:colors.border,paddingVertical:9,gap:4}}><Info>{item.public_code} · {t(item.state==='pending'?'Waiting for server verification':'Server conflict')}</Info><Info tone="muted">{formatDate(item.scanned_at,event?.timezone)}{item.detail?` · ${t(item.detail)}`:''}</Info>{item.state==='conflict'&&<Action secondary label={t('Dismiss conflict')} onPress={()=>void removeQueuedAdmission(eventId,item.client_scan_id).then(refreshOfflineQueue)}/>}</View>)}</Panel>}
       {!accessDenied && <>
         <Panel>
           <Info>{t('Scan one admission QR code at a time.')}</Info>
@@ -242,17 +295,17 @@ function StaffEventWorkspace({ eventId }: { eventId: number }) {
             {!!(Platform.OS !== 'web') && <Action label={t('Open settings')} secondary onPress={() => void Linking.openSettings().catch(() => setCameraError(true))} />}
           </>}
           {!!(cameraError) && <Info tone="error">{t('Camera unavailable')}. {t('Use manual attendee search below.')}</Info>}
-          {!!(cameraEnabled && permission?.granted && canVerify && ready && !cameraError) && <View style={{ height: 280, borderRadius: 12, overflow: 'hidden', backgroundColor: '#101828' }}>
+            {!!(cameraEnabled && permission?.granted && (canVerify||(!online&&!!event)) && ready && !cameraError) && <View style={{ height: 280, borderRadius: 12, overflow: 'hidden', backgroundColor: '#101828' }}>
             <CameraView style={{ flex: 1 }} facing="back" barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-              onBarcodeScanned={working || !ready ? undefined : ({ data }) => { void perform('scan', data); }}
+              onBarcodeScanned={working || !ready ? undefined : ({ data }) => { void handleScan(data); }}
               onMountError={() => { setCameraError(true); setCameraEnabled(false); }} />
             <View pointerEvents="none" style={{ position: 'absolute', bottom: 12, left: 12, right: 12, padding: 8, backgroundColor: '#101828' }}>
-              <Text style={{ color: '#FFFFFF', textAlign: 'center' }}>{t('Admission QR only')}</Text>
+              <Text style={{ color: '#FFFFFF', textAlign: 'center' }}>{t(online?'Admission QR only':'Offline cache match only · queued, not approved')}</Text>
             </View>
           </View>}
           {cameraEnabled
             ? <Action label={t('Close camera')} secondary onPress={() => setCameraEnabled(false)} />
-            : <Action label={t(permission?.granted ? 'Open camera' : 'Allow camera')} disabled={!canVerify || working || !ready} onPress={() => void openCamera()} />}
+            : <Action label={t(permission?.granted ? 'Open camera' : 'Allow camera')} disabled={(!canVerify&&!(event&&!online)) || working || !ready} onPress={() => void openCamera()} />}
           {!!(working) && <Info>{t('Checking ticket...')}</Info>}
           {!!(scanResult) && <View accessibilityLiveRegion="assertive" style={{ padding: 14, gap: 7, borderWidth: 2, borderRadius: 12, borderColor: scanResult.outcome === 'valid' ? colors.success : colors.danger }}>
             <Info tone={scanResult.outcome === 'valid' ? 'success' : 'error'}>{t(heading)}</Info>

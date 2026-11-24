@@ -25,6 +25,7 @@ export default function OrganizerScreen() {
   const [starts, setStarts] = useState(() => defaultEventInstant(7, 19)); const [ends, setEnds] = useState(() => defaultEventInstant(7, 21));
   const [cover, setCover] = useState(''); const [eventDescription, setEventDescription] = useState(''); const [refundPolicy, setRefundPolicy] = useState('');
   const [category, setCategory] = useState('concert'); const [visibility, setVisibility] = useState('public'); const [seatingMode, setSeatingMode] = useState<'general_admission'|'assigned'>('general_admission');
+  const [timeZone,setTimeZone]=useState(DEFAULT_EVENT_TIME_ZONE);
   const [capacity, setCapacity] = useState(''); const [opensAt, setOpensAt] = useState(''); const [closesAt, setClosesAt] = useState('');
 
   useFocusEffect(useCallback(() => {
@@ -47,7 +48,7 @@ export default function OrganizerScreen() {
   const createEvent = () => void run(async () => {
     const startsAt = requiredIso(starts); const endsAt = requiredIso(ends);
     if (!title.trim() || !venue.trim() || !address.trim() || endsAt <= startsAt) throw new Error('Enter a title, venue, address, and valid event date range.');
-    const event = await managementApi.createEvent(authenticatedFetch, { title: title.trim(), description: eventDescription.trim() || null, refund_policy: refundPolicy.trim() || null, category, visibility, seating_mode: seatingMode, venue_name: venue.trim(), venue_address: address.trim(), starts_at: startsAt, ends_at: endsAt, timezone: DEFAULT_EVENT_TIME_ZONE, capacity: capacity.trim() ? Number(capacity) : null, registration_opens_at: optionalIso(opensAt), registration_closes_at: optionalIso(closesAt), cover_image_url: cover.trim() || null });
+    const event = await managementApi.createEvent(authenticatedFetch, { title: title.trim(), description: eventDescription.trim() || null, refund_policy: refundPolicy.trim() || null, category, visibility, seating_mode: seatingMode, venue_name: venue.trim(), venue_address: address.trim(), starts_at: startsAt, ends_at: endsAt, timezone: timeZone.trim() || DEFAULT_EVENT_TIME_ZONE, capacity: capacity.trim() ? Number(capacity) : null, registration_opens_at: optionalIso(opensAt), registration_closes_at: optionalIso(closesAt), cover_image_url: cover.trim() || null });
     setTitle(''); setCover(''); router.push({ pathname: '/organizer-event', params: { eventId: String(event.id) } });
   }, 'Draft event created.');
   const shownEvents = phaseFilter === 'all' ? events : events.filter(event => event.phase === phaseFilter);
@@ -79,11 +80,12 @@ export default function OrganizerScreen() {
         <Action secondary label={`${t('Seating')}: ${t(seatingMode === 'assigned' ? 'Assigned seating' : 'General admission')} · ${t('Change')}`} onPress={() => setSeatingMode(value => value === 'assigned' ? 'general_admission' : 'assigned')} />
         <FormField label={t('Venue name')} value={venue} onChangeText={setVenue} />
         <FormField label={t('Venue address')} value={address} onChangeText={setAddress} />
-        <DateTimeField label={t('Starts at')} value={starts} onChange={setStarts} timeZone={DEFAULT_EVENT_TIME_ZONE} />
-        <DateTimeField label={t('Ends at')} value={ends} onChange={setEnds} timeZone={DEFAULT_EVENT_TIME_ZONE} />
+        <FormField label={t('Event timezone (IANA)')} value={timeZone} onChangeText={setTimeZone} autoCapitalize="none" />
+        <DateTimeField label={t('Starts at')} value={starts} onChange={setStarts} timeZone={timeZone} />
+        <DateTimeField label={t('Ends at')} value={ends} onChange={setEnds} timeZone={timeZone} />
         <FormField label={t('Capacity (optional)')} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" />
-        <DateTimeField optional label={t('Registration opens at')} value={opensAt} onChange={setOpensAt} timeZone={DEFAULT_EVENT_TIME_ZONE} />
-        <DateTimeField optional label={t('Registration closes at')} value={closesAt} onChange={setClosesAt} timeZone={DEFAULT_EVENT_TIME_ZONE} />
+        <DateTimeField optional label={t('Registration opens at')} value={opensAt} onChange={setOpensAt} timeZone={timeZone} />
+        <DateTimeField optional label={t('Registration closes at')} value={closesAt} onChange={setClosesAt} timeZone={timeZone} />
         <FormField label={t('Refund policy (optional)')} value={refundPolicy} onChangeText={setRefundPolicy} multiline maxLength={2000} />
         <FormField label={t('Cover image URL (optional)')} value={cover} onChangeText={setCover} autoCapitalize="none" />
         <Action label={t(busy ? 'Creating…' : 'Create draft')} disabled={busy || !title.trim() || !venue.trim() || !address.trim()} onPress={createEvent} />

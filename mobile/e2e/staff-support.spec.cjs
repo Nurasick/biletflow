@@ -20,7 +20,7 @@ async function mockApi(page, { remembered = true, failAdmission = false } = {}) 
   let supportCase = null;
   const ticket = () => ({ public_code: 'QA-TICKET', attendee_name: 'QA Attendee', ticket_type_name: 'General admission', status: checkedIn ? 'checked_in' : 'valid' });
   await page.addInitScript(({ remembered }) => {
-    if (remembered) localStorage.setItem('biletflow.auth.session.v1', JSON.stringify({ email: 'qa@example.test', refreshToken: `fixture-${Date.now()}` }));
+    if (remembered) sessionStorage.setItem('biletflow.auth.session.v1', JSON.stringify({ email: 'qa@example.test', refreshToken: `fixture-${Date.now()}` }));
   }, { remembered });
   await page.route('**/api/v1/**', async route => {
     const request = route.request();
@@ -144,6 +144,16 @@ test('signed-out login links navigate to reset and verification screens', async 
   await page.goto('/login');
   await page.getByText('Verify email', { exact: true }).click();
   await expect(page.getByLabel('Email token')).toBeVisible();
+});
+
+test('signed-out menu offers sign-in and routes protected menu actions there', async ({ page }) => {
+  await mockApi(page, { remembered: false });
+  await page.goto('/workspace');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
+  await page.goto('/workspace');
+  await page.getByRole('button', { name: 'Scan campaign QR', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
 });
 
 test('sign-in mounts authenticated navigation and opens the staff workspace', async ({ page }) => {

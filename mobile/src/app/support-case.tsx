@@ -101,6 +101,7 @@ function Conversation({caseNumber,mode}: {caseNumber:string;mode:SupportMode}) {
       {!!(mode==='staff')&&<Panel>
         <Info>{t('Staff actions')}</Info>
         <Action label={t('Assign to me')} secondary disabled={busy} onPress={assignToMe} />
+        <Action label={t('Escalate to platform support')} secondary disabled={busy||detail.status==='resolved'} onPress={()=>void mutate(()=>supportApi.escalate(authenticatedFetch,caseNumber,'Escalated from the mobile staff workspace.'))} />
         <FormField label={t('Staff user ID')} keyboardType="number-pad" value={assignee} onChangeText={setAssignee} editable={!busy} maxLength={16} />
         <Action label={t('Assign staff')} secondary disabled={busy||!assignee.trim()} onPress={()=>void mutate(()=>supportApi.assign(authenticatedFetch,caseNumber,Number(assignee)))} />
         {!!(detail.assigned_to_user_id!=null)&&<Action label={t('Unassign')} secondary disabled={busy} onPress={()=>void mutate(()=>supportApi.assign(authenticatedFetch,caseNumber,null))} />}

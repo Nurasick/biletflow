@@ -24,6 +24,7 @@ export type TicketType = {
 export type Order = {
     order_number: string;
     total_minor: number;
+    fee_minor: number;
     currency: string;
     status: string;
     expires_at: string | null;

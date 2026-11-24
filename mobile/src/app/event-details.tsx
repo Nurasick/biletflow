@@ -6,7 +6,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { ticketLimit } from '@/api/public';
 import { AppText, Icon, type IconName } from '@/components/design';
 import { ScreenFrame } from '@/components/screen-frame';
-import { Action, Info, Panel, ScreenHeading } from '@/components/workspace';
+import { Action, Info, Panel, ScreenHeading, FormField } from '@/components/workspace';
 import { MaxContentWidth } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useI18n } from '@/i18n';
@@ -29,6 +29,9 @@ export default function EventDetailsScreen() {
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [calendarBusy, setCalendarBusy] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [accessCode,setAccessCode]=useState('');
+  const [accessToken,setAccessToken]=useState('');
+  const [unlockError,setUnlockError]=useState('');
 
   useEffect(() => {
     if (!slug) {
@@ -40,8 +43,8 @@ export default function EventDetailsScreen() {
     setIsLoading(true);
     setError(null);
     void Promise.all([
-      eventsApi.get(slug, controller.signal),
-      eventsApi.ticketTypes(slug, controller.signal),
+      eventsApi.get(slug, controller.signal, accessToken),
+      eventsApi.ticketTypes(slug, controller.signal, accessToken),
     ]).then(([eventInfo, types]) => {
       if (controller.signal.aborted) return;
       setEvent(eventInfo);
@@ -52,7 +55,7 @@ export default function EventDetailsScreen() {
       if (!controller.signal.aborted) setIsLoading(false);
     });
     return () => controller.abort();
-  }, [slug, revision]);
+  }, [slug, revision, accessToken]);
 
   const imageUrl = resolveEventImage(event?.cover_image_url);
   const gallery = event?.images.filter((image) => image.url !== event.cover_image_url) ?? [];
@@ -69,6 +72,7 @@ export default function EventDetailsScreen() {
       setCalendarBusy(false);
     }
   };
+  const unlock=async()=>{if(!slug)return;setUnlockError('');try{const result=await eventsApi.unlock(slug,accessCode);setAccessToken(result.access_token);setAccessCode('');setRevision(value=>value+1);}catch(failure){setUnlockError(failure instanceof Error?failure.message:'Could not unlock this event.');}};
 
   return (
     <ScreenFrame title={t('Event details')}>
@@ -79,6 +83,7 @@ export default function EventDetailsScreen() {
           <Panel>
             <ScreenHeading>{t('Event unavailable')}</ScreenHeading>
             <Info tone="error">{t(error)}</Info>
+            {slug&&!accessToken&&<><FormField label={t('Private event access code')} value={accessCode} onChangeText={setAccessCode} autoCapitalize="none"/><Action label={t('Unlock event')} disabled={!accessCode.trim()} onPress={()=>void unlock()}/>{!!unlockError&&<Info tone="error">{t(unlockError)}</Info>}</>}
             {slug && <Action secondary label={t('Try again')} onPress={() => setRevision((value) => value + 1)} />}
             <Action secondary label={t('Back to events')} onPress={() => router.dismissTo('/')} />
           </Panel>
@@ -103,6 +108,7 @@ export default function EventDetailsScreen() {
               {event.status === 'suspended' && <Info tone="error">{t('Suspended')}</Info>}
             </View>
             <Panel>
+              {event.visibility==='private'&&!accessToken&&<><Info>{t('Private event')}</Info><FormField label={t('Access code')} value={accessCode} onChangeText={setAccessCode} autoCapitalize="none"/><Action label={t('Unlock event')} disabled={!accessCode.trim()} onPress={()=>void unlock()}/>{!!unlockError&&<Info tone="error">{t(unlockError)}</Info>}</>}
               <InfoRow icon="calendar" title={formatDate(event.starts_at, event.timezone)}
                 detail={t('Ends {date}', { date: formatDate(event.ends_at, event.timezone) })} />
               <InfoRow icon="location" title={event.venue_name} detail={event.venue_address} />
@@ -113,6 +119,7 @@ export default function EventDetailsScreen() {
               </View>
               <Action secondary icon="calendar" disabled={calendarBusy}
                 label={t(calendarBusy ? 'Preparing calendar file…' : 'Add to calendar (.ics)')} onPress={() => void addToCalendar()} />
+              {event.calendar_links&&<><Action secondary label={t('Add to Google Calendar')} onPress={()=>void import('expo-linking').then(({openURL})=>openURL(event.calendar_links!.google))}/><Action secondary label={t('Add to Outlook Calendar')} onPress={()=>void import('expo-linking').then(({openURL})=>openURL(event.calendar_links!.outlook))}/></>}
               {calendarError && <Info tone="error">{t(calendarError)}</Info>}
             </Panel>
             {!!event.description && <Panel><SectionTitle>{t('About the event')}</SectionTitle><Info tone="muted">{event.description}</Info></Panel>}
@@ -135,8 +142,8 @@ export default function EventDetailsScreen() {
           </ScrollView>
           <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
             <View style={styles.footerContent}>
-              <Action icon="ticket" disabled={!canBook} label={t(canBook ? 'Choose tickets' : 'Booking unavailable')}
-                onPress={() => router.push({ pathname: event.seating_mode === 'assigned' ? '/seat-selection' : '/ticket-selection', params: { slug: event.slug, ...(campaignToken ? { campaignToken } : {}) } })} />
+              <Action icon="ticket" disabled={!canBook||(event.visibility==='private'&&!accessToken)} label={t(canBook ? 'Choose tickets' : 'Booking unavailable')}
+                onPress={() => router.push({ pathname: event.seating_mode === 'assigned' ? '/seat-selection' : '/ticket-selection', params: { slug: event.slug, ...(accessToken?{accessToken}:{}), ...(campaignToken ? { campaignToken } : {}) } })} />
             </View>
           </View>
         </>

@@ -11,8 +11,9 @@ import { promotionsApi, type PromoQuote } from '@/shared/api/events';
 import { accountApi } from '@/shared/api/account';
 
 export default function Checkout() {
-  const { slug, selection, seats, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug: string; selection: string; seats?: string; campaignToken?: string|string[] }>();
+  const { slug, selection, seats, campaignToken: rawCampaignToken, accessToken:rawAccessToken } = useLocalSearchParams<{ slug: string; selection: string; seats?: string; campaignToken?: string|string[]; accessToken?:string|string[] }>();
   const campaignToken = Array.isArray(rawCampaignToken) ? rawCampaignToken[0] : rawCampaignToken;
+  const accessToken=Array.isArray(rawAccessToken)?rawAccessToken[0]:rawAccessToken;
   const router = useRouter();
   const { t, locale, formatDate, formatNumber } = useI18n();
   const price = (minor: number, currency: string) => new Intl.NumberFormat(locale, { style: 'currency', currency }).format(minor / 100);
@@ -28,6 +29,8 @@ export default function Checkout() {
   const [promoError, setPromoError] = useState('');
   const lock = useRef(false);
   const [order, setOrder] = useState<Order | null>(null);
+  const [now,setNow]=useState(Date.now());
+  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState(user?.email ?? '');
   const [names, setNames] = useState<Record<string, string>>({});
@@ -121,10 +124,15 @@ export default function Checkout() {
     setError('');
     try {
       if (!name.trim() || !email.trim()) throw new Error('Enter your contact name and email.');
-      const items = checkoutItems(selection ?? '{}', types, names);
+      const assigned: {id:number;ticket_type_id:number|null}[] = (()=>{try{const value=JSON.parse(seats??'[]');return Array.isArray(value)?value:[];}catch{return [];}})();
+      const items = checkoutItems(selection ?? '{}', types, names).map(item => {
+        const forType = assigned.filter(seat => seat.ticket_type_id === item.ticket_type_id);
+        let index = 0;
+        return { ...item, attendees:item.attendees.map(attendee=>({ ...attendee, ...(forType[index] ? {event_seat_id:forType[index++].id} : {}) })) };
+      });
       lock.current = true;
       setBusy(true);
-      setOrder(await decode<Order>(await authenticatedFetch(`/events/${encodeURIComponent(slug ?? '')}/orders`, {
+      setOrder(await decode<Order>(await authenticatedFetch(`/events/${encodeURIComponent(slug ?? '')}/orders${accessToken?`?access_token=${encodeURIComponent(accessToken)}`:''}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contact_name: name.trim(), contact_email: email.trim(), items, ...(promoQuote ? (activeCampaignToken ? { campaign_token: activeCampaignToken } : { promo_code: promoQuote.code }) : {}) }),
@@ -148,15 +156,16 @@ export default function Checkout() {
       autoCapitalize={isEmail ? 'none' : 'words'}
     />
   );
-  const seatPreview = seats?.split(',').filter(Boolean) ?? [];
+  const seatPreview: {id:number;label:string;ticket_type_id:number|null}[] = (()=>{try{const value=JSON.parse(seats??'[]');return Array.isArray(value)?value:[];}catch{return [];}})();
 
   if (order) {
     return (
       <Screen title={t('Order created')}>
         <Panel>
           <Label>{t('Order {number}: {status}', { number: order.order_number, status: t(order.status) })}</Label>
+          {order.fee_minor>0&&<Label>{t('Processing fee')}: {price(order.fee_minor,order.currency)}</Label>}
           <Label>{t('Total: {amount}', { amount: price(order.total_minor, order.currency) })}</Label>
-          <Label tone={order.expires_at ? 'muted' : 'success'}>{order.expires_at ? t('Reserved until {date}', { date: formatDate(order.expires_at) }) : t('Order confirmed.')}</Label>
+          <Label tone={order.expires_at ? 'muted' : 'success'}>{order.expires_at ? t('Reserved until {date}', { date: formatDate(order.expires_at) }) : t('Order confirmed.')}{order.expires_at?` · ${t('Hold expires in {time}', {time:remainingTime(order.expires_at,now)})}`:''}</Label>
           <Label tone="muted">{t(order.status === 'pending' ? 'Payment is still required. Open My tickets to complete the demo payment.' : 'Your free order is confirmed.')}</Label>
         </Panel>
         <Button title={t('Open my tickets')} onPress={() => router.dismissTo('/tickets')} />
@@ -173,7 +182,7 @@ export default function Checkout() {
         <Panel>
           <Label>{t('Ticket subtotal: {amount}', { amount: price(estimated, types[0]?.currency ?? 'KZT') })}</Label>
           {promoQuote && <Label tone="success">{t('Promo {code} applied: -{discount}. Total {total}.', { code: promoQuote.code, discount: price(promoQuote.discount_minor, types[0]?.currency ?? 'KZT'), total: price(promoQuote.total_minor, types[0]?.currency ?? 'KZT') })}</Label>}
-          {seatPreview.length > 0 && <Label tone="muted">{t('Seat preview: {seats}. The backend will reserve the ticket types, but does not hold or save seat numbers yet.', { seats: seatPreview.map((seat) => t('Row {row}, seat {seat}', { row: seat.split('-')[0], seat: seat.split('-')[1] })).join(' / ') })}</Label>}
+          {seatPreview.length > 0 && <Label tone="muted">{t('Selected seats')}: {seatPreview.map(seat=>seat.label).join(' / ')}</Label>}
           <FormField
             label={t('Promo code')}
             value={promoCode}
@@ -195,7 +204,9 @@ export default function Checkout() {
       </>}
       <Button title={t(busy ? 'Reserving...' : 'Reserve tickets')} disabled={busy || loading || !!selectionError || !types.length} onPress={() => void reserve()} />
       <Button secondary title={t(seatPreview.length ? 'Choose seats again' : 'Choose tickets again')} disabled={busy}
-        onPress={() => router.replace({ pathname: seatPreview.length ? '/seat-selection' : '/ticket-selection', params: { slug, ...(campaignToken ? { campaignToken } : {}) } })} />
+        onPress={() => router.replace({ pathname: seatPreview.length ? '/seat-selection' : '/ticket-selection', params: { slug, ...(campaignToken ? { campaignToken } : {}), ...(accessToken?{accessToken}:{}) } })} />
     </Screen>
   );
 }
+
+function remainingTime(expiresAt:string,now:number){const seconds=Math.max(0,Math.floor((new Date(expiresAt).getTime()-now)/1000));return `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;}

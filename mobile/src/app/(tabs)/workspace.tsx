@@ -31,14 +31,14 @@ export default function Workspace() {
     return () => controller.abort();
   }, [authenticatedFetch]));
 
-  const go = (href: Href) => () => router.push(href);
+  const go = (href: Href) => () => router.push(user ? href : '/login');
   const name = account ? `${account.first_name} ${account.last_name}`.trim() : '';
   const canAnswerSupport = hasStaffEvents || !!account?.is_organizer || !!account?.is_platform_admin;
 
   return (
     <WorkspaceScreen tab="workspace" title={t('Menu')}>
       <Group>
-        <ProfileRow name={name || t('Account')} email={account?.email ?? user?.email ?? ''} onPress={go('/account')} />
+        <ProfileRow name={name || t(user ? 'Account' : 'Sign in')} email={account?.email ?? user?.email ?? ''} onPress={go('/account')} />
       </Group>
 
       <Group title={t('Tickets and offers')}>
@@ -110,7 +110,7 @@ function ProfileRow({ name, email, onPress }: { name: string; email: string; onP
   const { t } = useI18n();
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={name} accessibilityHint={t('Edit your account')} onPress={onPress}
+    <Pressable accessibilityRole="button" accessibilityLabel={name} accessibilityHint={email ? t('Edit your account') : t('Sign in to access your tickets and orders.')} onPress={onPress}
       style={({ pressed }) => [styles.row, styles.profile, { backgroundColor: pressed ? colors.raised : 'transparent' }]}>
       <View style={[styles.avatar, { backgroundColor: colors.button }]}>
         {initials ? <AppText style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>{initials}</AppText> : <Icon name="user" size={24} color="#FFFFFF" />}

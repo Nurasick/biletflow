@@ -6,8 +6,15 @@
     "orientation": "portrait",
     "icon": "./assets/images/biletflow-icon.png",
     "scheme": "mobile",
-    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "kz.biletflow.mobile",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "BiletFlow uses the camera to scan admission and campaign QR codes."
+      }
+    },
     "android": {
+      "package": "kz.biletflow.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#593BC9",
         "foregroundImage": "./assets/images/biletflow-mark.png",
@@ -15,6 +22,7 @@
       },
       "predictiveBackGestureEnabled": false
     },
+    "userInterfaceStyle": "automatic",
     "web": {
       "output": "static",
       "favicon": "./assets/images/biletflow-icon.png"
@@ -30,6 +38,12 @@
         }
       ],
       "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "BiletFlow lets organizers choose event photos from their library."
+        }
+      ],
       "expo-web-browser",
       "expo-secure-store",
       "expo-sharing",

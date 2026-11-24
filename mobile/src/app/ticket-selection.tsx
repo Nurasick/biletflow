@@ -10,8 +10,9 @@ import { useI18n } from '@/i18n';
 import type { PublicTicketType } from '@/shared/api/events';
 
 export default function TicketSelectionScreen() {
-  const { slug, campaignToken } = useLocalSearchParams<{ slug?: string; campaignToken?: string|string[] }>();
+  const { slug, campaignToken, accessToken:rawAccessToken } = useLocalSearchParams<{ slug?: string; campaignToken?: string|string[]; accessToken?:string|string[] }>();
   const token = Array.isArray(campaignToken) ? campaignToken[0] : campaignToken;
+  const accessToken=Array.isArray(rawAccessToken)?rawAccessToken[0]:rawAccessToken;
   const router = useRouter();
   const colors = useTheme();
   const { t, locale, formatNumber } = useI18n();
@@ -29,14 +30,14 @@ export default function TicketSelectionScreen() {
     setQuantities({});
     const load = async () => {
       if (!slug) throw new Error('Choose an event first.');
-      return get<PublicTicketType[]>(`/events/${encodeURIComponent(slug)}/ticket-types`);
+      return get<PublicTicketType[]>(`/events/${encodeURIComponent(slug)}/ticket-types${accessToken?`?access_token=${encodeURIComponent(accessToken)}`:''}`);
     };
     load()
       .then((data) => { if (active) setTypes(data); })
       .catch((failure: unknown) => { if (active) setError(failure instanceof Error ? failure.message : 'Could not load ticket types.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [slug, retry]));
+  }, [slug, retry, accessToken]));
 
   const total = Object.values(quantities).reduce((sum, quantity) => sum + quantity, 0);
   const subtotal = types.reduce((sum, type) => sum + type.price_minor * (quantities[type.id] ?? 0), 0);
@@ -87,7 +88,7 @@ export default function TicketSelectionScreen() {
               <AppText style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{price(subtotal, types[0].currency)}</AppText>
             </View>
             <Action icon="arrowRight" label={t('Continue ({count})', { count: formatNumber(total) })} disabled={!total}
-              onPress={() => router.push({ pathname: '/checkout', params: { slug, selection: JSON.stringify(quantities), ...(token ? { campaignToken: token } : {}) } })} />
+              onPress={() => router.push({ pathname: '/checkout', params: { slug, selection: JSON.stringify(quantities), ...(token ? { campaignToken: token } : {}), ...(accessToken?{accessToken}:{}) } })} />
           </Panel>
         )}
       </>}

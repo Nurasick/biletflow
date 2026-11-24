@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field
 
 OutcomeType = Literal["valid", "invalid", "wrong_event", "cancelled", "refunded", "already_used"]
 
@@ -16,11 +17,33 @@ class DeviceInfo(BaseModel):
     device_info: str | None = Field(default=None, max_length=200)
 
 
+class OfflineSyncItem(BaseModel):
+    client_scan_id: UUID
+    public_code: str = Field(min_length=1, max_length=32)
+    qr_payload: str = Field(min_length=1, max_length=512)
+    scanned_at: AwareDatetime
+
+
+class OfflineSyncRequest(BaseModel):
+    scans: list[OfflineSyncItem] = Field(min_length=1, max_length=50)
+
+
+class OfflineSnapshotTicket(BaseModel):
+    public_code: str
+    qr_payload: str
+
+
 class ScannedTicket(BaseModel):
     public_code: str
     status: str
     attendee_name: str
     ticket_type_name: str
+
+
+class OfflineSyncResult(BaseModel):
+    client_scan_id: UUID
+    outcome: OutcomeType
+    ticket: ScannedTicket | None
 
 
 class ScanResponse(BaseModel):

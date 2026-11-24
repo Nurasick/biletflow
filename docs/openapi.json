@@ -4056,6 +4056,114 @@
         "title": "NotificationRead",
         "type": "object"
       },
+      "OfflineSnapshotTicket": {
+        "properties": {
+          "public_code": {
+            "title": "Public Code",
+            "type": "string"
+          },
+          "qr_payload": {
+            "title": "Qr Payload",
+            "type": "string"
+          }
+        },
+        "required": [
+          "public_code",
+          "qr_payload"
+        ],
+        "title": "OfflineSnapshotTicket",
+        "type": "object"
+      },
+      "OfflineSyncItem": {
+        "properties": {
+          "client_scan_id": {
+            "format": "uuid",
+            "title": "Client Scan Id",
+            "type": "string"
+          },
+          "public_code": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Public Code",
+            "type": "string"
+          },
+          "qr_payload": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Qr Payload",
+            "type": "string"
+          },
+          "scanned_at": {
+            "format": "date-time",
+            "title": "Scanned At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_scan_id",
+          "public_code",
+          "qr_payload",
+          "scanned_at"
+        ],
+        "title": "OfflineSyncItem",
+        "type": "object"
+      },
+      "OfflineSyncRequest": {
+        "properties": {
+          "scans": {
+            "items": {
+              "$ref": "#/components/schemas/OfflineSyncItem"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Scans",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scans"
+        ],
+        "title": "OfflineSyncRequest",
+        "type": "object"
+      },
+      "OfflineSyncResult": {
+        "properties": {
+          "client_scan_id": {
+            "format": "uuid",
+            "title": "Client Scan Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "valid",
+              "invalid",
+              "wrong_event",
+              "cancelled",
+              "refunded",
+              "already_used"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "ticket": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScannedTicket"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "client_scan_id",
+          "outcome",
+          "ticket"
+        ],
+        "title": "OfflineSyncResult",
+        "type": "object"
+      },
       "OrderEvent": {
         "description": "Enough of the event to render an order without a second request.",
         "properties": {
@@ -14743,6 +14851,143 @@
           }
         ],
         "summary": "Attendance",
+        "tags": [
+          "check-in"
+        ]
+      }
+    },
+    "/api/v1/staff/events/{event_id}/offline-snapshot": {
+      "get": {
+        "description": "Download current valid signed QR payloads for a secure offline event cache.",
+        "operationId": "offline_snapshot_api_v1_staff_events__event_id__offline_snapshot_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OfflineSnapshotTicket"
+                  },
+                  "title": "Response Offline Snapshot Api V1 Staff Events  Event Id  Offline Snapshot Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Offline Snapshot",
+        "tags": [
+          "check-in"
+        ]
+      }
+    },
+    "/api/v1/staff/events/{event_id}/offline-sync": {
+      "post": {
+        "description": "Revalidate queued offline codes sequentially; every admission decision remains server-side.",
+        "operationId": "offline_sync_api_v1_staff_events__event_id__offline_sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfflineSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OfflineSyncResult"
+                  },
+                  "title": "Response Offline Sync Api V1 Staff Events  Event Id  Offline Sync Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Offline Sync",
         "tags": [
           "check-in"
         ]
