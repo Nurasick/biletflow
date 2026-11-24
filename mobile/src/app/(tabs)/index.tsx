@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { AppText, Icon, TicketArtwork, type IconName } from '@/components/design';
+import { useTabBarClearance } from '@/components/floating-tab-bar';
 import { ScreenFrame } from '@/components/screen-frame';
 import { Action, Info, Panel } from '@/components/workspace';
 import { Fonts, MaxContentWidth, Stage } from '@/constants/theme';
@@ -55,10 +56,11 @@ export default function HomeScreen() {
   const clearFilters = () => { setSearchQuery(''); setActiveCategory(undefined); };
   const openEvent = (event: PublicEvent) => router.push({ pathname: '/event-details', params: { slug: event.slug } });
   const showArtwork = width >= 365 && fontScale < 1.3;
+  const tabClearance = useTabBarClearance();
 
   return (
     <ScreenFrame tab="events">
-      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}
+      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingBottom: tabClearance }]}
         refreshControl={<RefreshControl refreshing={isLoading && events.length > 0 && !filtered} onRefresh={refresh} tintColor={colors.accent} colors={[colors.button]} />}>
         <View style={styles.hero}>
           {showArtwork && (
@@ -168,9 +170,7 @@ function EventCard({ event, featured = false, onPress }: { event: PublicEvent; f
           <AppText style={{ color: colors.text, fontSize: featured ? 20 : 16, fontWeight: '800', letterSpacing: featured ? -0.55 : -0.3 }}>{event.title}</AppText>
           <AppText style={{ color: colors.muted, fontSize: 12 }}>{event.venue_name}</AppText>
         </View>
-        <View style={[styles.cardArrow, { backgroundColor: colors.accentWash }]}>
-          <Icon name="arrowUpRight" color={colors.accent} size={17} />
-        </View>
+        <Icon name="chevronRight" color={colors.muted} size={15} />
       </View>
     </Pressable>
   );
@@ -178,8 +178,8 @@ function EventCard({ event, featured = false, onPress }: { event: PublicEvent; f
 
 const styles = StyleSheet.create({
   content: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', padding: 18, paddingBottom: 26, gap: 13 },
-  hero: { justifyContent: 'center', minHeight: 138, paddingHorizontal: 18, paddingVertical: 20, overflow: 'hidden', borderRadius: 22, backgroundColor: Stage.background },
-  heroTitle: { color: Stage.accent, fontSize: 35, lineHeight: 37, letterSpacing: -1.7, fontWeight: '800' },
+  hero: { justifyContent: 'center', minHeight: 112, paddingHorizontal: 18, paddingVertical: 16, overflow: 'hidden', borderRadius: 22, backgroundColor: Stage.background },
+  heroTitle: { color: Stage.accent, fontSize: 30, lineHeight: 33, letterSpacing: -1.3, fontWeight: '800' },
   heroDecoration: { position: 'absolute', right: -47, top: -9, bottom: -9, justifyContent: 'center', opacity: 0.92 },
   heroRing: { position: 'absolute', right: 4, top: -34, width: 219, height: 219, borderRadius: 110, borderWidth: 1, borderColor: Stage.lines },
   search: { flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 52, paddingHorizontal: 12, borderWidth: 1, borderRadius: 14 },
@@ -194,6 +194,5 @@ const styles = StyleSheet.create({
   cover: { aspectRatio: 2.05, overflow: 'hidden' },
   thumbnail: { width: 68, height: 68, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   cardContent: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  cardArrow: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
   feedbackIcon: { width: 49, height: 49, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
 });

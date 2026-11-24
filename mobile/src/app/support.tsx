@@ -60,7 +60,7 @@ export default function SupportScreen() {
     </View>
     {mode === 'requester' ? <Panel>
       <Info>{t('For ticket or event questions, open support from the relevant event, order, or ticket.')}</Info>
-      <Action label={t('Browse events')} secondary onPress={() => router.push('/')} />
+      <Action label={t('Browse events')} secondary onPress={() => router.dismissTo('/')} />
       <Action label={t('Organizer platform support')} secondary onPress={() => router.push({pathname:'/support-new',params:{audience:'organizer'}})} />
       <Info>{t('Platform requests require an organizer profile.')}</Info>
     </Panel> : <Panel>

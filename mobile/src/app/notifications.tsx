@@ -64,7 +64,7 @@ export default function Notifications() {
           {!!(typeof payload.case_number === 'string') && <Info>{payload.case_number}</Info>}
           <Info tone="muted">{formatDate(item.created_at)}</Info>
           {item.template_key.startsWith('support.') ? <Action secondary label={t('Open support')} onPress={() => router.push('/support')} />
-            : <Action secondary label={t('View orders')} onPress={() => router.push('/tickets')} />}
+            : <Action secondary label={t('View orders')} onPress={() => router.dismissTo('/tickets')} />}
         </Panel>;
       })}
     </>}

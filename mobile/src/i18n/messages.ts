@@ -303,7 +303,7 @@ const entries: readonly [string, string, string][] = [
   ['Go back', 'Назад', 'Артқа қайту'],
   ['Event details', 'О событии', 'Іс-шара туралы'],
   ['Sold out', 'Продано', 'Сатылып кеткен'],
-  ['My tickets', 'Мои билеты', 'Менің билеттерім'],
+  ['My tickets', 'Мои билеты', 'Билеттерім'],
   ['Find your next event', 'Найдите следующее событие', 'Келесі іс-шараңызды табыңыз'],
   ['Search events and venues', 'Поиск событий и площадок', 'Іс-шаралар мен өтетін орындарды іздеу'],
   ['Search events or venues…', 'Найти событие или площадку…', 'Іс-шара не өтетін орынды іздеу…'],
@@ -436,6 +436,20 @@ const entries: readonly [string, string, string][] = [
   ['Add to calendar (.ics)', 'Добавить в календарь (.ics)', 'Күнтізбеге қосу (.ics)'],
   ['draft', 'Черновик', 'Жоба'],
   ['completed', 'Завершено', 'Аяқталған'],
+  // Sign-in, sign-up and the Menu tab
+  ['Show password', 'Показать пароль', 'Құпия сөзді көрсету'],
+  ['Hide password', 'Скрыть пароль', 'Құпия сөзді жасыру'],
+  ['New to BiletFlow?', 'Впервые в BiletFlow?', 'BiletFlow-ты алғаш қолданасыз ба?'],
+  ['Got a verification email?', 'Получили письмо для подтверждения?', 'Растау хаты келді ме?'],
+  ['Already have an account?', 'Уже есть аккаунт?', 'Аккаунтыңыз бар ма?'],
+  ['Check your email', 'Проверьте почту', 'Поштаңызды тексеріңіз'],
+  ['Use 8–50 characters.', 'От 8 до 50 символов.', '8–50 таңба қолданыңыз.'],
+  ['Get tickets, keep them in one place, and check in with a QR code.', 'Покупайте билеты, храните их в одном месте и проходите по QR-коду.', 'Билет алыңыз, оларды бір жерде сақтаңыз және QR код арқылы кіріңіз.'],
+  ['Tickets and offers', 'Билеты и предложения', 'Билеттер мен ұсыныстар'],
+  ['Open an event with its promo code applied', 'Откройте событие с уже применённым промокодом', 'Промокоды қолданылған іс-шараны ашыңыз'],
+  ['Check tickets in at the door', 'Проверяйте билеты на входе', 'Кіреберісте билеттерді тексеріңіз'],
+  ['Events, sales and campaigns', 'События, продажи и акции', 'Іс-шаралар, сатылым және науқандар'],
+  ['Edit your account', 'Изменить данные аккаунта', 'Аккаунт деректерін өзгерту'],
 ];
 
 const allEntries = [...entries, ...managementEntries];

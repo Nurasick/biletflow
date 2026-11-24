@@ -99,7 +99,7 @@ export default function TicketsScreen() {
   };
 
   return (
-    <WorkspaceScreen tab="tickets" title={t('Your orders')} onRefresh={refresh} refreshing={isLoading && orders.length > 0}>
+    <WorkspaceScreen tab="tickets" title={t('My tickets')} onRefresh={refresh} refreshing={isLoading && orders.length > 0}>
         <ThemedText style={{ color: colors.muted, fontSize: 14 }}>{t("Tickets and order status for your account.")}</ThemedText>
 
         {isLoading && orders.length === 0 && <View style={{ alignItems: 'center', paddingVertical: 48 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted }}>{t("Loading your orders…")}</ThemedText></View>}
@@ -111,7 +111,7 @@ export default function TicketsScreen() {
             <View style={{ width: 54, height: 54, alignItems: 'center', justifyContent: 'center', borderRadius: 15, backgroundColor: colors.accentWash }}><Icon name="ticket" color={colors.accent} size={26} /></View>
             <ThemedText style={{ marginTop: 13, color: colors.text, fontSize: 16, fontWeight: '800' }}>{t("No orders yet")}</ThemedText>
             <ThemedText style={{ marginTop: 5, color: colors.muted, textAlign: 'center', fontSize: 12, lineHeight: 18 }}>{t("When you register for an event or buy a ticket, your order and tickets will appear here.")}</ThemedText>
-            <View style={{ marginTop: 16 }}><Action label={t('Browse events')} onPress={() => router.dismissTo('/')} /></View>
+            <View style={{ marginTop: 16 }}><Action label={t('Browse events')} onPress={() => router.navigate('/')} /></View>
           </View>
         )}
 

@@ -156,7 +156,9 @@ process.once('SIGTERM',()=>void stop());
    assert.equal(supportCase.context.event_id,eventId);assert.equal(supportCase.context.order_number,order.order_number);assert.equal(supportCase.context.ticket_code,tickets[1].public_code);
    pass('support request retains event, order and ticket context');
    assert.ok((await supportApi.list(auth.owner.fetcher,'staff')).some(item=>item.case_number===supportCase.case_number));
-   assert.deepEqual(await supportApi.list(auth.door.fetcher,'staff'),[]);
+   // Staff assigned to the event answer its attendee cases alongside the organizer (backend staff_scope).
+   assert.ok((await supportApi.list(auth.door.fetcher,'staff')).some(item=>item.case_number===supportCase.case_number));
+   assert.deepEqual(await supportApi.list(auth.outsider.fetcher,'staff'),[]);
    await assert.rejects(supportApi.read(auth.outsider.fetcher,supportCase.case_number,'requester'),/not found|access/);
    pass('support queues and conversations enforce relationship authorization');
    let current=await supportApi.assign(auth.owner.fetcher,supportCase.case_number,fixture.users.owner.id);

@@ -159,7 +159,7 @@ export default function Checkout() {
           <Label tone={order.expires_at ? 'muted' : 'success'}>{order.expires_at ? t('Reserved until {date}', { date: formatDate(order.expires_at) }) : t('Order confirmed.')}</Label>
           <Label tone="muted">{t(order.status === 'pending' ? 'Payment is still required. Open My tickets to complete the demo payment.' : 'Your free order is confirmed.')}</Label>
         </Panel>
-        <Button title={t('Open my tickets')} onPress={() => router.replace('/tickets')} />
+        <Button title={t('Open my tickets')} onPress={() => router.dismissTo('/tickets')} />
         <Button secondary title={t('Back to events')} onPress={() => router.dismissTo('/')} />
       </Screen>
     );

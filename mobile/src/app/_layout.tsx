@@ -1,11 +1,9 @@
-import '../../global.css';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View, useColorScheme as useSystemColorScheme } from 'react-native';
-import { useColorScheme as useNativeWindColorScheme } from 'nativewind';
 
 import { Wordmark } from '@/components/design';
 import { Colors, Fonts, Stage } from '@/constants/theme';
@@ -36,7 +34,6 @@ function RootLayoutContent() {
   const systemColorScheme = useSystemColorScheme();
   const [browserColorScheme, setBrowserColorScheme] = useState(getBrowserColorScheme);
   const colorScheme = browserColorScheme ?? systemColorScheme;
-  const { setColorScheme } = useNativeWindColorScheme();
   const { isLoggedIn, isRestoring } = useAuth();
   const [fontsLoaded, fontError] = useFonts({
     [Fonts.sans]: require('@/assets/fonts/Onest-Medium.ttf'),
@@ -64,10 +61,6 @@ function RootLayoutContent() {
   }, []);
 
   useEffect(() => {
-    setColorScheme(colorScheme === 'dark' ? 'dark' : 'light');
-  }, [colorScheme, setColorScheme]);
-
-  useEffect(() => {
     if (ready) void SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
 
@@ -85,8 +78,8 @@ function RootLayoutContent() {
       ) : (
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={isLoggedIn}>
-            {['index', 'about', 'home', 'explore', 'checkout', 'event-details', 'tickets',
-              'ticket-selection', 'seat-selection', 'staff', 'staff-event', 'workspace',
+            {['(tabs)', 'about', 'home', 'explore', 'checkout', 'event-details',
+              'ticket-selection', 'seat-selection', 'staff', 'staff-event',
               'support', 'support-new', 'support-case', 'notifications', 'account',
               'organizer', 'organizer-event', 'organizer-preview', 'organizer-image', 'admin', 'campaign-scan', 'report-event']
               .map(name => <Stack.Screen key={name} name={name} />)}

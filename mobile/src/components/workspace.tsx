@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from 'react';
+import type { ComponentRef, PropsWithChildren, Ref } from 'react';
 import { useState } from 'react';
 import {
   Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View,
@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import { AppText, Icon, type IconName } from '@/components/design';
+import { useTabBarClearance } from '@/components/floating-tab-bar';
 import { ScreenFrame, type PrimaryTab } from '@/components/screen-frame';
 import { Fonts, MaxContentWidth } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -16,9 +17,10 @@ export function WorkspaceScreen({ title, children, onRefresh, refreshing = false
   title: string; onRefresh?: () => void; refreshing?: boolean; onBack?: () => void; tab?: PrimaryTab;
 }>) {
   const colors = useTheme();
+  const tabClearance = useTabBarClearance();
   return (
     <ScreenFrame onBack={onBack} tab={tab}>
-      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}
+      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, tab && { paddingBottom: tabClearance }]}
         refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.button]} /> : undefined}>
         <ScreenHeading>{title}</ScreenHeading>
         {children}
@@ -46,6 +48,19 @@ export function Info({ children, tone }: PropsWithChildren<{ tone?: 'muted' | 'e
   </AppText>;
 }
 
+/** A requirement or checklist line: an icon carries the state, the text says what it is. */
+export function StatusLine({ done, failed = false, children }: PropsWithChildren<{ done: boolean; failed?: boolean }>) {
+  const colors = useTheme();
+  const icon: IconName = done ? 'checkCircle' : failed ? 'crossCircle' : 'circle';
+  const color = done ? colors.success : failed ? colors.danger : colors.muted;
+  return (
+    <View accessible accessibilityRole="text" style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <Icon name={icon} size={20} color={color} />
+      <AppText style={{ flex: 1, fontSize: 15, lineHeight: 21, color: done ? colors.text : failed ? colors.danger : colors.muted }}>{children}</AppText>
+    </View>
+  );
+}
+
 export function Action({ label, onPress, disabled = false, secondary = false, danger = false, icon }: {
   label: string; onPress: () => void; disabled?: boolean; secondary?: boolean; danger?: boolean; icon?: IconName;
 }) {
@@ -64,10 +79,15 @@ export function Action({ label, onPress, disabled = false, secondary = false, da
   );
 }
 
-export function FormInput({ style, onFocus, onBlur, ...props }: TextInputProps) {
+/** What a ref to FormInput / FormField / PasswordField points at, e.g. to move focus to the next field. */
+export type TextInputHandle = ComponentRef<typeof TextInput>;
+type FieldProps = TextInputProps & { ref?: Ref<TextInputHandle> };
+
+export function FormInput({ style, onFocus, onBlur, ref, ...props }: FieldProps) {
   const colors = useTheme();
   const [focused, setFocused] = useState(false);
   return <TextInput
+    ref={ref}
     placeholderTextColor={colors.muted}
     selectionColor={colors.accent}
     onFocus={(event) => { setFocused(true); onFocus?.(event); }}
@@ -82,7 +102,7 @@ export function FormInput({ style, onFocus, onBlur, ...props }: TextInputProps) 
   />;
 }
 
-export function FormField({ label, ...props }: TextInputProps & { label: string }) {
+export function FormField({ label, ...props }: FieldProps & { label: string }) {
   const colors = useTheme();
   return (
     <View style={{ gap: 7 }}>
