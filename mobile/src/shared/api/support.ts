@@ -1,14 +1,14 @@
 import type { AuthenticatedFetch } from './orders';
 
 export type CaseAudience = 'attendee' | 'organizer';
-export type CaseCategory = 'ticket_delivery' | 'payment' | 'refund' | 'seating' | 'event_info' | 'check_in' | 'account' | 'technical';
+export type CaseCategory = 'ticket_delivery' | 'payment' | 'refund' | 'seating' | 'event_info' | 'check_in' | 'account' | 'activation' | 'technical';
 export type CaseStatus = 'open' | 'in_progress' | 'waiting_for_customer' | 'resolved';
 export type SupportMode = 'requester' | 'staff';
 export const caseCategories: {value: CaseCategory; label: string}[] = [
   {value:'ticket_delivery', label:'Ticket delivery'}, {value:'payment', label:'Payment'},
   {value:'refund', label:'Refund'}, {value:'seating', label:'Seating'},
   {value:'event_info', label:'Event information'}, {value:'check_in', label:'Check-in'},
-  {value:'account', label:'Account'}, {value:'technical', label:'Technical problem'},
+  {value:'account', label:'Account'}, {value:'activation', label:'Paid-sales activation'}, {value:'technical', label:'Technical problem'},
 ];
 export const caseStatusLabels: Record<CaseStatus, string> = {
   open:'Open', in_progress:'In progress', waiting_for_customer:'Waiting for customer', resolved:'Resolved',
@@ -102,5 +102,6 @@ export const supportApi = {
     if (userId !== null && (!Number.isSafeInteger(userId) || userId <= 0)) throw new Error('Enter a valid staff user ID.');
     return request<SupportCase>(fetcher, base('staff')+'/'+encodeURIComponent(number), json({assigned_to_user_id:userId},'PATCH'));
   },
+  escalate(fetcher:AuthenticatedFetch,number:string,reason:string){return request<SupportCase>(fetcher,`/staff/support/cases/${encodeURIComponent(number)}/escalate`,json({reason:reason.trim()}));},
   currentUser: (fetcher: AuthenticatedFetch) => request<{id:number}>(fetcher, '/users/me'),
 };

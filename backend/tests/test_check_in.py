@@ -1,6 +1,9 @@
 """Door scanning (§4.8, §11). The cases are qr-codes.md#what-to-test and the
 04-checkin.md checklist, one test each."""
 
+from datetime import UTC, datetime
+from uuid import uuid4
+
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -19,6 +22,8 @@ from tests.test_ticket_types import add_ticket_type
 SCAN = "/api/v1/staff/events/{event_id}/scan"
 MANUAL = "/api/v1/staff/events/{event_id}/tickets/{code}/check-in"
 REVERSE = "/api/v1/staff/events/{event_id}/tickets/{code}/reverse"
+OFFLINE_SNAPSHOT = "/api/v1/staff/events/{event_id}/offline-snapshot"
+OFFLINE_SYNC = "/api/v1/staff/events/{event_id}/offline-sync"
 
 
 @pytest.fixture
@@ -119,6 +124,40 @@ def test_a_rotated_nonce_voids_the_old_qr(api, db, setup):
     db.commit()
 
     assert scan(api, event, admin, order["tickets"][0]["qr_payload"]).json()["outcome"] == "invalid"
+
+
+def test_offline_snapshot_and_sync_revalidate_on_server(api, db, setup):
+    event, admin, _, order = setup
+    ticket = order["tickets"][0]
+    snapshot = api.get(OFFLINE_SNAPSHOT.format(event_id=event.id), headers=auth(admin))
+    assert snapshot.status_code == 200
+    assert {row["public_code"] for row in snapshot.json()} == {
+        row["public_code"] for row in order["tickets"]
+    }
+    assert ticket["qr_payload"] in {row["qr_payload"] for row in snapshot.json()}
+
+    scanned_at = datetime.now(UTC).isoformat()
+    scan_id = str(uuid4())
+    synced = api.post(
+        OFFLINE_SYNC.format(event_id=event.id),
+        headers=auth(admin),
+        json={"scans": [{"client_scan_id": scan_id, "public_code": ticket["public_code"], "qr_payload": ticket["qr_payload"], "scanned_at": scanned_at}]},
+    )
+    assert synced.status_code == 200
+    assert synced.json()[0]["client_scan_id"] == scan_id
+    assert synced.json()[0]["outcome"] == "valid"
+    ticket_id = db.scalar(select(Ticket.id).where(Ticket.public_code == ticket["public_code"]))
+    record = db.scalar(select(CheckInRecord).where(CheckInRecord.ticket_id == ticket_id))
+    assert record is not None
+    assert scanned_at in record.device_info
+    retried = api.post(
+        OFFLINE_SYNC.format(event_id=event.id),
+        headers=auth(admin),
+        json={"scans": [{"client_scan_id": scan_id, "public_code": ticket["public_code"], "qr_payload": ticket["qr_payload"], "scanned_at": scanned_at}]},
+    )
+    assert retried.status_code == 200
+    assert retried.json()[0]["outcome"] == "valid"
+    assert db.scalar(select(func.count()).select_from(CheckInRecord)) == 1
 
 
 def test_an_unassigned_admin_gets_403(api, db, setup):

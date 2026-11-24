@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, View } from 'react-native';
 
 import { Icon } from '@/components/design';
 import { ThemedText } from '@/components/themed-text';
@@ -17,7 +17,7 @@ import { confirmAction } from '@/lib/confirm';
 
 export default function TicketsScreen() {
   const router = useRouter();
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale } = useI18n();
   const { authenticatedFetch } = useAuth();
   const colors = useTheme();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -28,6 +28,8 @@ export default function TicketsScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [documentBusy, setDocumentBusy] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
+  const [now,setNow]=useState(Date.now());
+  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[]);
 
   const loadOrders = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
@@ -104,7 +106,7 @@ export default function TicketsScreen() {
 
         {isLoading && orders.length === 0 && <View style={{ alignItems: 'center', paddingVertical: 48 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted }}>{t("Loading your orders…")}</ThemedText></View>}
 
-        {error && <FeedbackCard message={error} colors={colors} buttonLabel={t("Try again")} onPress={refresh} />}
+        {error && <FeedbackCard message={t(error)} colors={colors} buttonLabel={t("Try again")} onPress={refresh} />}
 
         {!isLoading && !error && orders.length === 0 && (
           <View style={{ alignItems: 'center', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
@@ -131,7 +133,7 @@ export default function TicketsScreen() {
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 13, paddingTop: 11, borderTopWidth: 1, borderTopColor: colors.border }}>
                   <ThemedText style={{ color: colors.muted, fontSize: 11 }}>{t("Order")} {order.order_number}</ThemedText>
-                  <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{formatOrderMoney(order.total_minor, order.currency)}</ThemedText>
+                  <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{formatOrderMoney(order.total_minor, order.currency, locale)}</ThemedText>
                 </View>
                 <ThemedText style={{ marginTop: 8, color: colors.accent, fontSize: 13, fontWeight: '700' }}>{expanded ? t("Hide details  ↑") : t('View details')}</ThemedText>
               </Pressable>
@@ -143,8 +145,8 @@ export default function TicketsScreen() {
                   </Pressable>
                   <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
                     <ThemedText style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>{t("Order summary")}</ThemedText>
-                    {order.items.map((item) => <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>{item.quantity} {t("× ticket")}</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(item.subtotal_minor, order.currency)}</ThemedText></View>)}
-                    {order.fee_minor > 0 && <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 7 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>{t("Processing fee")}</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(order.fee_minor, order.currency)}</ThemedText></View>}
+                    {order.items.map((item) => <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>{item.quantity} {t("× ticket")}</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(item.subtotal_minor, order.currency,locale)}</ThemedText></View>)}
+                    {order.fee_minor > 0 && <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 7 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>{t("Processing fee")}</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(order.fee_minor, order.currency,locale)}</ThemedText></View>}
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: 9, marginTop: 13 }}>
@@ -152,18 +154,21 @@ export default function TicketsScreen() {
                       <ActionButton label={documentBusy === order.order_number ? t("Preparing PDF…") : t("Download tickets PDF")} disabled={documentBusy !== null} colors={colors} onPress={() => void savePdf(order)} />
                     )}
                     <ActionButton label={t("Add to calendar")} disabled={documentBusy !== null} secondary colors={colors} onPress={() => void addToCalendar(order)} />
+                    {order.event.calendar_links?.google&&<ActionButton label={t('Google Calendar')} disabled={false} secondary colors={colors} onPress={()=>void Linking.openURL(order.event.calendar_links!.google)} />}
+                    {order.event.calendar_links?.outlook&&<ActionButton label={t('Outlook Calendar')} disabled={false} secondary colors={colors} onPress={()=>void Linking.openURL(order.event.calendar_links!.outlook)} />}
                   </View>
                   {documentError && <ThemedText style={{ marginTop: 8, color: colors.danger, fontSize: 12 }}>{t(documentError)}</ThemedText>}
 
                   {order.status === 'pending' && (
-                    <View style={{ flexDirection: 'row', gap: 9, marginTop: 13 }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 13 }}>
                       <ActionButton label={isBusy ? t("Working…") : t("Pay (demo)")} disabled={isBusy} colors={colors} onPress={() => void runOrderAction(order, 'pay')} />
+                      <ActionButton label={t("Simulate failed payment")} disabled={isBusy} secondary colors={colors} onPress={() => void ordersApi.pay(authenticatedFetch, order.order_number, 'fail').then(updated => setOrders(current => current.map(item => item.order_number === updated.order_number ? updated : item))).catch(failure => setActionError(failure instanceof Error ? failure.message : 'The payment failed.'))} />
                       <ActionButton label={isBusy ? t("Working…") : t("Cancel")} disabled={isBusy} secondary colors={colors} onPress={() => confirmCancel(order)} />
                     </View>
                   )}
 
                   {actionError && busyOrder === null && <ThemedText style={{ marginTop: 10, color: colors.danger, fontSize: 12 }}>{t(actionError)}</ThemedText>}
-                  {order.status === 'pending' && <ThemedText style={{ marginTop: 9, color: colors.muted, fontSize: 10 }}>{t("Demo payment only. No real payment is made.")}</ThemedText>}
+                  {order.status === 'pending' && <ThemedText style={{ marginTop: 9, color: colors.muted, fontSize: 10 }}>{t("Demo payment only. No real payment is made.")}{order.expires_at?` · ${t('Hold expires in {time}', {time:remainingTime(order.expires_at,now)})}`:''}</ThemedText>}
 
                   <View style={{ marginTop: 15 }}>
                     <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{t("Tickets (")}{order.tickets.length})</ThemedText>
@@ -199,6 +204,7 @@ function TicketCard({ ticket, order, colors }: { ticket: Order['tickets'][number
         <View style={{ flex: 1 }}>
           <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{ticket.ticket_type_name}</ThemedText>
           <ThemedText style={{ marginTop: 4, color: colors.muted, fontSize: 11 }}>{t("For")} {ticket.attendee_name}</ThemedText>
+          {ticket.seat_label && <ThemedText style={{ marginTop: 4, color: colors.accent, fontSize: 11, fontWeight:'700' }}>{ticket.seat_label}</ThemedText>}
         </View>
         <ThemedText style={{ color: statusColor, fontSize: 10, fontWeight: '800', textTransform: 'capitalize' }}>{t(ticket.status)}</ThemedText>
       </View>
@@ -217,6 +223,8 @@ function FeedbackCard({ message, colors, buttonLabel, onPress }: { message: stri
   const { t, formatDate } = useI18n();
   return <View style={{ alignItems: 'center', padding: 18, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}><ThemedText style={{ color: colors.text, textAlign: 'center', fontSize: 13 }}>{message}</ThemedText><Pressable onPress={onPress} style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.accent }}><ThemedText style={{ color: '#FFFFFF', fontWeight: '800' }}>{t(buttonLabel)}</ThemedText></Pressable></View>;
 }
+
+function remainingTime(expiresAt:string,now:number){const seconds=Math.max(0,Math.floor((new Date(expiresAt).getTime()-now)/1000));return `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;}
 
 function ActionButton({ label, disabled, secondary = false, onPress }: { label: string; disabled: boolean; secondary?: boolean; colors: AppColors; onPress: () => void }) {
   return <View style={{ flex: 1 }}><Action label={label} disabled={disabled} secondary={secondary} onPress={onPress} /></View>;

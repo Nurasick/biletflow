@@ -22,6 +22,9 @@ export type StaffTicket = {
 export type ScanOutcome = 'valid' | 'invalid' | 'wrong_event' | 'cancelled' | 'refunded' | 'already_used';
 export type ScanResult = { outcome: ScanOutcome; ticket: StaffTicket | null };
 export type Attendance = { registered: number; checked_in: number; absent: number; checked_in_percent: number };
+export type OfflineSnapshotTicket = {public_code:string;qr_payload:string};
+export type OfflineSyncItem = {client_scan_id:string;public_code:string;qr_payload:string;scanned_at:string};
+export type OfflineSyncResult = {client_scan_id:string;outcome:ScanOutcome;ticket:StaffTicket|null};
 
 export class StaffApiError extends Error {
   constructor(message: string, public readonly status: number | null = null) {
@@ -81,6 +84,8 @@ export const staffApi = {
     request<StaffEvent[]>(fetcher, '/staff/events', { signal }),
   attendance: (fetcher: AuthenticatedFetch, eventId: number, signal?: AbortSignal) =>
     request<Attendance>(fetcher, `${eventPath(eventId)}/attendance`, { signal }),
+  offlineSnapshot: (fetcher:AuthenticatedFetch,eventId:number,offset=0,signal?:AbortSignal)=>request<OfflineSnapshotTicket[]>(fetcher,`${eventPath(eventId)}/offline-snapshot?limit=100&offset=${Math.max(0,Math.floor(offset))}`,{signal}),
+  offlineSync: (fetcher:AuthenticatedFetch,eventId:number,scans:OfflineSyncItem[])=>request<OfflineSyncResult[]>(fetcher,`${eventPath(eventId)}/offline-sync`,mutation({scans})),
   search: (fetcher: AuthenticatedFetch, eventId: number, query: string, signal?: AbortSignal) => {
     const term = query.trim();
     if (term.length < 2 || term.length > 100) throw new StaffApiError('Enter between 2 and 100 characters.');

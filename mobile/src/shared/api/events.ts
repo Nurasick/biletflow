@@ -26,7 +26,11 @@ export type EventDetail = PublicEvent & {
   organizer_name: string;
   images: { id: number; url: string; position: number }[];
   paid_sales_active: boolean;
+  calendar_links?: { google: string; outlook: string } | null;
 };
+
+export type EventSeat = { event_seat_id: number; section_name: string; row_label: string; seat_number: string; status: 'available'|'held'|'sold'|'unavailable'; is_accessible: boolean; ticket_type_id: number|null; ticket_type_name: string|null; price_minor: number|null; currency: string|null; seat_label: string; accessible_label: string; hold_expires_at: string|null };
+export type EventSeatMap = { event_id: number; seating_mode: string; venue_name: string; venue_city: string|null; venue_address: string; counts: { total:number; sellable:number; available:number; held:number; sold:number; unavailable:number }; sections: { section_id:number; name:string; display_order:number; rows:{ row_id:number; name:string; display_order:number; seats:EventSeat[] }[] }[] };
 
 export type PublicTicketType = {
   id: number;
@@ -87,10 +91,17 @@ function queryString(filters: EventFilters) {
 export const eventsApi = {
   list: (filters: EventFilters = {}, signal?: AbortSignal) =>
     getJson<PublicEvent[]>(`/events${queryString(filters)}`, signal),
-  get: (slug: string, signal?: AbortSignal) =>
-    getJson<EventDetail>(`/events/${encodeURIComponent(slug)}`, signal),
-  ticketTypes: (slug: string, signal?: AbortSignal) =>
-    getJson<PublicTicketType[]>(`/events/${encodeURIComponent(slug)}/ticket-types`, signal),
+  get: (slug: string, signal?: AbortSignal, accessToken?:string) =>
+    getJson<EventDetail>(`/events/${encodeURIComponent(slug)}${accessToken?`?access_token=${encodeURIComponent(accessToken)}`:''}`, signal),
+  ticketTypes: (slug: string, signal?: AbortSignal, accessToken?:string) =>
+    getJson<PublicTicketType[]>(`/events/${encodeURIComponent(slug)}/ticket-types${accessToken?`?access_token=${encodeURIComponent(accessToken)}`:''}`, signal),
+  seats: (slug: string, signal?: AbortSignal, accessToken?:string) => getJson<EventSeatMap>(`/events/${encodeURIComponent(slug)}/seats${accessToken?`?access_token=${encodeURIComponent(accessToken)}`:''}`, signal),
+  unlock: async (slug: string, accessCode: string) => {
+    const response = await fetch(`${API_V1_URL}/events/${encodeURIComponent(slug)}/unlock`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({access_code:accessCode}) });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string' ? body.detail : 'Could not unlock this event.');
+    return body as {event_slug:string; access_token:string};
+  },
 };
 
 export const promotionsApi = {

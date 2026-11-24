@@ -162,6 +162,24 @@ def find_ticket(db: Session, event: Event, public_code: str) -> Ticket:
     return ticket
 
 
+def offline_snapshot(db: Session, event: Event, limit: int = 100, offset: int = 0) -> list[dict[str, str]]:
+    """Signed QR snapshots for currently valid tickets, scoped to assigned event access."""
+    rows = db.scalars(
+        select(Ticket)
+        .where(Ticket.event_id == event.id, Ticket.status == TicketStatus.VALID)
+        .order_by(Ticket.id)
+        .limit(limit)
+        .offset(offset)
+    ).all()
+    return [
+        {
+            "public_code": ticket.public_code,
+            "qr_payload": qr.sign(qr.ADMISSION, ticket.public_code, event.id, ticket.qr_nonce),
+        }
+        for ticket in rows
+    ]
+
+
 def counts(db: Session, event: Event) -> dict[str, int | float]:
     """§4.8 registered and checked-in; §4.15 absent and percentage. All derived
     from tickets.status and never stored. Cancelled and refunded tickets are

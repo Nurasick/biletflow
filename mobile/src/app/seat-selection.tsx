@@ -1,210 +1,70 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
-
-import { ticketLimit } from '@/api/public';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { ScreenFrame } from '@/components/screen-frame';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenHeading } from '@/components/workspace';
 import { useI18n } from '@/i18n';
-import { EVENT, ROWS, SEAT_PRICE, SEATS_PER_ROW, SOLD_SEATS, type SeatType } from '@/constants/seating';
-import { MaxContentWidth, Stage, type AppColors } from '@/constants/theme';
+import { MaxContentWidth, Stage } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { eventsApi, type EventDetail, type PublicTicketType } from '@/shared/api/events';
-
-type TicketMap = Record<SeatType, PublicTicketType | null>;
-
-function mapTicketTypes(types: PublicTicketType[]): TicketMap {
-  const available = types.filter((type) => ticketLimit(type) > 0);
-  const sorted = [...available].sort((a, b) => a.price_minor - b.price_minor);
-  const forTier = (tier: SeatType, rank: number) => {
-    const exactPrice = available.find((type) => type.price_minor === SEAT_PRICE[tier] * 100);
-    if (exactPrice) return exactPrice;
-    const named = available.find((type) => `${type.name} ${type.description ?? ''}`.toLowerCase().includes(tier));
-    return named ?? sorted[Math.min(rank, sorted.length - 1)] ?? null;
-  };
-  return {
-    standard: forTier('standard', 0),
-    premium: forTier('premium', Math.floor((sorted.length - 1) / 2)),
-    vip: forTier('vip', sorted.length - 1),
-  };
-}
-
-function seatTier(seatId: string): SeatType {
-  const rowName = seatId.split('-')[0];
-  return ROWS.find((row) => row.name === rowName)?.type ?? 'standard';
-}
+import { eventsApi, type EventDetail, type EventSeat, type EventSeatMap } from '@/shared/api/events';
 
 export default function SeatSelectionScreen() {
   const router = useRouter();
   const { t, locale, formatDate, formatNumber } = useI18n();
-  const { slug: rawSlug, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug?: string | string[]; campaignToken?: string|string[] }>();
-  const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
-  const campaignToken = Array.isArray(rawCampaignToken) ? rawCampaignToken[0] : rawCampaignToken;
-  const { width } = useWindowDimensions();
+  const params = useLocalSearchParams<{slug?:string|string[];campaignToken?:string|string[];accessToken?:string|string[]}>();
+  const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+  const campaignToken = Array.isArray(params.campaignToken) ? params.campaignToken[0] : params.campaignToken;
+  const accessToken = Array.isArray(params.accessToken) ? params.accessToken[0] : params.accessToken;
   const colors = useTheme();
-  const [event, setEvent] = useState<EventDetail | null>(null);
-  const [ticketTypes, setTicketTypes] = useState<PublicTicketType[]>([]);
-  const [selectedSeats, setSelectedSeats] = useState<string[]>(slug ? [] : ['3-6', '3-7']);
-  const [loading, setLoading] = useState(!!slug);
-  const [error, setError] = useState<string | null>(null);
-  const previewOnly = !slug;
-
+  const [event,setEvent] = useState<EventDetail|null>(null);
+  const [map,setMap] = useState<EventSeatMap|null>(null);
+  const [selected,setSelected] = useState<EventSeat[]>([]);
+  const [error,setError] = useState('');
+  const [loading,setLoading] = useState(true);
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) { setError('Choose an event first.'); setLoading(false); return; }
     const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    void Promise.all([
-      eventsApi.get(slug, controller.signal),
-      eventsApi.ticketTypes(slug, controller.signal),
-    ]).then(([eventData, types]) => {
-      setEvent(eventData);
-      setTicketTypes(types);
-    }).catch((failure: unknown) => {
-      if (failure instanceof Error && failure.name === 'AbortError') return;
-      setError(failure instanceof Error ? failure.message : 'Could not load this event.');
-    }).finally(() => {
-      if (!controller.signal.aborted) setLoading(false);
-    });
-    return () => controller.abort();
-  }, [slug]);
-
-  const ticketMap = useMemo(() => mapTicketTypes(ticketTypes), [ticketTypes]);
-  const sheetWidth = Math.min(width, MaxContentWidth);
-  const seatSize = Math.max(24, Math.min(34, Math.floor((sheetWidth - 76) / SEATS_PER_ROW) - 2));
-  const selectedTotalMinor = selectedSeats.reduce((sum, seatId) => {
-    const type = ticketMap[seatTier(seatId)];
-    return sum + (type?.price_minor ?? SEAT_PRICE[seatTier(seatId)] * 100);
-  }, 0);
-  const selectedCounts = selectedSeats.reduce<Record<number, number>>((counts, seatId) => {
-    const type = ticketMap[seatTier(seatId)];
-    if (type) counts[type.id] = (counts[type.id] ?? 0) + 1;
-    return counts;
-  }, {});
-  const selectedCountByType = (typeId: number) => selectedCounts[typeId] ?? 0;
-
-  const toggleSeat = (seatId: string) => {
-    if (SOLD_SEATS.has(seatId)) return;
-    if (selectedSeats.includes(seatId)) {
-      setSelectedSeats((current) => current.filter((seat) => seat !== seatId));
-      return;
-    }
-    const type = ticketMap[seatTier(seatId)];
-    if (previewOnly) {
-      setSelectedSeats((current) => [...current, seatId]);
-      return;
-    }
-    if (selectedSeats.length >= 20 || !type || selectedCountByType(type.id) >= ticketLimit(type)) return;
-    setSelectedSeats((current) => [...current, seatId]);
+    void Promise.all([eventsApi.get(slug,controller.signal,accessToken),eventsApi.seats(slug,controller.signal,accessToken)])
+      .then(([eventData,seatMap]) => { if(!controller.signal.aborted){setEvent(eventData);setMap(seatMap);} })
+      .catch(failure => { if(!controller.signal.aborted)setError(failure instanceof Error?failure.message:'Could not load the seat map.'); })
+      .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+    return ()=>controller.abort();
+  },[slug,accessToken]);
+  const seats = useMemo(()=>map?.sections.flatMap(section=>section.rows.flatMap(row=>row.seats))??[],[map]);
+  const selectedTotal = selected.reduce((sum,seat)=>sum+(seat.price_minor??0),0);
+  const grouped = useMemo(()=>{
+    const result:Record<number,number>={};
+    selected.forEach(seat=>{if(seat.ticket_type_id)result[seat.ticket_type_id]=(result[seat.ticket_type_id]??0)+1;});
+    return result;
+  },[selected]);
+  const toggle=(seat:EventSeat)=>{
+    if(seat.status!=='available')return;
+    setSelected(current=>current.some(s=>s.event_seat_id===seat.event_seat_id)?current.filter(s=>s.event_seat_id!==seat.event_seat_id):current.length<20&&seat.ticket_type_id?[...current,seat]:current);
   };
-
-  const continueToCheckout = () => {
-    if (!slug || !selectedSeats.length) return;
-    const items = Object.fromEntries(Object.entries(selectedCounts).map(([id, quantity]) => [id, quantity]));
-    router.push({
-      pathname: '/checkout',
-      params: { slug, selection: JSON.stringify(items), seats: selectedSeats.join(','), ...(campaignToken ? { campaignToken } : {}) },
-    });
+  const go=()=>{
+    if(!slug||!selected.length)return;
+    router.push({pathname:'/checkout',params:{slug,selection:JSON.stringify(grouped),seats:JSON.stringify(selected.map(s=>({id:s.event_seat_id,label:s.seat_label,ticket_type_id:s.ticket_type_id}))),...(campaignToken?{campaignToken}:{}),...(accessToken?{accessToken}:{})}});
   };
-
-  const title = event?.title ?? EVENT.title;
-  const eventWhen = event ? `${formatDate(event.starts_at, event.timezone)} · ${event.venue_name}` : `${EVENT.date} · ${EVENT.time} · ${EVENT.hall}`;
-
-  return (
-    <ScreenFrame title={t('Select seats')}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth: MaxContentWidth, padding: 18, paddingBottom: 24 }}>
-        <ScreenHeading>{title}</ScreenHeading>
-        <ThemedText style={{ marginTop: 4, color: colors.muted, fontSize: 13 }}>{eventWhen}</ThemedText>
-
-        <View style={{ marginTop: 14, padding: 11, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.raised }}>
-          <ThemedText style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>
-            {t('Seat map preview. This backend currently reserves ticket quantities only; selected seat numbers are not held or saved on the ticket.')}
-          </ThemedText>
-        </View>
-
-        {loading ? <View style={{ alignItems: 'center', paddingVertical: 36 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 10, color: colors.muted }}>{t('Loading event and ticket types...')}</ThemedText></View> : error ? (
-          <View style={{ alignItems: 'center', paddingVertical: 30 }}><ThemedText style={{ color: colors.text, textAlign: 'center' }}>{t(error)}</ThemedText></View>
-        ) : <>
-          <View style={{ minHeight: 34, marginTop: 20, alignItems: 'center', justifyContent: 'center', borderBottomLeftRadius: 23, borderBottomRightRadius: 23, backgroundColor: Stage.background }}>
-            <ThemedText style={{ color: Stage.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.7 }}>{t('STAGE')}</ThemedText>
-          </View>
-
-          <ScrollView horizontal style={{ marginTop: 16 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 6 }}>
-          <View style={{ minWidth: 36 + SEATS_PER_ROW * (seatSize + 2), gap: 5 }}>
-            {ROWS.map((row) => <View key={row.name} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <ThemedText style={{ width: 14, color: colors.muted, fontSize: 9, textAlign: 'center' }}>{row.name}</ThemedText>
-              {Array.from({ length: SEATS_PER_ROW }, (_, index) => {
-                const seatId = `${row.name}-${index + 1}`;
-                const sold = SOLD_SEATS.has(seatId);
-                const selected = selectedSeats.includes(seatId);
-                const mappedType = ticketMap[row.type];
-                const atLimit = !!mappedType && selectedCountByType(mappedType.id) >= ticketLimit(mappedType);
-                const unavailable = !previewOnly && (!mappedType || atLimit || selectedSeats.length >= 20) && !selected;
-                const tierColor = row.type === 'standard' ? colors.accent : row.type === 'premium' ? colors.success : colors.warning;
-                return <Pressable
-                  key={seatId}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Row {row}, seat {seat}, {status}', { row: row.name, seat: formatNumber(index + 1), status: t(sold ? 'sold' : selected ? 'selected' : unavailable ? 'unavailable' : row.type) })}
-                  accessibilityState={{ disabled: sold || unavailable, selected }}
-                  disabled={sold || unavailable}
-                  onPress={() => toggleSeat(seatId)}
-                  style={{ width: seatSize, height: seatSize, marginHorizontal: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 6, borderWidth: sold || selected ? 0 : 1, borderColor: tierColor, backgroundColor: sold ? colors.raised : selected ? colors.button : row.type === 'standard' ? colors.surface : row.type === 'premium' ? colors.successWash : colors.warningWash, opacity: unavailable ? 0.4 : 1 }}>
-                  <ThemedText style={{ color: selected ? '#FFFFFF' : colors.muted, fontSize: 12, fontWeight: '800' }}>{sold ? '×' : selected ? '✓' : ''}</ThemedText>
-                </Pressable>;
-              })}
-              <ThemedText style={{ width: 14, color: colors.muted, fontSize: 9, textAlign: 'center' }}>{row.name}</ThemedText>
-            </View>)}
-          </View>
-          </ScrollView>
-
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 11, marginTop: 17 }}>
-            <Legend color={colors.button} label={t('Selected')} colors={colors} filled />
-            <Legend color={colors.accent} label={t('Standard')} colors={colors} />
-            <Legend color={colors.success} label={t('Premium')} colors={colors} filled />
-            <Legend color={colors.warning} label={t('VIP')} colors={colors} filled />
-            <Legend color={colors.muted} label={t('Sold')} colors={colors} filled />
-          </View>
-
-          <View style={{ marginTop: 16, overflow: 'hidden', borderRadius: 13, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 13, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-              <ThemedText style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>{t('Selected seats ({count})', { count: formatNumber(selectedSeats.length) })}</ThemedText>
-              <Pressable accessibilityRole="button" disabled={!selectedSeats.length} onPress={() => setSelectedSeats([])}><ThemedText style={{ color: colors.accent, fontSize: 10, fontWeight: '800' }}>{t('Clear all')}</ThemedText></Pressable>
+  return <ScreenFrame title={t('Select seats')}>
+    <ScrollView style={{flex:1}} contentContainerStyle={{alignSelf:'center',width:'100%',maxWidth:MaxContentWidth,padding:18,paddingBottom:24}}>
+      <ScreenHeading>{event?.title??t('Select seats')}</ScreenHeading>
+      {event&&<ThemedText style={{marginTop:4,color:colors.muted,fontSize:13}}>{formatDate(event.starts_at,event.timezone)} · {event.venue_name}</ThemedText>}
+      {loading?<View style={{alignItems:'center',padding:36}}><ActivityIndicator color={colors.accent}/><ThemedText style={{marginTop:10,color:colors.muted}}>{t('Loading event and ticket types...')}</ThemedText></View>:error?<ThemedText style={{padding:24,color:colors.text}}>{t(error)}</ThemedText>:<>
+        {!!map&&<><View style={{marginTop:20,padding:12,borderRadius:12,backgroundColor:Stage.background,alignItems:'center'}}><ThemedText style={{color:Stage.accent,fontSize:12,fontWeight:'800',letterSpacing:1.5}}>{t('STAGE')}</ThemedText></View>
+          {map.sections.map(section=><View key={section.section_id} style={{marginTop:16,padding:12,borderWidth:1,borderColor:colors.border,borderRadius:14,backgroundColor:colors.surface}}><ThemedText style={{marginBottom:9,color:colors.text,fontWeight:'800'}}>{section.name}</ThemedText>{section.rows.map(row=><View key={row.row_id} style={{marginBottom:10}}><ThemedText style={{marginBottom:4,color:colors.muted,fontSize:11}}>{t('Row {row}',{row:row.name})}</ThemedText><View style={{flexDirection:'row',flexWrap:'wrap',gap:5}}>{row.seats.map(seat=>{const active=selected.some(s=>s.event_seat_id===seat.event_seat_id);const enabled=seat.status==='available'&&(active||!!seat.ticket_type_id&&(selected.length<20||active));const tone=active?colors.button:seat.status==='sold'||seat.status==='held'?colors.muted:seat.is_accessible?colors.success:colors.accent;return <Pressable key={seat.event_seat_id} accessibilityRole="button" accessibilityLabel={`${seat.accessible_label}, ${t(active?'selected':seat.status)}`} accessibilityState={{disabled:!enabled,selected:active}} disabled={!enabled} onPress={()=>toggle(seat)} style={{minWidth:38,minHeight:38,paddingHorizontal:5,borderRadius:8,alignItems:'center',justifyContent:'center',backgroundColor:active?colors.button:seat.status==='sold'||seat.status==='held'?colors.raised:colors.surface,borderWidth:1,borderColor:tone,opacity:enabled?1:0.5}}><ThemedText style={{fontSize:10,color:active?'#FFFFFF':colors.text,fontWeight:'700'}}>{seat.seat_number}{seat.is_accessible?' ♿':''}</ThemedText></Pressable>;})}</View></View>)}</View>)}</>}
+        <View style={{marginTop:14,flexDirection:'row',flexWrap:'wrap',gap:12}}>{['available','held','sold','unavailable'].map(status=><ThemedText key={status} style={{color:colors.muted,fontSize:11}}>{t(status)}</ThemedText>)}</View>
+        <View style={{marginTop:16,borderWidth:1,borderColor:colors.border,borderRadius:13,overflow:'hidden',backgroundColor:colors.surface}}>
+          <ThemedText style={{padding:12,color:colors.text,fontWeight:'800'}}>{t('Selected seats ({count})',{count:formatNumber(selected.length)})}</ThemedText>
+          {selected.map(seat=>(
+            <View key={seat.event_seat_id} style={{padding:12,borderTopWidth:1,borderTopColor:colors.border,flexDirection:'row',justifyContent:'space-between'}}>
+              <ThemedText style={{color:colors.text}}>{seat.seat_label}{seat.is_accessible?' · ♿':''}</ThemedText>
+              <ThemedText style={{color:colors.text}}>{new Intl.NumberFormat(locale,{style:'currency',currency:seat.currency??'KZT',maximumFractionDigits:0}).format((seat.price_minor??0)/100)}</ThemedText>
             </View>
-            {!selectedSeats.length ? <ThemedText style={{ padding: 13, color: colors.muted, fontSize: 11 }}>{t('Choose available seats from the map above.')}</ThemedText> : selectedSeats.map((seatId) => {
-              const tier = seatTier(seatId);
-              const type = ticketMap[tier];
-              const amount = previewOnly ? SEAT_PRICE[tier] * 100 : (type?.price_minor ?? 0);
-              return <View key={seatId} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 13, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <View>
-                  <ThemedText style={{ color: colors.text, fontSize: 11, fontWeight: '700' }}>{t('Row {row}, seat {seat}', { row: seatId.split('-')[0], seat: seatId.split('-')[1] })}</ThemedText>
-                  <ThemedText style={{ marginTop: 2, color: colors.muted, fontSize: 10, textTransform: 'capitalize' }}>{type?.name ?? t(tier)}</ThemedText>
-                </View>
-                <ThemedText style={{ color: colors.text, fontSize: 11, fontWeight: '800' }}>{new Intl.NumberFormat(locale, { style: 'currency', currency: type?.currency ?? 'KZT', maximumFractionDigits: 0 }).format(amount / 100)}</ThemedText>
-              </View>;
-            })}
-          </View>
-        </>}
-      </ScrollView>
-
-      <View style={{ borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface }}>
-      <View style={{ alignSelf: 'center', width: '100%', maxWidth: MaxContentWidth, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 18, paddingVertical: 11 }}>
-        <View>
-          <ThemedText style={{ color: colors.muted, fontSize: 10 }}>{t('Total')}</ThemedText>
-          <ThemedText style={{ marginTop: 2, color: colors.text, fontSize: 14, fontWeight: '900' }}>{new Intl.NumberFormat(locale, { style: 'currency', currency: ticketTypes[0]?.currency ?? 'KZT', maximumFractionDigits: 0 }).format(selectedTotalMinor / 100)}</ThemedText>
+          ))}
         </View>
-        <Pressable accessibilityRole="button" disabled={!slug || !selectedSeats.length || loading || !!error} onPress={continueToCheckout} style={{ minWidth: 130, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, minHeight: 48, borderRadius: 13, backgroundColor: colors.button, opacity: !slug || !selectedSeats.length || loading || error ? 0.55 : 1 }}>
-          <ThemedText style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>{t(previewOnly ? 'Preview only' : 'Continue')}</ThemedText>
-        </Pressable>
-      </View>
-      </View>
-    </ScreenFrame>
-  );
-}
-
-function Legend({ color, label, colors, filled = false }: { color: string; label: string; colors: AppColors; filled?: boolean }) {
-  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-    <View style={{ width: 11, height: 11, borderRadius: 3, backgroundColor: filled ? color : 'transparent', borderWidth: filled ? 0 : 1, borderColor: color }} />
-    <ThemedText style={{ color: colors.muted, fontSize: 9 }}>{label}</ThemedText>
-  </View>;
+      </>}
+    </ScrollView>
+    <View style={{borderTopWidth:1,borderTopColor:colors.border,backgroundColor:colors.surface,padding:14,flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><View><ThemedText style={{color:colors.muted,fontSize:11}}>{t('Total')}</ThemedText><ThemedText style={{color:colors.text,fontWeight:'900'}}>{new Intl.NumberFormat(locale,{style:'currency',currency:seats.find(s=>s.currency)?.currency??'KZT',maximumFractionDigits:0}).format(selectedTotal/100)}</ThemedText></View><Pressable disabled={!selected.length||loading||!!error} onPress={go} style={{paddingHorizontal:20,paddingVertical:13,borderRadius:12,backgroundColor:colors.button,opacity:selected.length&&!loading&&!error?1:.5}}><ThemedText style={{color:'#FFF',fontWeight:'800'}}>{t('Continue')}</ThemedText></Pressable></View>
+  </ScreenFrame>;
 }

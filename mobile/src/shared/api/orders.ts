@@ -7,6 +7,10 @@ export type OrderTicket = {
   ticket_type_name: string;
   status: TicketStatus;
   attendee_name: string;
+  seat_label?: string | null;
+  section_name?: string | null;
+  row_label?: string | null;
+  seat_number?: string | null;
   qr_payload: string;
 };
 
@@ -22,6 +26,7 @@ export type Order = {
     ends_at: string;
     timezone: string;
     status: string;
+    calendar_links?: { google: string; outlook: string } | null;
   };
   status: OrderStatus;
   contact_name: string;
@@ -34,7 +39,7 @@ export type Order = {
   expires_at: string | null;
   confirmed_at: string | null;
   created_at: string;
-  items: { id: number; ticket_type_id: number; quantity: number; unit_price_minor: number; subtotal_minor: number }[];
+  items: { id: number; ticket_type_id: number; event_seat_id?:number|null; section_name?:string|null; row_label?:string|null; seat_number?:string|null; quantity: number; unit_price_minor: number; subtotal_minor: number }[];
   tickets: OrderTicket[];
 };
 
@@ -56,21 +61,21 @@ export const ordersApi = {
   mine: (fetcher: AuthenticatedFetch, signal?: AbortSignal) =>
     requestJson<Order[]>(fetcher, '/users/me/orders', { signal }),
 
-  pay: (fetcher: AuthenticatedFetch, orderNumber: string) =>
+  pay: (fetcher: AuthenticatedFetch, orderNumber: string, outcome: 'succeed'|'fail' = 'succeed') =>
     requestJson<Order>(fetcher, `/orders/${encodeURIComponent(orderNumber)}/pay`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Idempotency-Key': `mobile-${orderNumber}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       },
-      body: JSON.stringify({ outcome: 'succeed' }),
+      body: JSON.stringify({ outcome }),
     }),
 
   cancel: (fetcher: AuthenticatedFetch, orderNumber: string) =>
     requestJson<Order>(fetcher, `/orders/${encodeURIComponent(orderNumber)}/cancel`, { method: 'POST' }),
 };
 
-export function formatOrderMoney(minor: number, currency = 'KZT') {
-  const amount = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(minor / 100);
+export function formatOrderMoney(minor: number, currency = 'KZT', locale?: string) {
+  const amount = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(minor / 100);
   return `${amount} ${currency === 'KZT' ? '₸' : currency}`;
 }

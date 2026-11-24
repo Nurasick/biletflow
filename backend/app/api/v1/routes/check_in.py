@@ -8,12 +8,17 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import or_, select
 
 from app.api.deps import CurrentUser, DbSession, StaffEvent
+from app.core import qr
+from app.models.check_in import CheckInAction, CheckInRecord
 from app.models.event import Event, EventStatus
 from app.models.organizer import OrganizerProfile
 from app.models.staff import StaffAssignment
 from app.schemas.check_in import (
     AttendanceRead,
     DeviceInfo,
+    OfflineSnapshotTicket,
+    OfflineSyncRequest,
+    OfflineSyncResult,
     ScannedTicket,
     ScanRequest,
     ScanResponse,
@@ -77,6 +82,55 @@ def scan(event: StaffEvent, data: ScanRequest, user: CurrentUser, db: DbSession)
     door, not an error. Campaign QR codes come back `invalid` (§11).
     """
     return _response(check_in.scan(db, event, user, data.qr, data.device_info))
+
+
+@router.get("/staff/events/{event_id}/offline-snapshot", response_model=list[OfflineSnapshotTicket])
+def offline_snapshot(
+    event: StaffEvent,
+    db: DbSession,
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[dict[str, str]]:
+    """Download current valid signed QR payloads for a secure offline event cache."""
+    return check_in.offline_snapshot(db, event, limit, offset)
+
+
+@router.post("/staff/events/{event_id}/offline-sync", response_model=list[OfflineSyncResult])
+def offline_sync(
+    event: StaffEvent, data: OfflineSyncRequest, user: CurrentUser, db: DbSession
+) -> list[dict]:
+    """Revalidate queued offline codes sequentially; every admission decision remains server-side."""
+    ids = [item.client_scan_id for item in data.scans]
+    if len(ids) != len(set(ids)):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "client_scan_id values must be unique")
+    results = []
+    for item in data.scans:
+        sync_marker = f"offline:{item.client_scan_id}:{item.scanned_at.isoformat()}"
+        claims = qr.verify(item.qr_payload)
+        if claims is None or claims.typ != qr.ADMISSION or claims.event_id != event.id or claims.public_code != item.public_code:
+            results.append({"client_scan_id": item.client_scan_id, "outcome": "invalid", "ticket": None})
+            continue
+        try:
+            ticket = check_in.find_ticket(db, event, item.public_code)
+        except check_in.TicketNotFound:
+            results.append({"client_scan_id": item.client_scan_id, "outcome": "invalid", "ticket": None})
+            continue
+        previously_synced = db.scalar(
+            select(CheckInRecord).where(
+                CheckInRecord.event_id == event.id,
+                CheckInRecord.performed_by_user_id == user.id,
+                CheckInRecord.action == CheckInAction.CHECK_IN,
+                CheckInRecord.device_info == sync_marker,
+            )
+        )
+        if previously_synced and previously_synced.ticket_id != ticket.id:
+            result = check_in.describe(db, check_in.Outcome.INVALID, ticket)
+        elif previously_synced:
+            result = check_in.describe(db, check_in.Outcome.VALID, ticket)
+        else:
+            result = check_in.scan(db, event, user, item.qr_payload, sync_marker)
+        results.append({"client_scan_id": item.client_scan_id, **_response(result)})
+    return results
 
 
 @router.post("/staff/events/{event_id}/tickets/{public_code}/check-in", response_model=ScanResponse)

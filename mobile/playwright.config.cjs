@@ -2,7 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 // Without MOBILE_WEB_URL the suite serves the exported web build itself.
 // Run `npm run export:check` first (or use `npm run test:e2e:fresh`).
-const EXPORT_PORT = 8090;
+const EXPORT_PORT = Number(process.env.MOBILE_EXPORT_PORT || 8090);
 const useLocalExport = !process.env.MOBILE_WEB_URL;
 
 module.exports = defineConfig({

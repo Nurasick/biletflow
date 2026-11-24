@@ -23,6 +23,17 @@ test('staff requests only the server-assigned event list and forwards cancellati
   assert.equal(calls[0].init.signal, controller.signal);
 });
 
+test('offline snapshot is event scoped and sync preserves scan ids, QR payloads and timestamps',async()=>{
+ const calls=[];const fetcher=async(path,init)=>{calls.push({path,init});return Response.json([{client_scan_id:'123e4567-e89b-42d3-a456-426614174000',outcome:'valid',ticket:checkedInTicket}]);};
+ await staffApi.offlineSnapshot(fetcher,42,100);
+ const scans=[{client_scan_id:'123e4567-e89b-42d3-a456-426614174000',public_code:'TEST-TICKET',qr_payload:'BF1.adm.payload',scanned_at:'2026-11-24T10:00:00.000Z'}];
+ const result=await staffApi.offlineSync(fetcher,42,scans);
+ assert.equal(calls[0].path,'/staff/events/42/offline-snapshot?limit=100&offset=100');
+ assert.equal(calls[1].path,'/staff/events/42/offline-sync');
+ assert.deepEqual(JSON.parse(calls[1].init.body),{scans});
+ assert.equal(result[0].outcome,'valid');
+});
+
 test('all six admission outcomes remain distinct, including campaign rejection', async () => {
   for (const outcome of ['valid', 'invalid', 'wrong_event', 'cancelled', 'refunded', 'already_used']) {
     const calls = [];
