@@ -31,10 +31,13 @@ const fakeAuthSource = `
   export const api = {
     get: (p) => send('GET', p), post: (p, b) => send('POST', p, b), put: (p, b) => send('PUT', p, b),
     patch: (p, b) => send('PATCH', p, b), delete: (p) => send('DELETE', p),
+    // Downloads record the media type they asked for as the call body.
+    file: (p, mediaType) => send('FILE', p, { mediaType }),
     json: (method, body) => ({ method, body: JSON.stringify(body) }),
   };
   export const rawRequest = (p, init) => send(init?.method ?? 'GET', p, init?.body && JSON.parse(init.body));
   export const optionalAuthRequest = rawRequest;
+  export const optionalAuthFile = (p, mediaType) => send('FILE', p, { mediaType });
 `;
 export const fakeAuthUrl = `data:text/javascript;base64,${Buffer.from(fakeAuthSource).toString('base64')}`;
 

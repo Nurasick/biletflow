@@ -9,7 +9,7 @@ import { OperationsWorkspace } from "../features/Operations/ui/OperationsWorkspa
 import { useAuth } from "../hooks/useAuth";
 import { useLocale } from "../i18n/useLocale";
 import { adminApi, adminOrderStatuses, adminPaymentStatuses } from "../shared/api/admin";
-import type { AdminOrder, AdminPayment, AdminPaymentStatus, AdminRefund } from "../shared/api/admin";
+import type { AdminFilters, AdminOrder, AdminPayment, AdminPaymentStatus, AdminRefund } from "../shared/api/admin";
 import { formatMinorCurrency } from "../shared/lib/formatPrice";
 import { FileDownloadButton } from "../shared/ui/FileDownloadButton";
 
@@ -38,12 +38,16 @@ export const AdminTransactionsPage = () => {
   </OperationsWorkspace>;
 };
 
-const TransactionExport = ({ kind }: { kind: "orders" | "payments" }) => {
+const exportLabels = {
+  orders: "adminFinance.exportOrders", payments: "adminFinance.exportPayments", refunds: "adminFinance.exportRefunds",
+} as const;
+
+/** CSV of the rows the filters currently select (every page, not just this one). */
+const TransactionExport = ({ kind, filters }: { kind: keyof typeof exportLabels; filters?: AdminFilters }) => {
   const { t } = useTranslation();
   return <div>
-    <FileDownloadButton filename={`biletflow-${kind}.csv`}
-      label={t(kind === "orders" ? "adminFinance.exportOrders" : "adminFinance.exportPayments")}
-      getFile={kind === "orders" ? adminApi.ordersCsv : adminApi.paymentsCsv} />
+    <FileDownloadButton filename={`biletflow-${kind}.csv`} label={t(exportLabels[kind])}
+      getFile={() => adminApi.exportCsv(kind, filters)} />
     <p className="mt-1 text-xs text-muted">{t("adminFinance.exportScope")}</p>
   </div>;
 };
@@ -59,7 +63,7 @@ const AdminOrders = ({ userId }: { userId: number }) => {
   return <AdminRecords<AdminOrder> title={t("sales.orders")} empty={t("adminFinance.noOrders")}
     queryKey={[...operationsKeys.adminRecords(userId, "orders"), query, status]}
     load={(page) => adminApi.orders(page, query, status)} rowKey={(row) => row.order_number}
-    actions={<TransactionExport kind="orders" />}
+    actions={<TransactionExport kind="orders" filters={{ query, status }} />}
     filters={<form className="my-4 flex flex-wrap items-end gap-3" onSubmit={(event) => {
       event.preventDefault();
       const fields = new FormData(event.currentTarget);
@@ -112,25 +116,39 @@ const AdminPayments = ({ userId }: { userId: number }) => {
   const locale = useLocale();
   const [params, setParams] = useSearchParams();
   const status = adminPaymentStatuses.find((value) => value === params.get("status"));
+  const query = (params.get("q") ?? "").trim().slice(0, 100);
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
 
   return <AdminRecords<AdminPayment> title={t("adminFinance.payments")} empty={t("adminFinance.noPayments")}
-    queryKey={[...operationsKeys.adminRecords(userId, "payments"), status]}
-    load={(page) => adminApi.payments(page, status)} rowKey={(row) => row.id}
-    actions={<TransactionExport kind="payments" />}
-    filters={<div className="my-4 w-full max-w-56">
-      <label htmlFor="admin-payment-status" className="mb-1.5 block text-sm font-semibold">{t("support.statusLabel")}</label>
-      <select id="admin-payment-status" value={status ?? ""} className={statusClass}
-        onChange={(event) => {
-          const next = new URLSearchParams(params);
-          if (event.target.value) next.set("status", event.target.value); else next.delete("status");
-          next.delete("page");
-          setParams(next);
-        }}>
-        <option value="">{t("support.anyStatus")}</option>
-        {adminPaymentStatuses.map((value) => <option key={value} value={value}>{t(`adminFinance.paymentStatus.${value}`)}</option>)}
-      </select>
-    </div>}
+    queryKey={[...operationsKeys.adminRecords(userId, "payments"), query, status]}
+    load={(page) => adminApi.payments(page, status, query)} rowKey={(row) => row.id}
+    actions={<TransactionExport kind="payments" filters={{ query, status }} />}
+    filters={<form key={`${query}|${status ?? ""}`} className="my-4 flex flex-wrap items-end gap-3" onSubmit={(event) => {
+      event.preventDefault();
+      const fields = new FormData(event.currentTarget);
+      const next = new URLSearchParams(params);
+      const search = String(fields.get("q") ?? "").trim();
+      const selection = String(fields.get("status") ?? "");
+      if (search) next.set("q", search); else next.delete("q");
+      if (selection) next.set("status", selection); else next.delete("status");
+      next.delete("page");
+      setParams(next);
+    }}>
+      <div className="min-w-0 flex-1 basis-64">
+        <label htmlFor="admin-payment-search" className="mb-1.5 block text-sm font-semibold">{t("adminFinance.searchPayments")}</label>
+        <Input id="admin-payment-search" type="search" name="q" maxLength={100} defaultValue={query}
+          aria-describedby="admin-payment-search-hint" />
+        <p id="admin-payment-search-hint" className="mt-1 text-xs text-muted">{t("adminFinance.searchPaymentsHint")}</p>
+      </div>
+      <div className="self-start">
+        <label htmlFor="admin-payment-status" className="mb-1.5 block text-sm font-semibold">{t("support.statusLabel")}</label>
+        <select id="admin-payment-status" name="status" defaultValue={status ?? ""} className={statusClass}>
+          <option value="">{t("support.anyStatus")}</option>
+          {adminPaymentStatuses.map((value) => <option key={value} value={value}>{t(`adminFinance.paymentStatus.${value}`)}</option>)}
+        </select>
+      </div>
+      <Button htmlType="submit" type="primary" className="self-start sm:mt-[29px]">{t("ops.search")}</Button>
+    </form>}
     columns={[
       {
         label: t("adminFinance.payment"),
@@ -170,6 +188,7 @@ const AdminRefunds = ({ userId }: { userId: number }) => {
 
   return <AdminRecords<AdminRefund> title={t("adminFinance.refunds")} empty={t("adminFinance.noRefunds")}
     queryKey={operationsKeys.adminRecords(userId, "refunds")} load={adminApi.refunds} rowKey={(row) => row.id}
+    actions={<TransactionExport kind="refunds" />}
     columns={[
       { label: t("adminFinance.refund"), cell: (row) => <>#{row.id}</> },
       { label: t("reports.order"), cell: (row) => <><span className="block font-mono text-xs">{row.order_number}</span>

@@ -8,7 +8,7 @@ export const Footer = () => {
     <footer className="mt-8 border-t border-line bg-white">
       <div className="site-container flex flex-wrap items-center justify-between gap-5 py-6">
         <Brand />
-        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-muted">
+        <nav aria-label={t("a11y.footerNavigation")} className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-muted">
           <Link to="/" className="hover:text-primary">{t("catalogue.title")}</Link>
           <Link to="/support" className="hover:text-primary">{t("common.help")}</Link>
         </nav>

@@ -90,7 +90,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
       {t("eventWorkflow.editDetails")}
     </Link>}
     <p className="mt-3 text-sm leading-6 text-muted">{t("eventWorkflow.previewDescription")}</p>
-    {!preview.isError && <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary-hover">
+    {!preview.isError && <nav aria-label={t("a11y.eventSections")} className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary-hover">
       <a href="#event-ticket-types" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("ticketTypes.title")}</a>
       <Link to={`/organizer/events/${eventId}/analytics`} className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">
         {t("analytics.title")}

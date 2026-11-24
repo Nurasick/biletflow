@@ -32,7 +32,8 @@ const groups = [
     title: "adminOverview.review",
     metrics: [
       { field: "open_reports", label: "adminOverview.openReports", to: "/admin/reports" },
-      { field: "open_support_cases", label: "adminOverview.openSupport" },
+      { field: "open_support_cases", label: "adminOverview.openSupport", to: "/staff/support?status=open" },
+      { field: "open_disputes", label: "adminOverview.openDisputes", to: "/admin/disputes?status=open" },
       { field: "payments_failed", label: "adminOverview.failedPayments", to: "/admin/transactions?view=payments&status=failed" },
     ],
   },

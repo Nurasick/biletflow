@@ -20,6 +20,7 @@ export const EventCard = ({ event }: { event: PublicEvent }) => {
     <Link to={`/events/${event.slug}`} className="panel group flex min-w-0 flex-col overflow-hidden transition-[border-color,box-shadow] hover:border-primary/50 hover:shadow-[0_12px_26px_#21183c10]">
       <div className="relative isolate aspect-[16/10] overflow-hidden bg-accent-wash">
         {event.cover_image_url ? (
+          /* Decorative: the link's heading already names the event (WCAG H2). */
           <img src={eventImageSrc(event.cover_image_url)} alt="" loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]" />
         ) : (

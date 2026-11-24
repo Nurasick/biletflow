@@ -10,6 +10,7 @@ import { OperationsError, OperationsLoading, RefreshButton } from "../features/O
 import { useAuth } from "../hooks/useAuth";
 import { useLocale } from "../i18n/useLocale";
 import { notificationKey, notificationsApi } from "../shared/api/notifications";
+import { caseStatuses } from "../shared/api/support";
 import type { Notification } from "../shared/api/notifications";
 import { useAuthErrorMessage } from "../shared/lib/useAuthErrorMessage";
 
@@ -29,6 +30,11 @@ const NotificationInbox = ({ userId }: { userId: number }) => {
     mutationFn: notificationsApi.markRead,
     onMutate: () => client.cancelQueries({ queryKey }),
     onSuccess: () => client.invalidateQueries({ queryKey }),
+  });
+  const markOne = useMutation({
+    mutationFn: notificationsApi.markOneRead,
+    onMutate: () => client.cancelQueries({ queryKey }),
+    onSettled: () => client.invalidateQueries({ queryKey }),
   });
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   const unread = feed.data?.unread ?? 0;
@@ -50,19 +56,23 @@ const NotificationInbox = ({ userId }: { userId: number }) => {
       </div>
     </div>
     <div className="mt-6 space-y-4">
-      {markRead.isError && <Alert role="alert" type="error" showIcon
-        title={errorMessage(markRead.error, t("notifications.markError"))} />}
+      {(markRead.isError || markOne.isError) && <Alert role="alert" type="error" showIcon
+        title={errorMessage(markRead.error ?? markOne.error, t("notifications.markError"))} />}
       {feed.isPending ? <OperationsLoading /> : feed.isError
         ? <OperationsError error={feed.error} retry={() => void feed.refetch()} /> : feed.data.items.length === 0
         ? <p className="rounded-xl border border-line p-6 text-sm text-muted">{t("notifications.empty")}</p>
         : <ul className="space-y-3">
-          {feed.data.items.map((item) => <NotificationItem key={item.id} item={item} date={date} />)}
+          {feed.data.items.map((item) => <NotificationItem key={item.id} item={item} date={date}
+            busy={markRead.isPending || (markOne.isPending && markOne.variables === item.id)}
+            onMarkRead={() => markOne.mutate(item.id)} />)}
         </ul>}
     </div>
   </main>;
 };
 
-const NotificationItem = ({ item, date }: { item: Notification; date: Intl.DateTimeFormat }) => {
+const NotificationItem = ({ item, date, busy, onMarkRead }: {
+  item: Notification; date: Intl.DateTimeFormat; busy: boolean; onMarkRead: () => void;
+}) => {
   const { t } = useTranslation();
   const title = notificationTitleKey(item.template_key);
   const destination = notificationDestination(item.payload.link);
@@ -74,7 +84,12 @@ const NotificationItem = ({ item, date }: { item: Notification; date: Intl.DateT
   if (item.template_key === "payout.status" && (status === "active" || status === "suspended" || status === "pending")) {
     details.push(t(`activation.status.${status}`));
   }
-  if (item.template_key === "support.status" && typeof status === "string" && status.trim()) details.push(status);
+  if (item.template_key === "support.status") {
+    // Newer payloads carry the enum key; older ones only the English label.
+    const key = caseStatuses.find((value) => value === item.payload.status_key || value === status);
+    if (key) details.push(t(`support.status.${key}`));
+    else if (typeof status === "string" && status.trim()) details.push(status);
+  }
 
   return <li className={`rounded-xl border p-4 sm:p-5 ${item.read_at ? "border-line bg-white" : "border-line bg-accent-wash"}`}>
     <div className="flex flex-wrap items-start justify-between gap-2">
@@ -84,6 +99,12 @@ const NotificationItem = ({ item, date }: { item: Notification; date: Intl.DateT
         <time dateTime={item.created_at}>{date.format(new Date(item.created_at))}</time>
       </div>
     </div>
+    {!item.read_at && <div className="mt-2 flex justify-end">
+      <Button size="small" type="text" icon={<Check size={14} aria-hidden="true" />} loading={busy} disabled={busy}
+        aria-label={t("notifications.markOneLabel", { title: t(title) })} onClick={onMarkRead}>
+        {t("notifications.markOne")}
+      </Button>
+    </div>}
     {details.length > 0 && <p className="mt-2 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm leading-6 text-muted-strong">{details.join(" · ")}</p>}
     {destination && <div className="mt-3">
       {destination.kind === "calendar" ? <EventCalendarButton slug={destination.slug} cancelled />

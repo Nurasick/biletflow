@@ -20,7 +20,7 @@ export const EventDetails = ({ event, accessToken }: { event: EventDetail; acces
       <div className="panel overflow-hidden">
         {event.cover_image_url && (
           <div className="grid min-h-40 place-items-center bg-stage">
-            <img src={eventImageSrc(event.cover_image_url)} alt="" fetchPriority="high" className="max-h-[28rem] w-full object-contain" />
+            <img src={eventImageSrc(event.cover_image_url)} alt={t("a11y.eventCover", { title: event.title })} fetchPriority="high" className="max-h-[28rem] w-full object-contain" />
           </div>
         )}
         <div className="px-5 py-6 sm:px-7 sm:py-8">
@@ -63,7 +63,8 @@ export const EventDetails = ({ event, accessToken }: { event: EventDetail; acces
         <p className="mt-3 max-w-prose text-[0.9375rem] leading-7 whitespace-pre-wrap text-muted-strong wrap-anywhere">{event.description}</p>
       </section>}
       {gallery.length > 0 && <div className="grid grid-cols-2 gap-3">
-        {gallery.map((image) => <img key={image.id} src={eventImageSrc(image.url)} alt="" loading="lazy" className="aspect-[4/3] w-full rounded-2xl bg-soft object-cover" />)}
+        {gallery.map((image, index) => <img key={image.id} src={eventImageSrc(image.url)}
+          alt={t("a11y.eventPhoto", { title: event.title, number: index + 1 })} loading="lazy" className="aspect-[4/3] w-full rounded-2xl bg-soft object-cover" />)}
       </div>}
       <section className="panel p-5 sm:p-7" aria-labelledby="refunds">
         <h2 id="refunds" className="text-xl font-extrabold tracking-tight">{t("event.refundRules")}</h2>

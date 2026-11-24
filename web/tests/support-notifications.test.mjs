@@ -92,7 +92,7 @@ test('the staff queue sends all filters, respects page bounds, and unassigns wit
   });
   assert.deepEqual(fake.calls.slice(1).map(({ body }) => body), [{ assigned_to_user_id: null }, { status: 'resolved' }]);
   assert.deepEqual(queueFilters(new URLSearchParams('status=hidden&category=other&event_id=9007199254740993')), {
-    status: undefined, category: undefined, eventId: undefined,
+    status: undefined, category: undefined, eventId: undefined, audience: undefined,
   });
   assert.deepEqual(staffTransitions, {
     open: ['in_progress'], in_progress: ['waiting_for_customer', 'resolved'],

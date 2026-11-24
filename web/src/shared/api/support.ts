@@ -1,14 +1,36 @@
-import { api, optionalAuthRequest } from "./auth";
+import { api, optionalAuthFile, optionalAuthRequest } from "./auth";
 
 export const caseCategories = [
-  "ticket_delivery", "payment", "refund", "seating", "event_info", "check_in", "account", "technical",
+  "ticket_delivery", "payment", "refund", "seating", "event_info", "check_in", "account", "activation", "technical",
 ] as const;
+export const caseAudiences = ["attendee", "organizer"] as const;
 export const caseStatuses = ["open", "in_progress", "waiting_for_customer", "resolved"] as const;
 
 export type CaseCategory = (typeof caseCategories)[number];
 export type CaseStatus = (typeof caseStatuses)[number];
 export type StaffCaseStatus = Exclude<CaseStatus, "open">;
-export type CaseAudience = "attendee" | "organizer";
+export type CaseAudience = (typeof caseAudiences)[number];
+
+/** Which categories a requester may pick: organizers ask the platform about
+ * their account and paid sales, attendees ask an organizer about an event. */
+export const audienceCategories: Record<CaseAudience, readonly CaseCategory[]> = {
+  attendee: ["ticket_delivery", "payment", "refund", "seating", "event_info", "check_in", "account", "technical"],
+  organizer: ["account", "activation", "payment", "technical"],
+};
+
+/** Attachment types and size the backend accepts (storage.py, MAX_IMAGE_BYTES). */
+export const ATTACHMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
+export const ATTACHMENT_MAX_BYTES = 2 * 1024 * 1024;
+
+export type CaseAttachment = {
+  id: number;
+  support_message_id: number | null;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  created_at: string;
+  download_url: string;
+};
 
 export type CaseTarget =
   | { audience: "attendee"; event_id: number; order_number?: string; ticket_code?: string; order_token?: string }
@@ -40,7 +62,7 @@ export type CaseMessage = {
   created_at: string;
 };
 
-export type RequesterCase = CaseSummary & { context: CaseContext; messages: CaseMessage[] };
+export type RequesterCase = CaseSummary & { context: CaseContext; messages: CaseMessage[]; attachments?: CaseAttachment[] };
 type CreatedCase = RequesterCase & { access_token: string | null };
 
 export type StaffCaseSummary = CaseSummary & {
@@ -48,12 +70,28 @@ export type StaffCaseSummary = CaseSummary & {
   opened_by_user_id: number | null;
   assigned_to_user_id: number | null;
   event_id: number | null;
+  is_escalated?: boolean;
+  escalated_at?: string | null;
+  escalated_by_user_id?: number | null;
+  escalation_reason?: string | null;
 };
 
 export type StaffMessage = CaseMessage & { author_user_id: number | null; is_internal_note: boolean };
-export type StaffCase = StaffCaseSummary & { context: CaseContext; messages: StaffMessage[] };
+export type StaffCase = StaffCaseSummary & { context: CaseContext; messages: StaffMessage[]; attachments?: CaseAttachment[] };
 export type StaffCaseUpdate = { status?: StaffCaseStatus; assigned_to_user_id?: number | null };
-export type QueueFilters = { status?: CaseStatus; category?: CaseCategory; eventId?: number };
+export type QueueFilters = {
+  status?: CaseStatus;
+  category?: CaseCategory;
+  eventId?: number;
+  audience?: CaseAudience;
+  escalated?: boolean;
+  query?: string;
+};
+export type AttachmentUpload = { filename: string; dataUrl: string; messageId?: number };
+
+const attachmentBody = ({ filename, dataUrl, messageId }: AttachmentUpload) => ({
+  filename, data_url: dataUrl, ...(messageId !== undefined && { support_message_id: messageId }),
+});
 
 const withToken = (path: string, token: string | null) =>
   token ? `${path}?${new URLSearchParams({ token })}` : path;
@@ -72,6 +110,11 @@ export const supportApi = {
     optionalAuthRequest<RequesterCase>(withToken(requesterPath(number), token), { signal }),
   reply: (number: string, token: string | null, body: string) =>
     optionalAuthRequest<RequesterCase>(withToken(`${requesterPath(number)}/messages`, token), api.json("POST", { body })),
+  attach: (number: string, token: string | null, upload: AttachmentUpload) =>
+    optionalAuthRequest<CaseAttachment>(withToken(`${requesterPath(number)}/attachments`, token),
+      api.json("POST", attachmentBody(upload))),
+  attachmentFile: (number: string, token: string | null, attachmentId: number, mediaType: string) =>
+    optionalAuthFile(withToken(`${requesterPath(number)}/attachments/${attachmentId}`, token), mediaType),
 };
 
 export const staffSupportApi = {
@@ -80,10 +123,18 @@ export const staffSupportApi = {
     if (filters.status) params.set("status", filters.status);
     if (filters.category) params.set("category", filters.category);
     if (filters.eventId !== undefined) params.set("event_id", String(filters.eventId));
+    if (filters.audience) params.set("audience", filters.audience);
+    if (filters.escalated !== undefined) params.set("escalated", String(filters.escalated));
+    if (filters.query?.trim()) params.set("q", filters.query.trim());
     return api.get<StaffCaseSummary[]>(`/staff/support/cases?${params}`, { signal });
   },
   case: (number: string, signal?: AbortSignal) => api.get<StaffCase>(staffPath(number), { signal }),
   reply: (number: string, body: string, internal: boolean) =>
     api.post<StaffCase>(`${staffPath(number)}/messages`, { body, is_internal_note: internal }),
   update: (number: string, input: StaffCaseUpdate) => api.patch<StaffCase>(staffPath(number), input),
+  escalate: (number: string, reason: string) => api.post<StaffCase>(`${staffPath(number)}/escalate`, { reason: reason.trim() }),
+  attach: (number: string, upload: AttachmentUpload) =>
+    api.post<CaseAttachment>(`${staffPath(number)}/attachments`, attachmentBody(upload)),
+  attachmentFile: (number: string, attachmentId: number, mediaType: string) =>
+    api.file(`${staffPath(number)}/attachments/${attachmentId}`, mediaType),
 };
