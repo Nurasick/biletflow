@@ -1,12 +1,12 @@
 import { Button } from "antd";
-import { ImagePlus, LoaderCircle, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ImagePlus, LoaderCircle, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { validationMessage } from "../../../i18n/validation";
 import { eventImageSrc } from "../../../shared/api/urls";
 import { readEventImage, validateEventImageFiles } from "../model/eventImages";
-import { EVENT_IMAGE_TYPES, MAX_EVENT_IMAGES } from "../model/eventSchema";
+import { EVENT_IMAGE_TYPES, MAX_EVENT_IMAGE_ALT, MAX_EVENT_IMAGES } from "../model/eventSchema";
 import type { EventImage } from "../model/eventSchema";
 
 type EventImagesProps = {
@@ -22,6 +22,15 @@ export const EventImages = ({ images, onChange, onBusyChange, disabled }: EventI
   const readingRef = useRef(false);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= images.length) return;
+    const next = [...images];
+    const [image] = next.splice(from, 1);
+    next.splice(to, 0, image);
+    setError(null);
+    onChange(next);
+  };
 
   const addFiles = async (files: File[]) => {
     if (!files.length || readingRef.current || disabled) return;
@@ -68,25 +77,49 @@ export const EventImages = ({ images, onChange, onBusyChange, disabled }: EventI
       {error && <p role="alert" id="event-images-error" className="mt-2 text-xs text-red-600">
         {validationMessage(t, { type: "client", message: error })}
       </p>}
-      {images.length > 0 && <ul aria-label={t("organizerEvent.images")} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {images.length > 0 && <p id="event-image-alt-hint" className="mt-4 text-xs leading-5 text-muted">{t("organizerEvent.imageAltHint")}</p>}
+      {images.length > 0 && <ul aria-label={t("organizerEvent.images")} className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {images.map((image, index) => (
           <li key={image.id} className="overflow-hidden rounded-lg border border-line">
             <div className="relative">
-              <img src={eventImageSrc(image.dataUrl)} alt={image.name} className="aspect-video w-full object-cover" />
+              <img src={eventImageSrc(image.dataUrl)} alt={image.alt || image.name} className="aspect-video w-full object-cover" />
               <button type="button" onClick={() => { setError(null); onChange(images.filter((item) => item.id !== image.id)); }}
                 disabled={disabled || reading} aria-label={t("organizerEvent.removeImage", { name: image.name })}
                 className="absolute right-2 top-2 rounded-full border border-line bg-white p-2 text-ink focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50">
                 <X size={14} aria-hidden="true" />
               </button>
             </div>
-            <div className="p-3">
+            <div className="space-y-2 p-3">
               <p title={image.name} className="truncate text-xs text-muted">{image.name}</p>
-              {index === 0 ? <span className="mt-2 inline-block rounded bg-accent-wash px-2 py-1 text-[10px] font-semibold text-primary-hover">{t("organizerEvent.coverImage")}</span> : (
-                <button type="button" disabled={disabled || reading} className="mt-2 text-xs font-semibold text-primary-hover disabled:opacity-50"
-                  onClick={() => onChange([image, ...images.filter((item) => item.id !== image.id)])}>
-                  {t("organizerEvent.makeCover")}
-                </button>
-              )}
+              <label className="block text-xs font-semibold" htmlFor={`event-image-alt-${image.id}`}>
+                {t("organizerEvent.imageAlt")}
+                <input id={`event-image-alt-${image.id}`} type="text" maxLength={MAX_EVENT_IMAGE_ALT}
+                  value={image.alt ?? ""} disabled={disabled || reading}
+                  placeholder={t("organizerEvent.imageAltPlaceholder")} aria-describedby="event-image-alt-hint"
+                  onChange={(event) => onChange(images.map((item) => item.id === image.id
+                    ? { ...item, alt: event.target.value } : item))}
+                  className="mt-1 block min-h-9 w-full rounded-md border border-line bg-white px-2 text-xs font-normal focus-visible:outline-2 focus-visible:outline-primary" />
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                {index === 0 ? <span className="inline-block rounded bg-accent-wash px-2 py-1 text-[10px] font-semibold text-primary-hover">{t("organizerEvent.coverImage")}</span> : (
+                  <button type="button" disabled={disabled || reading} className="text-xs font-semibold text-primary-hover disabled:opacity-50"
+                    onClick={() => move(index, 0)}>
+                    {t("organizerEvent.makeCover")}
+                  </button>
+                )}
+                <span className="ml-auto flex gap-1">
+                  <button type="button" disabled={disabled || reading || index === 0} onClick={() => move(index, index - 1)}
+                    aria-label={t("organizerEvent.moveImageEarlier", { number: index + 1 })}
+                    className="rounded border border-line p-1.5 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40">
+                    <ArrowLeft size={14} aria-hidden="true" />
+                  </button>
+                  <button type="button" disabled={disabled || reading || index === images.length - 1} onClick={() => move(index, index + 1)}
+                    aria-label={t("organizerEvent.moveImageLater", { number: index + 1 })}
+                    className="rounded border border-line p-1.5 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40">
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </button>
+                </span>
+              </div>
             </div>
           </li>
         ))}

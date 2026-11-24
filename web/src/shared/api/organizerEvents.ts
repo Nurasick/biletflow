@@ -16,8 +16,11 @@ export type OrganizerEventRecord = {
   status: EventStatus;
   phase: EventPhase;
   visibility: "public" | "unlisted" | "private";
+  seating_mode: "general_admission" | "assigned";
+  venue_id: number | null;
   venue_name: string;
   venue_address: string;
+  venue_city: string | null;
   starts_at: string;
   ends_at: string;
   timezone: string;
@@ -30,7 +33,7 @@ export type OrganizerEventRecord = {
   updated_at: string;
 };
 
-export type ServerImage = { id: number; url: string; position: number };
+export type ServerImage = { id: number; url: string; position: number; alt_text: string | null };
 
 export class OrganizerEventError extends Error {
   constructor(message: "organizerEvent.loadError" | "organizerEvent.saveError" | "organizerEvent.accessError"
@@ -56,6 +59,9 @@ const toBody = (values: OrganizerEventValues) => ({
   category: values.category,
   venue_name: values.venueName,
   venue_address: values.venueAddress,
+  // The API rejects an empty city; null clears it.
+  venue_city: values.venueCity || null,
+  seating_mode: values.seatingMode,
   timezone: values.timeZone,
   starts_at: instant(values.startsAt, values.timeZone),
   ends_at: instant(values.endsAt, values.timeZone),
@@ -72,11 +78,14 @@ const toValues = (event: OrganizerEventRecord, images: ServerImage[]): Organizer
     description: event.description ?? "",
     refundPolicy: event.refund_policy ?? "",
     category: event.category ?? "other",
-    images: [...images].sort((a, b) => Number(b.url === event.cover_image_url) - Number(a.url === event.cover_image_url)).map((image) => ({
-      id: `${SERVER_IMAGE}${image.id}`, name: `image-${image.position + 1}`, dataUrl: image.url,
+    // Position 0 is the cover (the server keeps cover_image_url in step with it).
+    images: [...images].sort((a, b) => a.position - b.position || a.id - b.id).map((image) => ({
+      id: `${SERVER_IMAGE}${image.id}`, name: `image-${image.position + 1}`, dataUrl: image.url, alt: image.alt_text ?? "",
     })),
     venueName: event.venue_name,
     venueAddress: event.venue_address,
+    venueCity: event.venue_city ?? "",
+    seatingMode: event.seating_mode ?? "general_admission",
     timeZone: event.timezone,
     startsAt: local(event.starts_at),
     endsAt: local(event.ends_at),
@@ -89,15 +98,21 @@ const toValues = (event: OrganizerEventRecord, images: ServerImage[]): Organizer
 
 const path = (eventId: number) => `/organizer/events/${eventId}`;
 
-/** Make the server's images match the form: delete removed ones, upload new ones. */
+const altText = (image: EventImage) => image.alt?.trim() || null;
+const serverId = (image: EventImage) => Number(image.id.slice(SERVER_IMAGE.length));
+
+/** Make the server's images match the form: delete removed ones, update alt
+ * text, upload new ones, then store the form's order (position 0 is the cover). */
 const syncImages = async (event: OrganizerEventRecord, images: EventImage[]) => {
   const eventId = event.id;
-  const stored = await api.get<ServerImage[]>(`${path(eventId)}/images`);
-  const kept = new Set(images.filter((i) => i.id.startsWith(SERVER_IMAGE)).map((i) => Number(i.id.slice(SERVER_IMAGE.length))));
-  if ([...kept].some((id) => !stored.some((image) => image.id === id))) {
+  const stored = [...await api.get<ServerImage[]>(`${path(eventId)}/images`)]
+    .sort((a, b) => a.position - b.position || a.id - b.id);
+  const byId = new Map(stored.map((image) => [image.id, image]));
+  const keptImages = images.filter((i) => i.id.startsWith(SERVER_IMAGE));
+  const kept = new Set(keptImages.map(serverId));
+  if ([...kept].some((id) => !byId.has(id))) {
     throw new OrganizerEventError("eventEdit.imagesChanged");
   }
-  const urls = new Map(stored.map((image) => [`${SERVER_IMAGE}${image.id}`, image.url]));
   let changed = false;
   for (const image of stored) {
     if (!kept.has(image.id)) {
@@ -105,18 +120,35 @@ const syncImages = async (event: OrganizerEventRecord, images: EventImage[]) => 
       changed = true;
     }
   }
-  for (const image of images) {
-    if (image.dataUrl.startsWith("data:")) {
-      const uploaded = await api.post<ServerImage>(`${path(eventId)}/images`, { data_url: image.dataUrl });
-      urls.set(image.id, uploaded.url);
-      changed = true;
+  for (const image of keptImages) {
+    const alt = altText(image);
+    if ((byId.get(serverId(image))?.alt_text ?? null) !== alt) {
+      await api.patch<ServerImage>(`${path(eventId)}/images/${serverId(image)}`, { alt_text: alt });
     }
   }
-  // Upload/delete endpoints reset the cover to the first stored image. Apply
-  // the form's selected cover after those operations, including existing images.
-  const cover = images.length ? urls.get(images[0].id) : stored.length ? null : event.cover_image_url;
-  if (changed || cover !== event.cover_image_url) {
-    await api.patch<OrganizerEventRecord>(path(eventId), { cover_image_url: cover ?? null });
+  const order: ServerImage[] = [];
+  const uploaded: ServerImage[] = [];
+  for (const image of images) {
+    if (image.dataUrl.startsWith("data:")) {
+      const alt = altText(image);
+      const added = await api.post<ServerImage>(`${path(eventId)}/images`, {
+        data_url: image.dataUrl, ...(alt ? { alt_text: alt } : {}),
+      });
+      uploaded.push(added);
+      order.push(added);
+      changed = true;
+    } else {
+      order.push(byId.get(serverId(image))!);
+    }
+  }
+  if (!order.length) return;
+  // The server appends uploads after the kept images and moves the cover to
+  // position 0 on every add or delete. Reorder only when the form differs, or
+  // when nothing changed but a legacy cover URL is out of step.
+  const serverOrder = [...stored.filter((image) => kept.has(image.id)), ...uploaded].map((image) => image.id);
+  const wanted = order.map((image) => image.id);
+  if (wanted.join() !== serverOrder.join() || (!changed && order[0].url !== event.cover_image_url)) {
+    await api.put<ServerImage[]>(`${path(eventId)}/images/order`, { image_ids: wanted });
   }
 };
 

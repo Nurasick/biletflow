@@ -6,6 +6,7 @@ import { useOutletContext } from "react-router-dom";
 import { useOrganizerProfile } from "../features/Organizer/model/useOrganizerProfile";
 import { OrganizerProfileForm } from "../features/Organizer/ui/OrganizerProfileForm";
 import { OrganizerWorkspace } from "../features/Organizer/ui/OrganizerWorkspace";
+import { PayoutsPanel } from "../features/Organizer/ui/PayoutsPanel";
 import { VerificationPanel } from "../features/Organizer/ui/VerificationPanel";
 import type { OrganizerContext } from "../shared/auth/OrganizerRoute";
 
@@ -33,6 +34,7 @@ export const OrganizerProfilePage = () => {
         <>
           <OrganizerProfileForm profile={profile.data} saveProfile={saveProfile.mutateAsync} />
           <VerificationPanel userId={userId} />
+          <PayoutsPanel userId={userId} />
         </>
       )}
       <p className="mt-8 text-xs text-muted">{t("organizer.required")}</p>

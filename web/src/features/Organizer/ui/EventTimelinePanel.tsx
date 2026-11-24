@@ -10,7 +10,7 @@ import type { TimelineFilters } from "../../../shared/api/eventReports";
 import { EVENT_AUDIT_ACTIONS, eventReportKeys, REPORT_PAGE_SIZE, reportPage, timelineFilters } from "../model/eventReportModel";
 import { ReportError, ReportLoading, ReportPagination, ReportRefresh } from "./ReportControls";
 
-export const EventTimelinePanel = ({ eventId, userId }: { eventId: number; userId: number }) => {
+export const EventTimelinePanel = ({ eventId, userId, timeZone }: { eventId: number; userId: number; timeZone: string }) => {
   const { t } = useTranslation();
   const locale = useLocale();
   const [page, setPage] = useState(0);
@@ -19,8 +19,8 @@ export const EventTimelinePanel = ({ eventId, userId }: { eventId: number; userI
   const [actions, setActions] = useState<string[]>([]);
   const [filters, setFilters] = useState<TimelineFilters>({ actions: [] });
   const [filterError, setFilterError] = useState<"invalidDate" | "invalidRange" | null>(null);
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const dateFormat = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "medium", timeZone: timezone });
+  // Entries and filters both use the event's zone, not the browser's.
+  const dateFormat = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "medium", timeZone });
   const actionOptions = EVENT_AUDIT_ACTIONS.map((action) => ({ value: action, label: t(`reports.action.${action}`) }));
   const timeline = useQuery({
     queryKey: eventReportKeys.timeline(userId, eventId, filters, page),
@@ -39,10 +39,10 @@ export const EventTimelinePanel = ({ eventId, userId }: { eventId: number; userI
       <ReportRefresh refresh={() => void timeline.refetch()} fetching={timeline.isFetching} />
     </div>
     <p className="mt-2 text-sm leading-6 text-muted">{t("reports.timelineDescription")}</p>
-    <p id="timeline-timezone" className="mt-1 text-xs leading-5 text-muted">{t("reports.timezone", { timezone })}</p>
+    <p id="timeline-timezone" className="mt-1 text-xs leading-5 text-muted">{t("reports.timezone", { timezone: timeZone })}</p>
     <form className="my-5 space-y-4" onSubmit={(event) => {
       event.preventDefault();
-      const result = timelineFilters(since, until, actions);
+      const result = timelineFilters(since, until, actions, timeZone);
       if (result.error) { setFilterError(result.error); return; }
       setFilterError(null); setPage(0); setFilters(result.filters);
     }}>
@@ -79,7 +79,8 @@ export const EventTimelinePanel = ({ eventId, userId }: { eventId: number; userI
             {timeline.data.slice(0, REPORT_PAGE_SIZE).map((entry) => <li key={entry.id} className="py-4 first:pt-0">
               <div className="flex flex-wrap justify-between gap-2 text-xs text-muted">
                 <time dateTime={entry.created_at}>{dateFormat.format(new Date(entry.created_at))}</time>
-                <span>{entry.actor_user_id === null ? t("reports.system") : t("reports.actor", { id: entry.actor_user_id })}</span>
+                <span>{entry.actor_user_id === null ? t("reports.system")
+                  : entry.actor_name ?? t("reports.actor", { id: entry.actor_user_id })}</span>
               </div>
               <h3 className="mt-2 break-words text-sm font-semibold">{actionOptions.find((option) => option.value === entry.action)?.label ?? entry.action}</h3>
               <p className="mt-1 break-words text-sm">{entry.summary}</p>

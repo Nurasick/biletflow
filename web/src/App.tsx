@@ -42,6 +42,7 @@ function App() {
         { path: "/organizer/events", element: <OrganizerEventsPage /> },
         { path: "/organizer/events/:eventId/preview", element: <OrganizerEventPreviewPage /> },
         { path: "/organizer/events/:eventId/analytics", element: <OrganizerAnalyticsPage /> },
+        { path: "/organizer/analytics", element: <OrganizerAnalyticsPage /> },
         { path: "/organizer/events/new", element: <OrganizerEventPage /> },
         { path: "/organizer/events/:eventId/edit", element: <OrganizerEventPage /> },
       ],

@@ -31,6 +31,7 @@ export const TicketTypesPanel = ({ event, userId, editable }: Props) => {
   });
   const [editor, setEditor] = useState<{ ticket?: OrganizerTicketType; trigger: HTMLElement } | null>(null);
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: timezone });
+  const number = new Intl.NumberFormat(locale);
   const refresh = async () => {
     await Promise.all([
       client.invalidateQueries({ queryKey }),
@@ -74,9 +75,22 @@ export const TicketTypesPanel = ({ event, userId, editable }: Props) => {
             </div>
             <p className="mt-1 text-xs text-muted">
               {type.price_minor === 0 ? t("eventWorkflow.free") : formatMinor(type.price_minor, locale)}
-              {" · "}{t("ticketTypes.sold", { sold: type.quantity_sold, total: type.quantity_total })}
+              {" · "}{t("ticketTypes.total", { count: type.quantity_total })}
               {type.max_per_order ? ` · ${t("ticketTypes.maxPerOrder", { count: type.max_per_order })}` : ""}
             </p>
+            <dl aria-label={t("ticketTypes.inventory", { name: type.name })}
+              className="mt-2 grid grid-cols-3 gap-2 rounded-lg bg-paper p-2 text-xs sm:grid-cols-5">
+              {([
+                ["ticketTypes.available", type.available],
+                ["ticketTypes.reserved", type.quantity_reserved],
+                ["ticketTypes.soldCount", type.quantity_sold],
+                ["ticketTypes.refunded", type.quantity_refunded],
+                ["ticketTypes.checkedIn", type.quantity_checked_in],
+              ] as const).map(([label, value]) => <div key={label} className="min-w-0">
+                <dt className="text-muted">{t(label)}</dt>
+                <dd className="font-semibold tabular-nums">{number.format(value)}</dd>
+              </div>)}
+            </dl>
             {(type.sales_start_at || type.sales_end_at) && <p className="mt-1 text-xs text-muted">
               {type.sales_start_at && t("ticketTypes.opensAt", { date: date.format(parseApiInstant(type.sales_start_at)) })}
               {type.sales_start_at && type.sales_end_at && " · "}

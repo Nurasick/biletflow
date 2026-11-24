@@ -9,7 +9,7 @@ import { staffApi } from "../../../shared/api/eventManagement";
 
 // §2.3 "assign check-in staff": who may scan tickets for this event in the
 // mobile app. The account must exist already; they sign in to the app with it.
-export const StaffPanel = ({ eventId }: { eventId: number }) => {
+export const StaffPanel = ({ eventId, editable = true }: { eventId: number; editable?: boolean }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const queryKey = ["organizer", "staff", eventId];
@@ -32,15 +32,16 @@ export const StaffPanel = ({ eventId }: { eventId: number }) => {
       <ul className="mt-3 divide-y divide-line-soft">
         {staff.data?.map((member) => <li key={member.user_id} className="flex items-center justify-between gap-3 py-2 text-sm">
           <span className="min-w-0 break-words">{member.first_name} {member.last_name} <span className="text-muted">{member.email}</span></span>
-          <Button size="small" loading={remove.isPending && remove.variables === member.user_id}
-            onClick={() => remove.mutate(member.user_id)}>{t("staff.remove")}</Button>
+          {editable && <Button size="small" loading={remove.isPending && remove.variables === member.user_id}
+            onClick={() => remove.mutate(member.user_id)}>{t("staff.remove")}</Button>}
         </li>)}
       </ul>
-      <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); if (email.trim()) assign.mutate(); }}>
+      {staff.data?.length === 0 && <p className="mt-3 text-sm text-muted">{t("staff.empty")}</p>}
+      {editable && <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); if (email.trim()) assign.mutate(); }}>
         <Input type="email" aria-label={t("common.email")} placeholder={t("common.email")}
           value={email} onChange={(event) => setEmail(event.target.value)} />
         <Button htmlType="submit" loading={assign.isPending}>{t("staff.assign")}</Button>
-      </form>
+      </form>}
       {error && <Alert role="alert" type="error" showIcon className="mt-3"
         title={error instanceof ApiError ? error.message : t("eventWorkflow.networkError")} />}
     </section>

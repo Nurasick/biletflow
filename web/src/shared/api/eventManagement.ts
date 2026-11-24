@@ -62,6 +62,40 @@ export type OrganizerOrder = {
   created_at: string;
 };
 
+export type VenueSummary = {
+  id: number;
+  slug: string;
+  name: string;
+  city: string;
+  address: string;
+  total_seats: number;
+  accessible_seats: number;
+  price_categories: string[];
+  sections: { id: number; name: string; display_order: number; seat_count: number; price_categories: string[] }[];
+};
+
+export type SeatMap = {
+  event_id: number;
+  seating_mode: string;
+  venue_id: number | null;
+  venue_name: string;
+  venue_city: string | null;
+  venue_address: string;
+  counts: { total: number; sellable: number; available: number; held: number; sold: number; unavailable: number };
+  sections: { section_id: number; name: string; rows: { row_id: number; seats: { price_category: string; ticket_type_id: number | null }[] }[] }[];
+};
+
+/** price category -> ticket type, as the configured seat map currently has it. */
+export const seatCategoryMap = (map: SeatMap): Record<string, number> => {
+  const result: Record<string, number> = {};
+  for (const section of map.sections) for (const row of section.rows) for (const seat of row.seats) {
+    if (seat.ticket_type_id !== null && result[seat.price_category] === undefined) result[seat.price_category] = seat.ticket_type_id;
+  }
+  return result;
+};
+
+export type SeatingConfig = { venue_id: number; category_ticket_type_map: Record<string, number> };
+
 export type StaffMember = { user_id: number; email: string; first_name: string; last_name: string };
 
 const base = (eventId: number) => `/organizer/events/${eventId}`;
@@ -90,6 +124,12 @@ export const salesApi = {
     api.post<OrganizerOrder>(`${base(eventId)}/orders/${orderNumber}/refund`, { reason }),
   cancel: (eventId: number, orderNumber: string) =>
     api.post<OrganizerOrder>(`${base(eventId)}/orders/${orderNumber}/cancel`),
+};
+
+export const seatingApi = {
+  venues: (signal?: AbortSignal) => api.get<VenueSummary[]>("/venues", { signal }),
+  seats: (eventId: number, signal?: AbortSignal) => api.get<SeatMap>(`${base(eventId)}/seats`, { signal }),
+  configure: (eventId: number, config: SeatingConfig) => api.put<SeatMap>(`${base(eventId)}/seating`, config),
 };
 
 export const staffApi = {

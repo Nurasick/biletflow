@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Alert, Button, Modal } from "antd";
 import { Eye, Save } from "lucide-react";
 import { useState } from "react";
@@ -6,9 +7,10 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { validationMessage } from "../../../i18n/validation";
+import { seatingApi } from "../../../shared/api/eventManagement";
 import { FieldError } from "../../Auth/ui/FormControls";
 import { eventTimeZones } from "../model/eventDateTime";
-import { EVENT_CATEGORIES, EVENT_VISIBILITIES } from "../model/eventSchema";
+import { EVENT_CATEGORIES, EVENT_VISIBILITIES, SEATING_MODES } from "../model/eventSchema";
 import type { OrganizerEventValues } from "../model/eventSchema";
 import { useOrganizerEventForm } from "../model/useOrganizerEventForm";
 import { useUnsavedEvent } from "../model/useUnsavedEvent";
@@ -28,6 +30,19 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = fa
   const images = useWatch({ control, name: "images" });
   const description = useWatch({ control, name: "description" });
   const timeZone = useWatch({ control, name: "timeZone" });
+  const seatingMode = useWatch({ control, name: "seatingMode" });
+  const venues = useQuery({
+    queryKey: ["venues"], queryFn: ({ signal }) => seatingApi.venues(signal),
+    enabled: seatingMode === "assigned", staleTime: 5 * 60_000, retry: false,
+  });
+  const applyLayout = (venueId: string) => {
+    const venue = venues.data?.find((item) => String(item.id) === venueId);
+    if (!venue) return;
+    onChange();
+    for (const [field, value] of [["venueName", venue.name], ["venueAddress", venue.address], ["venueCity", venue.city]] as const) {
+      setValue(field, value, { shouldDirty: true, shouldValidate: true });
+    }
+  };
   const [readingImages, setReadingImages] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const busy = isSubmitting || readingImages;
@@ -77,6 +92,33 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = fa
             registration={register("venueName")} error={errors.venueName} />
           <EventInput id="event-venue-address" label={t("organizerEvent.venueAddress")} required maxLength={2000} autoComplete="street-address"
             registration={register("venueAddress")} error={errors.venueAddress} />
+          <EventInput id="event-venue-city" label={t("organizerEvent.venueCity")} maxLength={120} autoComplete="address-level2"
+            registration={register("venueCity")} error={errors.venueCity} />
+          <fieldset className="min-w-0">
+            <legend className="text-sm font-semibold">{t("organizerEvent.seatingMode")}</legend>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              {SEATING_MODES.map((mode) => (
+                <label key={mode} className="flex cursor-pointer items-start gap-3 rounded-lg border border-line p-4 has-checked:border-primary has-checked:bg-accent-wash has-focus-visible:ring-2 has-focus-visible:ring-primary">
+                  <input {...register("seatingMode")} type="radio" value={mode} className="mt-0.5 accent-primary" />
+                  <span>
+                    <span className="block text-xs font-semibold">{t(`organizerEvent.seating.${mode}`)}</span>
+                    <span className="mt-1 block text-xs leading-5 text-muted">{t(`organizerEvent.seating.${mode}Description`)}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <FieldError id="event-seating-mode-error" error={errors.seatingMode} />
+          </fieldset>
+          {seatingMode === "assigned" && <EventFormField id="event-venue-layout" label={t("organizerEvent.venueLayout")}
+            hint={t("organizerEvent.venueLayoutHint")}>
+            <select id="event-venue-layout" className={eventInputClass} defaultValue="" disabled={!venues.data}
+              aria-describedby="event-venue-layout-hint" onChange={(event) => applyLayout(event.target.value)}>
+              <option value="">{venues.isError ? t("organizerEvent.venueLayoutError") : t("organizerEvent.venueLayoutPick")}</option>
+              {venues.data?.map((venue) => <option key={venue.id} value={venue.id}>
+                {t("organizerEvent.venueLayoutOption", { name: venue.name, city: venue.city, seats: venue.total_seats })}
+              </option>)}
+            </select>
+          </EventFormField>}
         </EventFormSection>
 
         <EventFormSection id="event-schedule-heading" number="04" title={t("organizerEvent.schedule")}

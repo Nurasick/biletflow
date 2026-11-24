@@ -4,6 +4,8 @@ import { isEventTimeZone, parseLocalDateTime, resolveEventDateTime } from "./eve
 
 export const EVENT_CATEGORIES = ["concert", "conference", "sport", "theater", "other"] as const;
 export const EVENT_VISIBILITIES = ["public", "unlisted", "private"] as const;
+export const SEATING_MODES = ["general_admission", "assigned"] as const;
+export const MAX_EVENT_IMAGE_ALT = 300;
 export const MAX_EVENT_IMAGES = 5;
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 export const EVENT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -18,6 +20,8 @@ export const eventImageSchema = z.object({
       .regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, "validation.eventImageType"),
     z.string().max(512).regex(/^(?:https?:\/\/|\/media\/)\S+$/, "validation.eventImageType"),
   ]),
+  // Describes the picture for screen readers (WCAG 1.1.1); empty falls back to the event title.
+  alt: z.string().max(MAX_EVENT_IMAGE_ALT, "validation.eventImageAltMax").optional(),
 });
 export type EventImage = z.infer<typeof eventImageSchema>;
 
@@ -32,6 +36,8 @@ export const eventSchema = z.object({
   images: z.array(eventImageSchema).max(MAX_EVENT_IMAGES, "validation.eventImageCount"),
   venueName: z.string().trim().min(1, "validation.eventVenue").max(300, "validation.eventVenueMax"),
   venueAddress: z.string().trim().min(1, "validation.eventAddress").max(2000, "validation.eventAddressMax"),
+  venueCity: z.string().trim().max(120, "validation.eventCityMax"),
+  seatingMode: z.enum(SEATING_MODES, { error: "validation.eventSeatingMode" }),
   timeZone: z.string().refine(isEventTimeZone, "validation.eventTimeZone"),
   startsAt: dateTime,
   endsAt: dateTime,
@@ -72,6 +78,6 @@ export type OrganizerEventValues = z.infer<typeof eventSchema>;
 
 export const emptyOrganizerEvent = (): OrganizerEventValues => ({
   title: "", description: "", refundPolicy: "", category: "other", images: [],
-  venueName: "", venueAddress: "", timeZone: "Asia/Almaty", startsAt: "", endsAt: "",
+  venueName: "", venueAddress: "", venueCity: "", seatingMode: "general_admission", timeZone: "Asia/Almaty", startsAt: "", endsAt: "",
   registrationOpensAt: "", registrationClosesAt: "", capacity: "", visibility: "public",
 });

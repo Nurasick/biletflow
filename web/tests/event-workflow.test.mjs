@@ -14,7 +14,7 @@ const { eventLifecycleApi, EventWorkflowError } = await import(lifecycleUrl);
 const event = { id: 7, title: 'Indie Night', status: 'draft', timezone: 'Asia/Almaty', updated_at: '2030-01-01T00:00:00Z' };
 const preview = {
   event,
-  images: [{ id: 1, url: 'http://x/cover.png', position: 0 }, { id: 2, url: 'http://x/g.png', position: 1 }],
+  images: [{ id: 1, url: 'http://x/cover.png', position: 0, alt_text: 'Stage' }, { id: 2, url: 'http://x/g.png', position: 1 }],
   publish_requirements: [{ code: 'title', met: true }, { code: 'visible_ticket_type', met: true }],
   allowed_actions: ['publish', 'cancel'],
 };
@@ -30,7 +30,8 @@ test('preview combines the server preview with visible ticket types and their av
   const fake = scriptApi([[200, preview], [200, types]]);
   const snapshot = await eventLifecycleApi.preview(1, 7);
   assert.deepEqual(fake.calls.map((c) => c.path), ['/organizer/events/7/preview', '/organizer/events/7/ticket-types']);
-  assert.deepEqual(snapshot.gallery_images, ['http://x/g.png']);
+  assert.deepEqual(snapshot.gallery_images, [{ url: 'http://x/g.png', alt: null }]);
+  assert.equal(snapshot.cover_alt, 'Stage');
   assert.deepEqual(snapshot.ticket_types.map((t) => [t.name, t.available]), [['General', 65]]);
   assert.deepEqual(snapshot.allowed_actions, ['publish', 'cancel']);
 });
@@ -38,7 +39,8 @@ test('preview combines the server preview with visible ticket types and their av
 test('preview excludes the saved selected cover rather than the first uploaded image', async () => {
   scriptApi([[200, { ...preview, event: { ...event, cover_image_url: preview.images[1].url } }], [200, types]]);
   const snapshot = await eventLifecycleApi.preview(1, 7);
-  assert.deepEqual(snapshot.gallery_images, [preview.images[0].url]);
+  assert.deepEqual(snapshot.gallery_images.map((image) => image.url), [preview.images[0].url]);
+  assert.equal(snapshot.cover_alt, null);
 });
 
 test('a transition posts the action and returns the fresh preview', async () => {

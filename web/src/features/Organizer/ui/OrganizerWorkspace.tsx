@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, CalendarPlus, LifeBuoy, MessageCircle, ScanLine, UserRound } from "lucide-react";
+import { ArrowLeft, BarChart3, CalendarDays, CalendarPlus, LifeBuoy, MessageCircle, ScanLine, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, useOutletContext } from "react-router-dom";
@@ -14,6 +14,7 @@ export const OrganizerWorkspace = ({ children }: { children: ReactNode }) => {
   const links = [
     { to: "/organizer/events", label: t("eventWorkflow.myEvents"), Icon: CalendarDays, end: true },
     { to: "/organizer/events/new", label: t("nav.createEvent"), Icon: CalendarPlus },
+    { to: "/organizer/analytics", label: t("analytics.overviewTitle"), Icon: BarChart3 },
     { to: "/organizer/profile", label: t("organizer.profile"), Icon: UserRound },
     { to: "/staff/events", label: t("nav.checkIn"), Icon: ScanLine },
     ...(isOrganizer ? [{ to: "/staff/support", label: t("support.queue"), Icon: MessageCircle }] : []),

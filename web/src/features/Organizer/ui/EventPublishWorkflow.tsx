@@ -15,6 +15,7 @@ import { AttendeesPanel } from "./AttendeesPanel";
 import { CampaignsPanel } from "./CampaignsPanel";
 import { EventPreviewContent } from "./EventPreviewContent";
 import { EventSalesPanel } from "./EventSalesPanel";
+import { SeatingPanel } from "./SeatingPanel";
 import { StaffPanel } from "./StaffPanel";
 import { TicketTypesPanel } from "./TicketTypesPanel";
 import { EventStatusBadge } from "./EventStatusBadge";
@@ -60,6 +61,8 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
   const busy = transition.isPending || preview.isFetching;
   const canAct = !busy && !preview.isError;
   const blocked = publish_requirements.some((requirement) => !requirement.met);
+  // Completed and cancelled events keep their history visible but read-only.
+  const editable = (event.status === "draft" || event.status === "published") && event.phase !== "completed";
   const confirmedAction = transition.isSuccess && transition.data.event.status === event.status
     && transition.data.event.updated_at === event.updated_at;
   const actionError = transition.isError && <Alert role="alert" type="error" showIcon className="mt-4"
@@ -85,7 +88,7 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
         </Button>
       </div>
     </div>
-    {(snapshot.event.status === "draft" || snapshot.event.status === "published") && <Link to={`/organizer/events/${eventId}/edit`}
+    {editable && <Link to={`/organizer/events/${eventId}/edit`}
       className="mt-4 inline-block text-sm font-semibold text-primary-hover">
       {t("eventWorkflow.editDetails")}
     </Link>}
@@ -117,15 +120,17 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
     <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]" aria-busy={transition.isPending}>
       <div className="min-w-0 space-y-6">
         <EventPreviewContent snapshot={snapshot} />
-        <TicketTypesPanel event={event} userId={userId} editable={event.status === "draft" || event.status === "published"} />
+        <TicketTypesPanel event={event} userId={userId} editable={editable} />
+        {event.seating_mode === "assigned" && <SeatingPanel event={event} userId={userId} editable={editable} />}
         <ActivationPanel eventId={eventId} />
-        <CampaignsPanel eventId={eventId} userId={userId} timeZone={event.timezone} />
+        <CampaignsPanel eventId={eventId} userId={userId} timeZone={event.timezone} editable={editable} />
         <EventSalesPanel eventId={eventId} userId={userId} />
         {!preview.isError && <>
           <AttendeesPanel key={`attendees:${userId}:${eventId}`} eventId={eventId} userId={userId} slug={event.slug} />
-          <EventTimelinePanel key={`timeline:${userId}:${eventId}`} eventId={eventId} userId={userId} />
+          <EventTimelinePanel key={`timeline:${userId}:${eventId}:${event.timezone}`} eventId={eventId} userId={userId}
+            timeZone={event.timezone} />
         </>}
-        <StaffPanel eventId={eventId} />
+        <StaffPanel eventId={eventId} editable={editable} />
       </div>
       <section aria-labelledby="event-publishing" className="rounded-xl border border-line bg-white p-5">
         <h2 id="event-publishing" className="font-semibold">{t("eventWorkflow.publishing")}</h2>
@@ -149,12 +154,13 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
           onClick={() => { transition.reset(); setConfirmation("unpublish"); }}>{t("eventWorkflow.unpublish")}</Button>}
         {allowed_actions.includes("cancel") && <Button block danger className="mt-3" disabled={!canAct}
           onClick={() => { transition.reset(); setConfirmation("cancel"); }}>{t("eventWorkflow.cancel")}</Button>}
-        {event.phase === "completed" && <>
-          <Button block className="mt-3" disabled={!canAct} loading={duplicate.isPending}
-            onClick={() => { if (!duplicate.isPending) duplicate.mutate(); }}>{t("eventWorkflow.duplicate")}</Button>
-          {duplicate.isError && <Alert role="alert" type="error" showIcon className="mt-3"
-            title={t("eventWorkflow.duplicateError")} />}
-        </>}
+        {/* Any event can seed a new draft: configuration and ticket types, never orders (§4.16). */}
+        <Button block className="mt-3" disabled={!canAct} loading={duplicate.isPending}
+          onClick={() => { if (!duplicate.isPending) duplicate.mutate(); }}>{t("eventWorkflow.duplicate")}</Button>
+        <p className="mt-2 text-xs leading-5 text-muted">{t("eventWorkflow.duplicateHint")}</p>
+        {duplicate.isError && <Alert role="alert" type="error" showIcon className="mt-3"
+          title={t("eventWorkflow.duplicateError")} />}
+        {!editable && <p className="mt-4 text-xs leading-5 text-muted">{t("eventWorkflow.readOnly")}</p>}
         <p className="mt-4 text-xs leading-5 text-muted">
           {t("eventWorkflow.updated", { date: new Intl.DateTimeFormat(locale, {
             dateStyle: "medium", timeStyle: "short", timeZone: event.timezone,
