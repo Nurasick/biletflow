@@ -12,6 +12,7 @@ const serverFields: Record<string, keyof OrganizerEventValues> = {
   venue_name: "venueName", venue_address: "venueAddress", venue_city: "venueCity", seating_mode: "seatingMode",
   timezone: "timeZone",
   starts_at: "startsAt", ends_at: "endsAt", capacity: "capacity", visibility: "visibility",
+  access_code: "accessCode",
   registration_opens_at: "registrationOpensAt", registration_closes_at: "registrationClosesAt",
 };
 

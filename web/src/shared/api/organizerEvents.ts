@@ -16,6 +16,7 @@ export type OrganizerEventRecord = {
   status: EventStatus;
   phase: EventPhase;
   visibility: "public" | "unlisted" | "private";
+  has_access_code?: boolean;
   seating_mode: "general_admission" | "assigned";
   venue_id: number | null;
   venue_name: string;
@@ -34,6 +35,7 @@ export type OrganizerEventRecord = {
 };
 
 export type ServerImage = { id: number; url: string; position: number; alt_text: string | null };
+export type EventInviteLink = { invite_token: string; invite_url: string };
 
 export class OrganizerEventError extends Error {
   constructor(message: "organizerEvent.loadError" | "organizerEvent.saveError" | "organizerEvent.accessError"
@@ -51,8 +53,15 @@ const instant = (value: string, zone: string) => {
 };
 const optionalInstant = (value: string, zone: string) => (value ? instant(value, zone) : null);
 
+const accessCodeField = (values: OrganizerEventValues, isUpdate: boolean): { access_code?: string | null } => {
+  if (values.visibility !== "private") return isUpdate ? { access_code: null } : {};
+  if (values.accessCode) return { access_code: values.accessCode };
+  if (isUpdate && values.clearAccessCode) return { access_code: null };
+  return {};
+};
+
 /** Form values -> the API body. The schema has already resolved every time. */
-const toBody = (values: OrganizerEventValues) => ({
+const toBody = (values: OrganizerEventValues, isUpdate: boolean) => ({
   title: values.title,
   description: values.description,
   refund_policy: values.refundPolicy || null,
@@ -69,6 +78,7 @@ const toBody = (values: OrganizerEventValues) => ({
   registration_closes_at: optionalInstant(values.registrationClosesAt, values.timeZone),
   capacity: values.capacity ? Number(values.capacity) : null,
   visibility: values.visibility,
+  ...accessCodeField(values, isUpdate),
 });
 
 const toValues = (event: OrganizerEventRecord, images: ServerImage[]): OrganizerEventValues => {
@@ -93,6 +103,8 @@ const toValues = (event: OrganizerEventRecord, images: ServerImage[]): Organizer
     registrationClosesAt: local(event.registration_closes_at),
     capacity: event.capacity === null ? "" : String(event.capacity),
     visibility: event.visibility,
+    accessCode: "",
+    clearAccessCode: false,
   };
 };
 
@@ -177,14 +189,15 @@ export const organizerEventApi = {
   /** Create a draft (the server makes the slug from the title). Returns its id. */
   create: (values: OrganizerEventValues) => wrap("organizerEvent.saveError", async () => {
     const draft = eventSchema.parse(values);
-    const event = await api.post<OrganizerEventRecord>("/events", toBody(draft));
+    const event = await api.post<OrganizerEventRecord>("/events", toBody(draft, false));
     await syncImages(event, draft.images);
     return event.id;
   }),
   update: (eventId: number, values: OrganizerEventValues) => wrap("organizerEvent.saveError", async () => {
     const draft = eventSchema.parse(values);
-    const event = await api.patch<OrganizerEventRecord>(path(eventId), toBody(draft));
+    const event = await api.patch<OrganizerEventRecord>(path(eventId), toBody(draft, true));
     await syncImages(event, draft.images);
     return (await organizerEventApi.get(eventId)).values;
   }),
+  createInviteLink: (eventId: number) => api.post<EventInviteLink>(`${path(eventId)}/invite-link`),
 };

@@ -68,3 +68,11 @@ test('network failures become load errors, never a fake empty list', async () =>
   scriptApi([[500, { detail: 'boom' }]]);
   await assert.rejects(eventLifecycleApi.list(1), errorCode('load'));
 });
+
+test('preview preserves private visibility and has_access_code status for the private access panel', async () => {
+  const privateEvent = { ...event, visibility: 'private', has_access_code: true };
+  scriptApi([[200, { ...preview, event: privateEvent }], [200, types]]);
+  const snapshot = await eventLifecycleApi.preview(1, 7);
+  assert.equal(snapshot.event.visibility, 'private');
+  assert.equal(snapshot.event.has_access_code, true);
+});
