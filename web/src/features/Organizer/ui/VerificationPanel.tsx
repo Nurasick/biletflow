@@ -37,7 +37,9 @@ export const VerificationPanel = ({ userId }: { userId: number }) => {
       {(status === "unverified" || status === "rejected") && <Button className="mt-4" loading={verify.isPending} onClick={() => verify.mutate()}>
         {t(status === "rejected" ? "organizer.verifyAgain" : "organizer.verifySimulated")}
       </Button>}
-      {verify.isError && <p role="alert" className="mt-2 text-sm text-primary-hover">{t("organizer.saveError")}</p>}
+      {verify.isError && <p role="alert" className="mt-2 text-sm text-primary-hover">
+        {verify.error instanceof Error && verify.error.message ? verify.error.message : t("organizer.saveError")}
+      </p>}
     </section>
   );
 };

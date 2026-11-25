@@ -15,7 +15,7 @@ import type { EventDetail, EventSeat, PublicTicketType } from "../../../../share
 import { trackCheckoutStart } from "../../../../shared/lib/analytics";
 import { formatMinor } from "../../../../shared/lib/formatPrice";
 import { useAuthErrorMessage } from "../../../../shared/lib/useAuthErrorMessage";
-import { ticketSaleStatus, ticketSaleWindow } from "../../model/ticketSales";
+import { closedSaleNotice, ticketSaleStatus, ticketSaleWindow } from "../../model/ticketSales";
 import { SeatMap } from "../SeatMap/SeatMap";
 
 // The backend's per-request bound (schemas/order.py MAX_TICKETS_PER_ORDER).
@@ -179,6 +179,25 @@ const CheckoutForm = ({ event, ticketTypes, loading, accessToken, accessRevision
 
   const canSubmit = onSale && !selectionUnavailable && total > 0 && (!promo || Boolean(quoted)) && !buy.isPending;
   const saleTime = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: event.timezone });
+  const mappedTypeIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const seat of liveSeats.values()) {
+      if (seat.status !== "unavailable" && seat.ticket_type_id !== null) ids.add(seat.ticket_type_id);
+    }
+    return ids;
+  }, [liveSeats]);
+  const mappedTickets = mappedTypeIds.size > 0 ? tickets.filter((type) => mappedTypeIds.has(type.id)) : [];
+  const assignedTickets = mappedTickets.length > 0 ? mappedTickets : tickets;
+  const sellableAssigned = assignedTickets.filter((type) => limitFor(type) > 0);
+  const assignedWindowTypes = sellableAssigned.length > 0 ? sellableAssigned : assignedTickets;
+  const assignedSaleNotice = assigned && onSale && !loading
+    ? closedSaleNotice(assignedWindowTypes.map((type) => type.saleWindow), now)
+    : null;
+  const assignedSaleMessage = assignedSaleNotice?.status === "upcoming"
+    ? t("ticketTypes.opensAt", { date: saleTime.format(assignedSaleNotice.opens) })
+    : assignedSaleNotice?.status === "closed" ? t("checkout.salesClosed")
+      : assignedSaleNotice?.status === "unavailable" ? t("checkout.salesUnavailable") : null;
+  const assignedPaidInactive = !loading && !event.paid_sales_active && tickets.some((type) => type.price_minor > 0);
 
   return (
     <aside id="ticket-booking" tabIndex={-1} aria-labelledby="buy" className="panel min-w-0 scroll-mt-6 p-5 sm:p-6 lg:sticky lg:top-6">
@@ -189,6 +208,8 @@ const CheckoutForm = ({ event, ticketTypes, loading, accessToken, accessRevision
       {loading && <p role="status" className="mt-4 text-sm text-muted">{t("common.loading")}</p>}
       {!loading && ticketTypes.length === 0 && <p className="mt-4 text-sm text-muted">{t("eventWorkflow.noTickets")}</p>}
       {assigned && onSale && <>
+        {assignedPaidInactive && <Alert className="mt-4" type="info" showIcon title={t("checkout.paidInactive")} />}
+        {assignedSaleMessage && <Alert className="mt-4" type="info" showIcon title={assignedSaleMessage} />}
         {seatMap.isPending && <p role="status" className="mt-4 text-sm text-muted">{t("booking.loadingSeats")}</p>}
         {seatMap.isError && <Alert className="mt-4" type="warning" showIcon title={t("booking.seatMapError")}
           action={<Button size="small" loading={seatMap.isFetching} onClick={() => void seatMap.refetch()}>{t("common.retry")}</Button>} />}
