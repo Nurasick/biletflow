@@ -143,3 +143,41 @@ def create_event_access_token(event_id: int) -> str:
 def create_event_invite_token(event_id: int) -> str:
     """Long-lived signed invite token an organizer shares for a private event."""
     return _create_token(event_id, "event_invite", timedelta(days=365))
+
+
+def create_halyk_checkout_token(
+    payment_id: int, payment_object: dict, script_url: str
+) -> str:
+    """Short-lived signed token for the hosted Halyk ePay HTML launcher page.
+
+    Used by mobile WebBrowser and redirect flows so payment parameters cannot
+    be tampered with in query strings.
+    """
+    return _create_token(
+        payment_id,
+        "halyk_checkout",
+        timedelta(minutes=15),
+        {"payment_object": payment_object, "script_url": script_url},
+    )
+
+
+def decode_halyk_checkout_token(token: str) -> dict:
+    payload = decode_token(token)
+    if payload.get("type") != "halyk_checkout":
+        raise jwt.InvalidTokenError("invalid token type")
+    return payload
+
+
+def halyk_secret_hash(payment_id: int, invoice_id: str) -> str:
+    """Keyed HMAC sent as Halyk `secret_hash` and verified on `postLink` webhooks."""
+    return hmac.new(
+        settings.SECRET_KEY.encode("utf-8"),
+        f"halyk-epay:{payment_id}:{invoice_id}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()[:32]
+
+
+def verify_halyk_secret_hash(payment_id: int, invoice_id: str, candidate: str) -> bool:
+    if not candidate:
+        return False
+    return hmac.compare_digest(halyk_secret_hash(payment_id, invoice_id), candidate.strip())

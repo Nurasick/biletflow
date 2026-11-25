@@ -25,11 +25,12 @@ def _bigint_as_integer(type_, compiler, **kw):
 # Before any app import reads settings: the hold sweeper would otherwise start
 # with every TestClient and write to the real database in the background.
 os.environ["HOLD_SWEEP_INTERVAL_SECONDS"] = "0"
-# Same for the notification sender, and never hit a real email provider.
+# Same for the notification sender, and never hit a real email or payment provider.
 os.environ["NOTIFY_INTERVAL_SECONDS"] = "0"
 os.environ["SMTP_HOST"] = ""
 os.environ["RESEND_API_KEY"] = ""
 os.environ["EMAIL_PROVIDER"] = "console"
+os.environ["PAYMENT_PROVIDER"] = "simulator"
 
 from app.core.config import settings  # noqa: E402
 from app.db.base import Base  # noqa: E402 - must import after the compiles() override
