@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
-import { checkoutItems, decode, get, type Order, type TicketType } from '@/api/public';
+import { checkoutItems, decode, type Order, type TicketType } from '@/api/public';
 import { Screen, Label, Button } from '@/components/api-screen';
 import { Action, FormField, Panel } from '@/components/workspace';
 import { useAuth } from '@/hooks/use-auth';
@@ -50,12 +50,13 @@ export default function Checkout() {
     let active = true;
     setLoading(true);
     setError('');
-    get<TicketType[]>(`/events/${encodeURIComponent(slug ?? '')}/ticket-types`)
+    authenticatedFetch(`/events/${encodeURIComponent(slug ?? '')}/ticket-types${accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : ''}`)
+      .then((response) => decode<TicketType[]>(response))
       .then((data) => { if (active) setTypes(data); })
       .catch((loadError: unknown) => { if (active) setError(loadError instanceof Error ? loadError.message : 'Could not load ticket availability.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [slug]));
+  }, [authenticatedFetch, slug, accessToken]));
 
   useEffect(() => {
     if (!campaignToken || loading || !types.length || !slug) return;
@@ -67,13 +68,13 @@ export default function Checkout() {
       const values = JSON.parse(selection ?? '{}') as Record<string, number>;
       items = Object.entries(values).map(([id, quantity]) => ({ ticket_type_id: Number(id), quantity }));
     } catch { /* The normal selection validation below will show the error. */ }
-    void promotionsApi.quote(slug, { token: campaignToken }, items).then(quote => {
+    void promotionsApi.quote(slug, { token: campaignToken }, items, accessToken, authenticatedFetch).then(quote => {
       if (active) { setPromoQuote(quote); setPromoCode(quote.code); setActiveCampaignToken(campaignToken); }
     }).catch(failure => {
       if (active) setPromoError(failure instanceof Error ? failure.message : 'Could not apply this campaign.');
     }).finally(() => { if (active) setPromoBusy(false); });
     return () => { active = false; };
-  }, [campaignToken, loading, types.length, slug, selection]);
+  }, [campaignToken, loading, types.length, slug, selection, accessToken, authenticatedFetch]);
 
   let attendees: { key: string; label: string }[] = [];
   let estimated = 0;
@@ -108,7 +109,7 @@ export default function Checkout() {
     try {
       const values = JSON.parse(selection ?? '{}') as Record<string, number>;
       const items = Object.entries(values).map(([id, quantity]) => ({ ticket_type_id: Number(id), quantity }));
-      const quote = await promotionsApi.quote(slug, promoCode.trim() ? { code: promoCode.trim() } : { token: campaignToken ?? '' }, items);
+      const quote = await promotionsApi.quote(slug, promoCode.trim() ? { code: promoCode.trim() } : { token: campaignToken ?? '' }, items, accessToken, authenticatedFetch);
       setPromoQuote(quote);
       setPromoCode(quote.code);
       setActiveCampaignToken(promoCode.trim() ? '' : campaignToken ?? '');

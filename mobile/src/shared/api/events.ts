@@ -1,4 +1,5 @@
 import { API_BASE_URL, API_V1_URL } from '@/constants/api';
+import type { AuthenticatedFetch } from './orders';
 
 export type EventCategory = 'concert' | 'conference' | 'sport' | 'theater' | 'other';
 
@@ -61,12 +62,13 @@ export type PromoQuote = {
   total_minor: number;
 };
 
-async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function getJson<T>(path: string, signal?: AbortSignal, fetcher?: AuthenticatedFetch): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${API_V1_URL}${path}`, { signal });
+    response = fetcher ? await fetcher(path, { signal }) : await fetch(`${API_V1_URL}${path}`, { signal });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error;
+    if (fetcher && error instanceof Error) throw error;
     throw new Error('Could not reach the BiletFlow API. Check your connection and try again.');
   }
 
@@ -91,11 +93,12 @@ function queryString(filters: EventFilters) {
 export const eventsApi = {
   list: (filters: EventFilters = {}, signal?: AbortSignal) =>
     getJson<PublicEvent[]>(`/events${queryString(filters)}`, signal),
-  get: (slug: string, signal?: AbortSignal, accessToken?:string) =>
-    getJson<EventDetail>(`/events/${encodeURIComponent(slug)}${accessToken?`?access_token=${encodeURIComponent(accessToken)}`:''}`, signal),
-  ticketTypes: (slug: string, signal?: AbortSignal, accessToken?:string) =>
-    getJson<PublicTicketType[]>(`/events/${encodeURIComponent(slug)}/ticket-types${accessToken?`?access_token=${encodeURIComponent(accessToken)}`:''}`, signal),
-  seats: (slug: string, signal?: AbortSignal, accessToken?:string) => getJson<EventSeatMap>(`/events/${encodeURIComponent(slug)}/seats${accessToken?`?access_token=${encodeURIComponent(accessToken)}`:''}`, signal),
+  get: (slug: string, signal?: AbortSignal, accessToken?: string, fetcher?: AuthenticatedFetch) =>
+    getJson<EventDetail>(`/events/${encodeURIComponent(slug)}${accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : ''}`, signal, fetcher),
+  ticketTypes: (slug: string, signal?: AbortSignal, accessToken?: string, fetcher?: AuthenticatedFetch) =>
+    getJson<PublicTicketType[]>(`/events/${encodeURIComponent(slug)}/ticket-types${accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : ''}`, signal, fetcher),
+  seats: (slug: string, signal?: AbortSignal, accessToken?: string, fetcher?: AuthenticatedFetch) =>
+    getJson<EventSeatMap>(`/events/${encodeURIComponent(slug)}/seats${accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : ''}`, signal, fetcher),
   unlock: async (slug: string, accessCode: string) => {
     const response = await fetch(`${API_V1_URL}/events/${encodeURIComponent(slug)}/unlock`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({access_code:accessCode}) });
     const body = await response.json().catch(() => null);
@@ -105,15 +108,24 @@ export const eventsApi = {
 };
 
 export const promotionsApi = {
-  quote: async (slug: string, source: { code?: string; token?: string }, items: { ticket_type_id: number; quantity: number }[]): Promise<PromoQuote> => {
+  quote: async (
+    slug: string,
+    source: { code?: string; token?: string },
+    items: { ticket_type_id: number; quantity: number }[],
+    accessToken?: string,
+    fetcher?: AuthenticatedFetch,
+  ): Promise<PromoQuote> => {
     let response: Response;
+    const path = `/events/${encodeURIComponent(slug)}/promo${accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : ''}`;
+    const init: RequestInit = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...source, items }),
+    };
     try {
-      response = await fetch(`${API_V1_URL}/events/${encodeURIComponent(slug)}/promo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...source, items }),
-      });
-    } catch {
+      response = fetcher ? await fetcher(path, init) : await fetch(`${API_V1_URL}${path}`, init);
+    } catch (error) {
+      if (fetcher && error instanceof Error) throw error;
       throw new Error('Could not reach the BiletFlow API. Check your connection and try again.');
     }
     const body: unknown = await response.json().catch(() => null);

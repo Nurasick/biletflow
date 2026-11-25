@@ -383,4 +383,15 @@ export const managementEntries: readonly [string, string, string][] = [
   ['This is not a BiletFlow campaign QR. Admission ticket QRs are not accepted here.', 'Это не QR-код акции BiletFlow. Входные билеты здесь не принимаются.', 'Бұл BiletFlow науқанының QR коды емес. Кіру билеттері мұнда қабылданбайды.'],
   ['Try another QR', 'Попробовать другой QR', 'Басқа QR кодты көру'],
 
+  // Private events
+  ['Access code (optional, 4–64 characters)', 'Код доступа (необязательно, 4–64 символа)', 'Кіру коды (міндетті емес, 4–64 таңба)'],
+  ['Access code must be between 4 and 64 characters.', 'Код доступа должен содержать от 4 до 64 символов.', 'Кіру коды 4 пен 64 таңба аралығында болуы керек.'],
+  ['An access code is currently set. Leave blank to keep it.', 'Код доступа уже задан. Оставьте поле пустым, чтобы сохранить его.', 'Кіру коды орнатылған. Оны сақтау үшін өрісті бос қалдырыңыз.'],
+  ['New access code (optional, 4–64 characters)', 'Новый код доступа (необязательно, 4–64 символа)', 'Жаңа кіру коды (міндетті емес, 4–64 таңба)'],
+  ['Clear access code', 'Удалить код доступа', 'Кіру кодын өшіру'],
+  ['Access code will be cleared on save', 'Код доступа будет удалён при сохранении', 'Сақтау кезінде кіру коды өшіріледі'],
+  ['Share private invite link', 'Поделиться приватной ссылкой-приглашением', 'Жабық шақыру сілтемесімен бөлісу'],
+  ['Private invite link', 'Приватная ссылка-приглашение', 'Жабық шақыру сілтемесі'],
+  ['Private invite link created.', 'Приватная ссылка-приглашение создана.', 'Жабық шақыру сілтемесі жасалды.'],
+
 ];

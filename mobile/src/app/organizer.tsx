@@ -25,6 +25,7 @@ export default function OrganizerScreen() {
   const [starts, setStarts] = useState(() => defaultEventInstant(7, 19)); const [ends, setEnds] = useState(() => defaultEventInstant(7, 21));
   const [cover, setCover] = useState(''); const [eventDescription, setEventDescription] = useState(''); const [refundPolicy, setRefundPolicy] = useState('');
   const [category, setCategory] = useState('concert'); const [visibility, setVisibility] = useState('public'); const [seatingMode, setSeatingMode] = useState<'general_admission'|'assigned'>('general_admission');
+  const [accessCode, setAccessCode] = useState('');
   const [timeZone,setTimeZone]=useState(DEFAULT_EVENT_TIME_ZONE);
   const [capacity, setCapacity] = useState(''); const [opensAt, setOpensAt] = useState(''); const [closesAt, setClosesAt] = useState('');
 
@@ -48,8 +49,10 @@ export default function OrganizerScreen() {
   const createEvent = () => void run(async () => {
     const startsAt = requiredIso(starts); const endsAt = requiredIso(ends);
     if (!title.trim() || !venue.trim() || !address.trim() || endsAt <= startsAt) throw new Error('Enter a title, venue, address, and valid event date range.');
-    const event = await managementApi.createEvent(authenticatedFetch, { title: title.trim(), description: eventDescription.trim() || null, refund_policy: refundPolicy.trim() || null, category, visibility, seating_mode: seatingMode, venue_name: venue.trim(), venue_address: address.trim(), starts_at: startsAt, ends_at: endsAt, timezone: timeZone.trim() || DEFAULT_EVENT_TIME_ZONE, capacity: capacity.trim() ? Number(capacity) : null, registration_opens_at: optionalIso(opensAt), registration_closes_at: optionalIso(closesAt), cover_image_url: cover.trim() || null });
-    setTitle(''); setCover(''); router.push({ pathname: '/organizer-event', params: { eventId: String(event.id) } });
+    const trimmedCode = visibility === 'private' ? accessCode.trim() : '';
+    if (trimmedCode && (trimmedCode.length < 4 || trimmedCode.length > 64)) throw new Error('Access code must be between 4 and 64 characters.');
+    const event = await managementApi.createEvent(authenticatedFetch, { title: title.trim(), description: eventDescription.trim() || null, refund_policy: refundPolicy.trim() || null, category, visibility, seating_mode: seatingMode, venue_name: venue.trim(), venue_address: address.trim(), starts_at: startsAt, ends_at: endsAt, timezone: timeZone.trim() || DEFAULT_EVENT_TIME_ZONE, capacity: capacity.trim() ? Number(capacity) : null, registration_opens_at: optionalIso(opensAt), registration_closes_at: optionalIso(closesAt), cover_image_url: cover.trim() || null, ...(trimmedCode ? { access_code: trimmedCode } : {}) });
+    setTitle(''); setCover(''); setAccessCode(''); router.push({ pathname: '/organizer-event', params: { eventId: String(event.id) } });
   }, 'Draft event created.');
   const shownEvents = phaseFilter === 'all' ? events : events.filter(event => event.phase === phaseFilter);
 
@@ -77,6 +80,7 @@ export default function OrganizerScreen() {
         <FormField label={t('Description')} value={eventDescription} onChangeText={setEventDescription} multiline maxLength={10000} />
         <Action secondary label={`${t('Category')}: ${t(category)} · ${t('Change')}`} onPress={() => setCategory(value => cycle(CATEGORIES, value))} />
         <Action secondary label={`${t('Visibility')}: ${t(visibility)} · ${t('Change')}`} onPress={() => setVisibility(value => cycle(VISIBILITIES, value))} />
+        {visibility === 'private' && <FormField label={t('Access code (optional, 4–64 characters)')} value={accessCode} onChangeText={setAccessCode} autoCapitalize="none" maxLength={64} />}
         <Action secondary label={`${t('Seating')}: ${t(seatingMode === 'assigned' ? 'Assigned seating' : 'General admission')} · ${t('Change')}`} onPress={() => setSeatingMode(value => value === 'assigned' ? 'general_admission' : 'assigned')} />
         <FormField label={t('Venue name')} value={venue} onChangeText={setVenue} />
         <FormField label={t('Venue address')} value={address} onChangeText={setAddress} />

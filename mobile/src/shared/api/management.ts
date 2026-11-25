@@ -29,6 +29,7 @@ export type ManagedEvent = {
   venue_name: string; venue_address: string; starts_at: string; ends_at: string; timezone: string;
   capacity: number | null; registration_opens_at: string | null; registration_closes_at: string | null;
   seating_mode: 'general_admission'|'assigned';
+  has_access_code?: boolean;
   refund_policy: string | null; published_at: string | null; cancelled_at: string | null;
 };
 export type ManagedTicketType = {
@@ -85,6 +86,7 @@ export const managementApi = {
   removeImage: (f: AuthenticatedFetch, id: number, imageId: number) => request<null>(f, `${eventBase(id)}/images/${imageId}`, { method:'DELETE' }),
   transition: (f: AuthenticatedFetch, id: number, action: 'publish'|'unpublish'|'cancel') => request<ManagedEvent>(f, `${eventBase(id)}/${action}`, json('POST')),
   duplicate: (f: AuthenticatedFetch, id: number) => request<ManagedEvent>(f, `${eventBase(id)}/duplicate`, json('POST')),
+  createInviteLink: (f: AuthenticatedFetch, id: number) => request<{ invite_token: string; invite_url: string }>(f, `${eventBase(id)}/invite-link`, json('POST')),
   ticketTypes: (f: AuthenticatedFetch, id: number, signal?: AbortSignal) => request<ManagedTicketType[]>(f, `${eventBase(id)}/ticket-types`, { signal }),
   createTicketType: (f: AuthenticatedFetch, id: number, body: Record<string, unknown>) => request<ManagedTicketType>(f, `${eventBase(id)}/ticket-types`, json('POST', body)),
   updateTicketType: (f: AuthenticatedFetch, id: number, ticketId: number, body: Record<string, unknown>) => request<ManagedTicketType>(f, `${eventBase(id)}/ticket-types/${ticketId}`, json('PATCH', body)),
