@@ -53,8 +53,8 @@ test('timeline requests encode UTC bounds and repeat action params without losin
     action: 'event.published', entity_type: 'event', entity_id: 7, summary: 'Event published', payload: null };
   const fake = scriptApi([[200, [entry]]]);
   const filters = { since: '2026-10-01T10:00:00+05:00', until: '2026-11-01T00:00:00Z',
-    actions: ['event.published', 'support_case.status_changed', 'future.action & value'] };
-  assert.ok(EVENT_AUDIT_ACTIONS.includes('support_case.status_changed'));
+    actions: ['event.published', 'support.status_changed', 'future.action & value'] };
+  assert.ok(EVENT_AUDIT_ACTIONS.includes('support.status_changed'));
   assert.deepEqual(await eventReportsApi.timeline(7, filters, reportPage(2)), [entry]);
   const url = new URL(fake.calls[0].path, 'https://example.test');
   assert.equal(url.pathname, '/organizer/events/7/timeline');

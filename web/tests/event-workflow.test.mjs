@@ -57,6 +57,12 @@ test('a refused publish carries the server reason as a requirements error', asyn
     (e) => errorCode('requirements')(e) && e.detail === 'starts_at must be in the future');
 });
 
+test('a 403 transition preserves the backend permission detail in EventWorkflowError', async () => {
+  scriptApi([[403, { detail: { code: 'email_not_verified', message: 'Please verify your email address before continuing' } }]]);
+  await assert.rejects(eventLifecycleApi.transition(1, 7, 'publish'),
+    (e) => errorCode('save')(e) && e.detail === 'Please verify your email address before continuing');
+});
+
 test('other refused transitions are conflicts, and unknown events are not found', async () => {
   scriptApi([[409, { detail: 'tickets are already sold or reserved; cancel the event instead' }]]);
   await assert.rejects(eventLifecycleApi.transition(1, 7, 'unpublish'), errorCode('conflict'));
@@ -67,4 +73,12 @@ test('other refused transitions are conflicts, and unknown events are not found'
 test('network failures become load errors, never a fake empty list', async () => {
   scriptApi([[500, { detail: 'boom' }]]);
   await assert.rejects(eventLifecycleApi.list(1), errorCode('load'));
+});
+
+test('preview preserves private visibility and has_access_code status for the private access panel', async () => {
+  const privateEvent = { ...event, visibility: 'private', has_access_code: true };
+  scriptApi([[200, { ...preview, event: privateEvent }], [200, types]]);
+  const snapshot = await eventLifecycleApi.preview(1, 7);
+  assert.equal(snapshot.event.visibility, 'private');
+  assert.equal(snapshot.event.has_access_code, true);
 });

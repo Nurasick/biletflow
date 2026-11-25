@@ -81,11 +81,21 @@ export async function downloadSingleTicketPdf(fetcher: AuthenticatedFetch, order
   await saveOrSharePdf(bytes, `biletflow-${publicCode}.pdf`);
 }
 
-export async function openEventCalendar(slug: string) {
-  const url = `${API_V1_URL}/events/${encodeURIComponent(slug)}/calendar.ics`;
+export async function openEventCalendar(slug: string, accessToken?: string) {
+  const query = accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : '';
+  const url = `${API_V1_URL}/events/${encodeURIComponent(slug)}/calendar.ics${query}`;
   if (Platform.OS === 'web') {
     downloadInBrowser(url, `${slug}.ics`);
     return;
   }
   await Linking.openURL(url);
+}
+
+export async function downloadOrderCalendar(fetcher: AuthenticatedFetch, orderNumber: string, slug: string) {
+  await downloadAuthenticatedFile(
+    fetcher,
+    `/orders/${encodeURIComponent(orderNumber)}/calendar.ics`,
+    `${slug}.ics`,
+    'text/calendar',
+  );
 }

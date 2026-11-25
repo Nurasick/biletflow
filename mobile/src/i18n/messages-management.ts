@@ -41,7 +41,7 @@ export const managementEntries: readonly [string, string, string][] = [
   ['Date and 24-hour time in {zone}', 'Дата и время (24 ч) в поясе {zone}', '{zone} белдеуіндегі күн мен уақыт (24 сағ)'],
   ['Use YYYY-MM-DD for the date and HH:MM (24-hour) for the time.', 'Дата в формате ГГГГ-ММ-ДД, время — ЧЧ:ММ (24 ч).', 'Күнді ЖЖЖЖ-АА-КК, уақытты СС:ММ (24 сағ) пішімінде енгізіңіз.'],
   ['Check the date and time fields.', 'Проверьте поля даты и времени.', 'Күн мен уақыт өрістерін тексеріңіз.'],
-  ['Times are entered in Asia/Almaty time (UTC+5).', 'Время указывается по Алматы (UTC+5).', 'Уақыт Алматы уақытымен (UTC+5) енгізіледі.'],
+  ['Times are entered in the selected event time zone.', 'Время указывается в выбранном часовом поясе события.', 'Уақыт таңдалған іс-шараның уақыт белдеуі бойынша енгізіледі.'],
   ['Starts at', 'Начало', 'Басталуы'],
   ['Ends at', 'Окончание', 'Аяқталуы'],
   ['Registration opens at', 'Открытие регистрации', 'Тіркеудің ашылуы'],
@@ -84,7 +84,7 @@ export const managementEntries: readonly [string, string, string][] = [
   ['Create draft', 'Создать черновик', 'Жоба жасау'],
   ['Draft event created.', 'Черновик события создан.', 'Іс-шара жобасы жасалды.'],
   ['Enter a title, venue, address, and valid event date range.', 'Укажите название, площадку, адрес и корректные даты события.', 'Атауын, өтетін орнын, мекенжайын және дұрыс күндерін енгізіңіз.'],
-  ['Add photos from the event page after creating the draft. Seat selection remains a preview until the backend supports seat holds.', 'Фото можно добавить на странице события после создания черновика. Выбор мест пока работает как предпросмотр, пока сервер не поддерживает бронь мест.', 'Фотоны жоба жасалғаннан кейін іс-шара бетінде қосыңыз. Сервер орын брондауды қолдағанға дейін орын таңдау алдын ала қарау ретінде ғана жұмыс істейді.'],
+  ['Add photos from the event page after creating the draft.', 'Фото можно добавить на странице события после создания черновика.', 'Фотоны жоба жасалғаннан кейін іс-шара бетінде қосыңыз.'],
   ['upcoming', 'Предстоящее', 'Алдағы'],
   ['active', 'Идёт сейчас', 'Қазір өтуде'],
   ['public', 'Публичное', 'Ашық'],
@@ -382,5 +382,16 @@ export const managementEntries: readonly [string, string, string][] = [
   ['Camera access is needed to scan a campaign QR.', 'Чтобы сканировать QR-код акции, нужен доступ к камере.', 'Науқанның QR кодын сканерлеу үшін камераға рұқсат қажет.'],
   ['This is not a BiletFlow campaign QR. Admission ticket QRs are not accepted here.', 'Это не QR-код акции BiletFlow. Входные билеты здесь не принимаются.', 'Бұл BiletFlow науқанының QR коды емес. Кіру билеттері мұнда қабылданбайды.'],
   ['Try another QR', 'Попробовать другой QR', 'Басқа QR кодты көру'],
+
+  // Private events
+  ['Access code (optional, 4–64 characters)', 'Код доступа (необязательно, 4–64 символа)', 'Кіру коды (міндетті емес, 4–64 таңба)'],
+  ['Access code must be between 4 and 64 characters.', 'Код доступа должен содержать от 4 до 64 символов.', 'Кіру коды 4 пен 64 таңба аралығында болуы керек.'],
+  ['An access code is currently set. Leave blank to keep it.', 'Код доступа уже задан. Оставьте поле пустым, чтобы сохранить его.', 'Кіру коды орнатылған. Оны сақтау үшін өрісті бос қалдырыңыз.'],
+  ['New access code (optional, 4–64 characters)', 'Новый код доступа (необязательно, 4–64 символа)', 'Жаңа кіру коды (міндетті емес, 4–64 таңба)'],
+  ['Clear access code', 'Удалить код доступа', 'Кіру кодын өшіру'],
+  ['Access code will be cleared on save', 'Код доступа будет удалён при сохранении', 'Сақтау кезінде кіру коды өшіріледі'],
+  ['Share private invite link', 'Поделиться приватной ссылкой-приглашением', 'Жабық шақыру сілтемесімен бөлісу'],
+  ['Private invite link', 'Приватная ссылка-приглашение', 'Жабық шақыру сілтемесі'],
+  ['Private invite link created.', 'Приватная ссылка-приглашение создана.', 'Жабық шақыру сілтемесі жасалды.'],
 
 ];

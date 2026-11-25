@@ -65,6 +65,7 @@ const asWorkflowError = (error: unknown, fallback: WorkflowErrorCode, action?: E
   if (error instanceof EventWorkflowError) return error;
   if (error instanceof ApiError) {
     if (error.status === 404) return new EventWorkflowError("notFound");
+    if (error.status === 403) return new EventWorkflowError(fallback, error.message || undefined);
     // The backend says exactly which publish guard failed; keep its words.
     if (error.status === 409) return new EventWorkflowError(action === "publish" ? "requirements" : "conflict", error.message);
   }

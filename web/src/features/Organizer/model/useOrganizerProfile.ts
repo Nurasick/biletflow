@@ -7,6 +7,7 @@ import type { ProfileValues } from "./profileSchema";
 export const organizerProfileKeys = {
   profile: (userId: number) => ["organizer", "profile", userId] as const,
   record: (userId: number) => ["organizer", "profile-record", userId] as const,
+  payouts: (userId: number) => ["organizer", "payouts", userId] as const,
 };
 
 export const useOrganizerProfile = (userId: number, email = "") => {
@@ -23,9 +24,10 @@ export const useOrganizerProfile = (userId: number, email = "") => {
     onSuccess: async (values) => {
       queryClient.setQueryData(queryKey, values);
       // The first save makes this account an organizer: reload `me` so the
-      // event pages open, and the record so verification status shows.
+      // event pages open, and reload the record and payouts so status shows.
       await queryClient.invalidateQueries({ queryKey: authKeys.me });
       await queryClient.invalidateQueries({ queryKey: organizerProfileKeys.record(userId) });
+      await queryClient.invalidateQueries({ queryKey: organizerProfileKeys.payouts(userId) });
     },
   });
 

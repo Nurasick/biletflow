@@ -21,7 +21,10 @@ export const PayoutsPanel = ({ userId }: { userId: number }) => {
   const locale = useLocale();
   const record = useQuery({ queryKey: organizerProfileKeys.record(userId), queryFn: organizerApi.getRecord, retry: false });
   const payouts = useQuery({
-    queryKey: ["organizer", "payouts", userId], queryFn: ({ signal }) => organizerApi.payouts(signal), retry: false,
+    queryKey: organizerProfileKeys.payouts(userId),
+    queryFn: ({ signal }) => organizerApi.payouts(signal),
+    enabled: Boolean(record.data),
+    retry: false,
   });
   if (!record.data) return null;
   const account = record.data.payout_account;

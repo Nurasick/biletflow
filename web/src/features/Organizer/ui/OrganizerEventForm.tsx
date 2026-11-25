@@ -17,11 +17,12 @@ import { useUnsavedEvent } from "../model/useUnsavedEvent";
 import { EventFormField, EventFormSection, EventInput, eventInputClass } from "./EventFormField";
 import { EventImages } from "./EventImages";
 
-export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = false }: {
+export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = false, hasAccessCode = false }: {
   draft: OrganizerEventValues;
   saveDraft: (values: OrganizerEventValues) => Promise<OrganizerEventValues>;
   previewHref?: string;
   editing?: boolean;
+  hasAccessCode?: boolean;
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -31,6 +32,8 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = fa
   const description = useWatch({ control, name: "description" });
   const timeZone = useWatch({ control, name: "timeZone" });
   const seatingMode = useWatch({ control, name: "seatingMode" });
+  const visibility = useWatch({ control, name: "visibility" });
+  const clearAccessCode = useWatch({ control, name: "clearAccessCode" });
   const venues = useQuery({
     queryKey: ["venues"], queryFn: ({ signal }) => seatingApi.venues(signal),
     enabled: seatingMode === "assigned", staleTime: 5 * 60_000, retry: false,
@@ -157,17 +160,52 @@ export const OrganizerEventForm = ({ draft, saveDraft, previewHref, editing = fa
           description={t("organizerEvent.visibilityDescription")}>
           <div role="radiogroup" aria-labelledby="event-visibility-heading" aria-invalid={Boolean(errors.visibility)}
             aria-describedby={errors.visibility ? "event-visibility-error" : undefined} className="grid gap-3 sm:grid-cols-3">
-            {EVENT_VISIBILITIES.map((visibility) => (
-              <label key={visibility} className="flex cursor-pointer items-start gap-3 rounded-lg border border-line p-4 has-checked:border-primary has-checked:bg-accent-wash has-focus-visible:ring-2 has-focus-visible:ring-primary">
-                <input {...register("visibility")} type="radio" value={visibility} className="mt-0.5 accent-primary" />
+            {EVENT_VISIBILITIES.map((option) => (
+              <label key={option} className="flex cursor-pointer items-start gap-3 rounded-lg border border-line p-4 has-checked:border-primary has-checked:bg-accent-wash has-focus-visible:ring-2 has-focus-visible:ring-primary">
+                <input {...register("visibility", {
+                  onChange: (event) => {
+                    if (event.target.value !== "private") {
+                      setValue("accessCode", "", { shouldValidate: true });
+                      setValue("clearAccessCode", false);
+                    }
+                  },
+                })} type="radio" value={option} className="mt-0.5 accent-primary" />
                 <span>
-                  <span className="block text-xs font-semibold">{t(`organizerEvent.visibility.${visibility}`)}</span>
-                  <span className="mt-1 block text-xs leading-5 text-muted">{t(`organizerEvent.visibility.${visibility}Description`)}</span>
+                  <span className="block text-xs font-semibold">{t(`organizerEvent.visibility.${option}`)}</span>
+                  <span className="mt-1 block text-xs leading-5 text-muted">{t(`organizerEvent.visibility.${option}Description`)}</span>
                 </span>
               </label>
             ))}
           </div>
           <FieldError id="event-visibility-error" error={errors.visibility} />
+          {visibility === "private" && (
+            <div className="space-y-4 rounded-lg border border-line-soft bg-paper/60 p-4">
+              <EventInput id="event-access-code" type="text" autoComplete="off" maxLength={64}
+                label={t("organizerEvent.accessCode")}
+                placeholder={t(editing && hasAccessCode
+                  ? "organizerEvent.accessCodePlaceholderUpdate" : "organizerEvent.accessCodePlaceholder")}
+                hint={t(editing && hasAccessCode
+                  ? "organizerEvent.accessCodeHintExisting" : "organizerEvent.accessCodeHint")}
+                disabled={clearAccessCode}
+                registration={register("accessCode")}
+                error={errors.accessCode} />
+              {editing && hasAccessCode && (
+                <label htmlFor="event-clear-access-code" className="flex cursor-pointer items-start gap-2.5 text-xs leading-5">
+                  <input {...register("clearAccessCode", {
+                    onChange: (event) => {
+                      if (event.target.checked) {
+                        setValue("accessCode", "", { shouldValidate: true });
+                      }
+                    },
+                  })} id="event-clear-access-code" type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-primary" />
+                  <span>
+                    <span className="block font-semibold text-ink">{t("organizerEvent.clearAccessCode")}</span>
+                    <span className="mt-0.5 block text-muted">{t("organizerEvent.clearAccessCodeHint")}</span>
+                  </span>
+                </label>
+              )}
+            </div>
+          )}
         </EventFormSection>
         <EventFormSection id="event-refund-policy-heading" number="07" title={t("eventEdit.refundPolicy")}
           description={t("eventEdit.refundPolicyHint")}>

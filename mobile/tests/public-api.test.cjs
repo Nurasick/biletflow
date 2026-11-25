@@ -44,3 +44,37 @@ test('closed sales and the global quantity limit cannot proceed', () => {
  assert.equal(api.exports.ticketLimit(type),0);
  assert.equal(api.exports.ticketLimit({...type,sales_end_at:null}),20);
 });
+
+const eventsSource = fs.readFileSync(require.resolve('../src/shared/api/events.ts'), 'utf8');
+const eventsCompiled = ts.transpileModule(eventsSource, {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText;
+const eventsExports = {};
+new Function('exports', 'module', 'require', eventsCompiled)(
+  eventsExports,
+  {exports: eventsExports},
+  (id) => id === '@/constants/api' ? {API_BASE_URL: 'https://api.example.test', API_V1_URL: 'https://api.example.test/api/v1'} : require(id),
+);
+
+test('promotionsApi.quote forwards accessToken query param for private events', async () => {
+ const calls = [];
+ global.fetch = async (url, init) => {
+  calls.push({url, init});
+  return Response.json({code: 'VIP10', name: 'VIP', discount_type: 'percent', discount_value: 10, ticket_type_ids: [1], subtotal_minor: 10000, discount_minor: 1000, total_minor: 9000});
+ };
+ await eventsExports.promotionsApi.quote('secret-gala', {code: 'VIP10'}, [{ticket_type_id: 1, quantity: 2}], 'tok+1/2');
+ await eventsExports.promotionsApi.quote('public-show', {code: 'OPEN'}, [{ticket_type_id: 1, quantity: 1}]);
+ assert.equal(calls[0].url, 'https://api.example.test/api/v1/events/secret-gala/promo?access_token=tok%2B1%2F2');
+ assert.equal(calls[0].init.method, 'POST');
+ assert.equal(calls[1].url, 'https://api.example.test/api/v1/events/public-show/promo');
+});
+
+test('eventsApi.get and ticketTypes use optional authenticatedFetch when provided', async () => {
+ const calls = [];
+ const fetcher = async (path, init) => {
+  calls.push({path, init});
+  return Response.json(path.includes('ticket-types') ? [] : {id: 1, slug: 'secret-gala'});
+ };
+ await eventsExports.eventsApi.get('secret-gala', undefined, 'tok1', fetcher);
+ await eventsExports.eventsApi.ticketTypes('secret-gala', undefined, undefined, fetcher);
+ assert.equal(calls[0].path, '/events/secret-gala?access_token=tok1');
+ assert.equal(calls[1].path, '/events/secret-gala/ticket-types');
+});

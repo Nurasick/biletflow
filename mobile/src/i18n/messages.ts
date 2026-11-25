@@ -362,6 +362,8 @@ const entries: readonly [string, string, string][] = [
   ['Offline cache match only · queued, not approved', 'Совпадение только с кэшем · в очереди, не подтверждено', 'Офлайн кэш сәйкестігі · кезекте, әлі расталмады'],
   ['The offline queue is full ({count} check-ins). Reconnect and sync it.', 'Офлайн-очередь заполнена ({count}). Подключитесь к сети и синхронизируйте её.', 'Офлайн кезек толды ({count}). Желіге қосылып, синхрондаңыз.'],
   ['Offline cache is limited to 2,000 tickets per event.', 'Офлайн-кэш ограничен 2 000 билетами на мероприятие.', 'Офлайн кэш бір іс-шараға 2 000 билетпен шектелген.'],
+  ['Could not sync offline check-ins.', 'Не удалось синхронизировать офлайн-отметки.', 'Офлайн белгілерді синхрондау мүмкін болмады.'],
+  ['Could not access secure offline storage on this device.', 'Не удалось получить доступ к защищённому офлайн-хранилищу на этом устройстве.', 'Бұл құрылғыдағы қауіпсіз офлайн жадқа қол жеткізу мүмкін болмады.'],
   ['Event timezone (IANA)', 'Часовой пояс мероприятия (IANA)', 'Іс-шараның уақыт белдеуі (IANA)'],
   ['Choose from photo library', 'Выбрать из фототеки', 'Фотосуреттерден таңдау'],
   ['Download branded campaign QR (SVG)', 'Скачать фирменный QR кампании (SVG)', 'Науқанның брендтелген QR кодын жүктеу (SVG)'],
@@ -484,6 +486,8 @@ const entries: readonly [string, string, string][] = [
   ['Check tickets in at the door', 'Проверяйте билеты на входе', 'Кіреберісте билеттерді тексеріңіз'],
   ['Events, sales and campaigns', 'События, продажи и акции', 'Іс-шаралар, сатылым және науқандар'],
   ['Edit your account', 'Изменить данные аккаунта', 'Аккаунт деректерін өзгерту'],
+  ['Sign in to view your tickets and orders.', 'Войдите, чтобы просмотреть свои билеты и заказы.', 'Билеттеріңіз бен тапсырыстарыңызды көру үшін кіріңіз.'],
+  ['The payment failed.', 'Платёж не прошёл.', 'Төлем сәтсіз аяқталды.'],
 ];
 
 const allEntries = [...entries, ...managementEntries];

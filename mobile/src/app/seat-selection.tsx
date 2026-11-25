@@ -6,11 +6,13 @@ import { ThemedText } from '@/components/themed-text';
 import { ScreenHeading } from '@/components/workspace';
 import { useI18n } from '@/i18n';
 import { MaxContentWidth, Stage } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { eventsApi, type EventDetail, type EventSeat, type EventSeatMap } from '@/shared/api/events';
 
 export default function SeatSelectionScreen() {
   const router = useRouter();
+  const { isLoggedIn } = useAuth();
   const { t, locale, formatDate, formatNumber } = useI18n();
   const params = useLocalSearchParams<{slug?:string|string[];campaignToken?:string|string[];accessToken?:string|string[]}>();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
@@ -44,6 +46,7 @@ export default function SeatSelectionScreen() {
   };
   const go=()=>{
     if(!slug||!selected.length)return;
+    if(!isLoggedIn){router.push('/login');return;}
     router.push({pathname:'/checkout',params:{slug,selection:JSON.stringify(grouped),seats:JSON.stringify(selected.map(s=>({id:s.event_seat_id,label:s.seat_label,ticket_type_id:s.ticket_type_id}))),...(campaignToken?{campaignToken}:{}),...(accessToken?{accessToken}:{})}});
   };
   return <ScreenFrame title={t('Select seats')}>

@@ -8,6 +8,7 @@ import { AppText, Icon, type IconName } from '@/components/design';
 import { ScreenFrame } from '@/components/screen-frame';
 import { Action, Info, Panel, ScreenHeading, FormField } from '@/components/workspace';
 import { MaxContentWidth } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useI18n } from '@/i18n';
 import { openEventCalendar } from '@/shared/api/documents';
@@ -17,10 +18,24 @@ const categories: Record<EventCategory, string> = { concert: 'Concerts', theater
 
 export default function EventDetailsScreen() {
   const router = useRouter();
+  const { isLoggedIn, authenticatedFetch } = useAuth();
   const { t, formatDate, formatNumber } = useI18n();
-  const { slug: rawSlug, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug?: string | string[]; campaignToken?: string | string[] }>();
+  const {
+    slug: rawSlug,
+    campaignToken: rawCampaignToken,
+    accessToken: rawAccessToken,
+    invite: rawInvite,
+  } = useLocalSearchParams<{
+    slug?: string | string[];
+    campaignToken?: string | string[];
+    accessToken?: string | string[];
+    invite?: string | string[];
+  }>();
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
   const campaignToken = Array.isArray(rawCampaignToken) ? rawCampaignToken[0] : rawCampaignToken;
+  const paramAccessToken = (Array.isArray(rawInvite) ? rawInvite[0] : rawInvite)
+    ?? (Array.isArray(rawAccessToken) ? rawAccessToken[0] : rawAccessToken)
+    ?? '';
   const colors = useTheme();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [ticketTypes, setTicketTypes] = useState<PublicTicketType[]>([]);
@@ -30,8 +45,12 @@ export default function EventDetailsScreen() {
   const [calendarBusy, setCalendarBusy] = useState(false);
   const [revision, setRevision] = useState(0);
   const [accessCode,setAccessCode]=useState('');
-  const [accessToken,setAccessToken]=useState('');
+  const [accessToken,setAccessToken]=useState(paramAccessToken);
   const [unlockError,setUnlockError]=useState('');
+
+  useEffect(() => {
+    if (paramAccessToken) setAccessToken(paramAccessToken);
+  }, [paramAccessToken]);
 
   useEffect(() => {
     if (!slug) {
@@ -42,9 +61,10 @@ export default function EventDetailsScreen() {
     const controller = new AbortController();
     setIsLoading(true);
     setError(null);
+    const fetcher = isLoggedIn ? authenticatedFetch : undefined;
     void Promise.all([
-      eventsApi.get(slug, controller.signal, accessToken),
-      eventsApi.ticketTypes(slug, controller.signal, accessToken),
+      eventsApi.get(slug, controller.signal, accessToken || undefined, fetcher),
+      eventsApi.ticketTypes(slug, controller.signal, accessToken || undefined, fetcher),
     ]).then(([eventInfo, types]) => {
       if (controller.signal.aborted) return;
       setEvent(eventInfo);
@@ -55,7 +75,7 @@ export default function EventDetailsScreen() {
       if (!controller.signal.aborted) setIsLoading(false);
     });
     return () => controller.abort();
-  }, [slug, revision, accessToken]);
+  }, [slug, revision, accessToken, isLoggedIn, authenticatedFetch]);
 
   const imageUrl = resolveEventImage(event?.cover_image_url);
   const gallery = event?.images.filter((image) => image.url !== event.cover_image_url) ?? [];
@@ -65,7 +85,7 @@ export default function EventDetailsScreen() {
     setCalendarBusy(true);
     setCalendarError(null);
     try {
-      await openEventCalendar(event.slug);
+      await openEventCalendar(event.slug, accessToken || undefined);
     } catch (failure) {
       setCalendarError(failure instanceof Error ? failure.message : 'Could not open the calendar file.');
     } finally {
@@ -137,8 +157,8 @@ export default function EventDetailsScreen() {
               )}
             </Panel>
             {!!event.refund_policy && <Panel><SectionTitle>{t('Refund policy')}</SectionTitle><Info tone="muted">{event.refund_policy}</Info></Panel>}
-            <Action secondary icon="help" label={t('Contact support')} onPress={() => router.push({ pathname: '/support-new', params: { eventId: String(event.id) } })} />
-            <Action secondary label={t('Report this event')} onPress={() => router.push({ pathname: '/report-event', params: { slug: event.slug } })} />
+            <Action secondary icon="help" label={t('Contact support')} onPress={() => router.push(isLoggedIn ? { pathname: '/support-new', params: { eventId: String(event.id) } } : '/login')} />
+            <Action secondary label={t('Report this event')} onPress={() => router.push(isLoggedIn ? { pathname: '/report-event', params: { slug: event.slug } } : '/login')} />
           </ScrollView>
           <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
             <View style={styles.footerContent}>

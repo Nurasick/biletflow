@@ -256,3 +256,69 @@ test('server validation errors remain available to the edit form, and changed im
   ] }), (error) => error instanceof OrganizerEventError && error.message === 'eventEdit.imagesChanged');
   assert.equal(fake.calls.length, 2);
 });
+
+test('private event access codes are trimmed, optional when blank, and reject lengths outside 4-64 chars', () => {
+  const parsed = eventSchema.parse({ ...validDraft(), visibility: 'private', accessCode: '  VIP2026  ' });
+  assert.equal(parsed.accessCode, 'VIP2026');
+  assert.equal(parsed.clearAccessCode, false);
+  assert.equal(eventSchema.parse({ ...validDraft(), visibility: 'private', accessCode: '   ' }).accessCode, '');
+  assert.equal(eventSchema.safeParse({ ...validDraft(), visibility: 'private', accessCode: 'ABCD' }).success, true);
+  assert.equal(eventSchema.safeParse({ ...validDraft(), visibility: 'private', accessCode: 'x'.repeat(64) }).success, true);
+  for (const accessCode of ['a', 'ab', 'abc', '  ab  ', 'x'.repeat(65)]) {
+    errorAt({ visibility: 'private', accessCode }, 'accessCode', 'validation.eventAccessCode');
+  }
+});
+
+test('creating a private event sends access_code only when set and never sends an empty string', async () => {
+  const fake = scriptApi([
+    [201, record({ visibility: 'private', has_access_code: true })], [200, []],
+    [201, record({ visibility: 'private', has_access_code: false })], [200, []],
+    [201, record({ visibility: 'public', has_access_code: false })], [200, []],
+  ]);
+  await organizerEventApi.create({ ...validDraft(), visibility: 'private', accessCode: ' VIP2026 ' });
+  await organizerEventApi.create({ ...validDraft(), visibility: 'private', accessCode: '   ', clearAccessCode: true });
+  await organizerEventApi.create({ ...validDraft(), visibility: 'public', accessCode: 'VIP2026' });
+  const posts = fake.calls.filter((call) => call.method === 'POST');
+  assert.equal(posts[0].body.access_code, 'VIP2026');
+  assert.equal(Object.hasOwn(posts[1].body, 'access_code'), false);
+  assert.equal(Object.hasOwn(posts[2].body, 'access_code'), false);
+});
+
+test('editing a private event preserves, replaces, or clears access_code per backend semantics', async () => {
+  const priv = record({ visibility: 'private', has_access_code: true });
+  scriptApi([[200, priv], [200, []]]);
+  const loaded = await organizerEventApi.get(7);
+  assert.equal(loaded.event.has_access_code, true);
+  assert.equal(loaded.values.accessCode, '');
+  assert.equal(loaded.values.clearAccessCode, false);
+
+  // Blank accessCode with clearAccessCode: false omits access_code to preserve the existing hash.
+  const keepFake = scriptApi([[200, priv], [200, []], [200, priv], [200, []]]);
+  await organizerEventApi.update(7, { ...loaded.values, accessCode: '  ', clearAccessCode: false });
+  assert.equal(Object.hasOwn(keepFake.calls[0].body, 'access_code'), false);
+
+  // Explicit clearAccessCode: true sends access_code: null.
+  const cleared = record({ visibility: 'private', has_access_code: false });
+  const clearFake = scriptApi([[200, cleared], [200, []], [200, cleared], [200, []]]);
+  await organizerEventApi.update(7, { ...loaded.values, accessCode: '', clearAccessCode: true });
+  assert.equal(clearFake.calls[0].body.access_code, null);
+
+  // Non-empty accessCode sends the trimmed replacement.
+  const replaceFake = scriptApi([[200, priv], [200, []], [200, priv], [200, []]]);
+  await organizerEventApi.update(7, { ...loaded.values, accessCode: ' NEW2027 ', clearAccessCode: false });
+  assert.equal(replaceFake.calls[0].body.access_code, 'NEW2027');
+
+  // Switching visibility away from private clears any previous access_code.
+  const pub = record({ visibility: 'public', has_access_code: false });
+  const publicFake = scriptApi([[200, pub], [200, []], [200, pub], [200, []]]);
+  await organizerEventApi.update(7, { ...loaded.values, visibility: 'public' });
+  assert.equal(publicFake.calls[0].body.access_code, null);
+});
+
+test('createInviteLink posts to /organizer/events/:id/invite-link and returns token and url', async () => {
+  const reply = { invite_token: 'tok-123', invite_url: 'https://biletflow.example/events/indie-night?invite=tok-123' };
+  const fake = scriptApi([[200, reply]]);
+  const result = await organizerEventApi.createInviteLink(7);
+  assert.deepEqual(fake.calls, [{ method: 'POST', path: '/organizer/events/7/invite-link', body: undefined }]);
+  assert.deepEqual(result, reply);
+});

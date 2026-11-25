@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { get, ticketLimit } from '@/api/public';
 import { AppText, Icon } from '@/components/design';
 import { Action, Info, Panel, WorkspaceScreen } from '@/components/workspace';
+import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useI18n } from '@/i18n';
 import type { PublicTicketType } from '@/shared/api/events';
@@ -14,6 +15,7 @@ export default function TicketSelectionScreen() {
   const token = Array.isArray(campaignToken) ? campaignToken[0] : campaignToken;
   const accessToken=Array.isArray(rawAccessToken)?rawAccessToken[0]:rawAccessToken;
   const router = useRouter();
+  const { isLoggedIn } = useAuth();
   const colors = useTheme();
   const { t, locale, formatNumber } = useI18n();
   const price = (minor: number, currency: string) => new Intl.NumberFormat(locale, { style: 'currency', currency }).format(minor / 100);
@@ -88,7 +90,7 @@ export default function TicketSelectionScreen() {
               <AppText style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{price(subtotal, types[0].currency)}</AppText>
             </View>
             <Action icon="arrowRight" label={t('Continue ({count})', { count: formatNumber(total) })} disabled={!total}
-              onPress={() => router.push({ pathname: '/checkout', params: { slug, selection: JSON.stringify(quantities), ...(token ? { campaignToken: token } : {}), ...(accessToken?{accessToken}:{}) } })} />
+              onPress={() => router.push(isLoggedIn ? { pathname: '/checkout', params: { slug, selection: JSON.stringify(quantities), ...(token ? { campaignToken: token } : {}), ...(accessToken?{accessToken}:{}) } } : '/login')} />
           </Panel>
         )}
       </>}

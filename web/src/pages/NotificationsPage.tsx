@@ -81,8 +81,12 @@ const NotificationItem = ({ item, date, busy, onMarkRead }: {
   const details = fields.map((field) => item.payload[field])
     .filter((value): value is string => typeof value === "string" && Boolean(value.trim()));
   const status = item.payload.status;
-  if (item.template_key === "payout.status" && (status === "active" || status === "suspended" || status === "pending")) {
-    details.push(t(`activation.status.${status}`));
+  if (item.template_key === "payout.status") {
+    if (status === "active" || status === "suspended" || status === "pending") {
+      details.push(t(`activation.status.${status}`));
+    } else if (status === "processing" || status === "paid" || status === "failed") {
+      details.push(t(`organizer.payoutStatus.${status}`));
+    }
   }
   if (item.template_key === "support.status") {
     // Newer payloads carry the enum key; older ones only the English label.

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText, Icon, Wordmark } from '@/components/design';
 import { MaxContentWidth } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useI18n } from '@/i18n';
 
@@ -16,6 +17,7 @@ export function ScreenFrame({ children, tab, title, onBack }: PropsWithChildren<
 }>) {
   const colors = useTheme();
   const router = useRouter();
+  const { isLoggedIn } = useAuth();
   const { t } = useI18n();
   const goBack = onBack ?? (() => router.canGoBack() ? router.back() : router.replace('/'));
 
@@ -27,7 +29,7 @@ export function ScreenFrame({ children, tab, title, onBack }: PropsWithChildren<
           {tab ? (
             <>
               <View style={{ paddingLeft: 6 }}><Wordmark /></View>
-              <Pressable accessibilityRole="button" accessibilityLabel={t('Notifications')} onPress={() => router.push('/notifications')}
+              <Pressable accessibilityRole="button" accessibilityLabel={t('Notifications')} onPress={() => router.push(isLoggedIn ? '/notifications' : '/login')}
                 style={({ pressed }) => [styles.iconButton, { backgroundColor: pressed ? colors.raised : 'transparent' }]}>
                 <Icon name="bell" color={colors.text} size={22} />
               </Pressable>

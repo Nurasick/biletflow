@@ -25,7 +25,8 @@ const fakeAuthSource = `
     state.calls.push({ method, path, body });
     if (!state.responses.length) throw new Error('Unexpected request ' + method + ' ' + path);
     const [status, data] = state.responses.shift();
-    if (status >= 400) throw new ApiError(data?.detail ?? 'error', status);
+    const detail = typeof data?.detail === 'string' ? data.detail : data?.detail?.message;
+    if (status >= 400) throw new ApiError(detail ?? 'error', status);
     return data;
   };
   export const api = {
