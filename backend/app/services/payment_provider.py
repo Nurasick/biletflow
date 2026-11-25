@@ -115,7 +115,9 @@ def current_is_simulated() -> bool:
     return settings.PAYMENT_PROVIDER != "halyk"
 
 
-def get_halyk_config(*, mode_override: Literal["halyk_sandbox", "halyk"] | None = None) -> HalykConfig:
+def get_halyk_config(
+    *, mode_override: Literal["halyk_sandbox", "halyk"] | None = None
+) -> HalykConfig:
     mode = mode_override or settings.PAYMENT_PROVIDER
     if mode not in ("halyk_sandbox", "halyk"):
         raise PaymentGatewayError("Halyk Bank payment gateway is not enabled")
@@ -269,7 +271,9 @@ def request_halyk_payment_token(
         timeout=cfg.timeout_seconds,
     )
     if status_code >= 400 or not body.get("access_token"):
-        detail = body.get("error_description") or body.get("message") or body.get("raw") or status_code
+        detail = (
+            body.get("error_description") or body.get("message") or body.get("raw") or status_code
+        )
         raise PaymentGatewayError(f"Halyk OAuth token request failed: {detail}")
     return body
 
@@ -302,7 +306,9 @@ def check_halyk_transaction_status(
 ) -> HalykTransactionStatus:
     cfg = cfg or get_halyk_config()
     token = request_halyk_api_token(cfg)
-    url = f"{cfg.api_url}/check-status/payment/transaction/{urllib.parse.quote(invoice_id, safe='')}"
+    url = (
+        f"{cfg.api_url}/check-status/payment/transaction/{urllib.parse.quote(invoice_id, safe='')}"
+    )
     status_code, body = _http_json(
         url,
         method="GET",
@@ -319,7 +325,9 @@ def check_halyk_transaction_status(
     status_name = str(txn.get("statusName") or "").strip().upper()
     reason_code = str(txn.get("reasonCode") or "").strip()
     reason = str(txn.get("reason") or body.get("resultMessage") or "").strip() or None
-    amount_minor = major_to_minor(txn.get("amount")) if txn.get("amount") not in (None, 0, "") else None
+    amount_minor = (
+        major_to_minor(txn.get("amount")) if txn.get("amount") not in (None, 0, "") else None
+    )
     currency = str(txn.get("currency") or "").strip().upper() or None
     approval_code = str(txn.get("approvalCode") or "").strip() or None
     card_mask = str(txn.get("cardMask") or "").strip() or None
