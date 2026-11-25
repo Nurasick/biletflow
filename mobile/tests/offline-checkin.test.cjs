@@ -23,3 +23,41 @@ test('offline scans remain pending until sync and conflicts can be dismissed',as
  await removeQueuedAdmission(19,item.client_scan_id);
  assert.deepEqual(await listQueuedAdmissions(19),[]);
 });
+
+test('clearOfflineEventData removes cached snapshots from memory and storage as well as queued scans',async()=>{
+ const {storeAdmissionSnapshot,findCachedAdmission,queueOfflineAdmission,listQueuedAdmissions,clearOfflineEventData}=api.exports;
+ const tickets=Array.from({length:10},(_,index)=>({public_code:`BF-CLR-${index}`,qr_payload:`BF1.adm.clear-${index}`}));
+ await storeAdmissionSnapshot(42,tickets);
+ await queueOfflineAdmission(42,'BF-CLR-0','BF1.adm.clear-0','2026-11-24T12:00:00.000Z');
+ await queueOfflineAdmission(42,'BF-CLR-1','BF1.adm.clear-1','2026-11-24T12:01:00.000Z');
+ assert.equal((await findCachedAdmission(42,'BF1.adm.clear-9')).public_code,'BF-CLR-9');
+ assert.equal((await listQueuedAdmissions(42)).length,2);
+
+ await clearOfflineEventData(42);
+
+ assert.equal(await findCachedAdmission(42,'BF1.adm.clear-0'),null);
+ assert.equal(await findCachedAdmission(42,'BF1.adm.clear-9'),null);
+ assert.deepEqual(await listQueuedAdmissions(42),[]);
+ const remainingKeys=[...values.keys()].filter(key=>key.startsWith('biletflow.offline.42.'));
+ assert.deepEqual(remainingKeys,[]);
+});
+
+test('unavailable SecureStore rejects writes and deletes with a clean user-facing error',async()=>{
+ const webApi={exports:{}};
+ const webSecure={
+   isAvailableAsync:async()=>false,
+   getItemAsync:async()=>{throw new TypeError('ExpoSecureStore.getValueWithKeyAsync is not a function');},
+   setItemAsync:async()=>{throw new TypeError('ExpoSecureStore.setValueWithKeyAsync is not a function');},
+   deleteItemAsync:async()=>{throw new TypeError('ExpoSecureStore.deleteValueWithKeyAsync is not a function');},
+ };
+ new Function('exports','module','require',compiled)(webApi.exports,{exports:webApi.exports},name=>name==='expo-secure-store'?webSecure:{});
+ await assert.rejects(
+   webApi.exports.storeAdmissionSnapshot(99,[{public_code:'BF-WEB-1',qr_payload:'BF1.adm.web'}]),
+   /Secure offline cache is available on iOS and Android only\./,
+ );
+ await assert.rejects(
+   webApi.exports.clearOfflineEventData(99),
+   /Secure offline cache is available on iOS and Android only\./,
+ );
+ assert.deepEqual(await webApi.exports.listQueuedAdmissions(99),[]);
+});
