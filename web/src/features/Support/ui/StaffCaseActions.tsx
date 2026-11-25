@@ -157,6 +157,7 @@ const Escalation = ({ supportCase, busy, escalate }: {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [sending, setSending] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   if (supportCase.is_escalated) {
     return <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm">
@@ -171,22 +172,23 @@ const Escalation = ({ supportCase, busy, escalate }: {
   const trimmed = reason.trim();
   return <div className="border-t border-line-soft pt-4">
     <Button size="small" danger icon={<ShieldAlert size={14} aria-hidden="true" />} disabled={busy}
-      onClick={() => setOpen(true)}>{t("support.escalate")}</Button>
+      onClick={() => { setModalError(null); setOpen(true); }}>{t("support.escalate")}</Button>
     <p className="mt-2 text-xs text-muted">{t("support.escalateHint")}</p>
     {open && <Modal open title={t("support.escalateTitle")} okText={t("support.escalate")} cancelText={t("ops.close")}
       okButtonProps={{ danger: true, disabled: !trimmed || trimmed.length > ESCALATION_REASON_MAX }}
       confirmLoading={sending} closable={!sending} keyboard={!sending} mask={{ closable: false }}
       cancelButtonProps={{ disabled: sending }}
-      onCancel={() => { if (!sending) setOpen(false); }}
+      onCancel={() => { if (!sending) { setModalError(null); setOpen(false); } }}
       onOk={async () => {
         if (!trimmed || sending) return;
+        setModalError(null);
         setSending(true);
         try {
           await escalate(trimmed);
           setOpen(false);
           setReason("");
-        } catch {
-          // The case page shows the API error; keep the dialog and draft for a retry.
+        } catch (error) {
+          setModalError(error instanceof Error && error.message ? error.message : t("support.escalateError"));
         } finally {
           setSending(false);
         }
@@ -194,8 +196,9 @@ const Escalation = ({ supportCase, busy, escalate }: {
       <p className="mt-3 text-sm text-muted-strong">{t("support.escalateDescription")}</p>
       <label htmlFor={`${id}-reason`} className="mt-4 mb-1.5 block text-sm font-semibold">{t("ops.reasonRequired")}</label>
       <Input.TextArea id={`${id}-reason`} rows={3} maxLength={ESCALATION_REASON_MAX} showCount value={reason}
-        disabled={sending} onChange={(event) => setReason(event.target.value)} />
+        disabled={sending} onChange={(event) => { setReason(event.target.value); setModalError(null); }} />
       {sending && <Alert className="mt-3" type="info" showIcon title={t("support.escalating")} />}
+      {modalError && <Alert role="alert" className="mt-3" type="error" showIcon title={modalError} />}
     </Modal>}
   </div>;
 };

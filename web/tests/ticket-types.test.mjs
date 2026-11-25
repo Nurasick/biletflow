@@ -14,7 +14,7 @@ const { ticketTypeDraft, ticketTypeInput, ticketTypeChanges } = await import(awa
     '"../../../shared/lib/parseHundredths"': JSON.stringify(hundredthsUrl),
   },
 ));
-const { ticketSaleWindow, ticketSaleStatus } = await import(await moduleUrl('../src/features/Event/model/ticketSales.ts', apiTimeImport));
+const { closedSaleNotice, ticketSaleWindow, ticketSaleStatus } = await import(await moduleUrl('../src/features/Event/model/ticketSales.ts', apiTimeImport));
 const zone = 'Asia/Almaty';
 const ticket = {
   name: 'Early Bird', description: 'First row', price_minor: 184900, quantity_total: 20,
@@ -69,4 +69,19 @@ test('public checkout opens and closes at the intersection of the event and tick
   assert.equal(ticketSaleStatus(window, Date.parse(event.registration_closes_at)), 'closed');
   assert.equal(ticketSaleStatus(ticketSaleWindow(event, { ...ticket, sales_end_at: '2026-11-11T04:20:00Z' }),
     Date.parse(event.registration_opens_at)), 'unavailable');
+});
+
+test('assigned-seating sale notice picks earliest upcoming opening, closed, or unavailable only when nothing is open', () => {
+  const now = Date.parse('2026-11-11T10:00:00Z');
+  const open = { opens: now - 1000, closes: now + 1000 };
+  const soon = { opens: now + 60_000, closes: now + 120_000 };
+  const later = { opens: now + 300_000, closes: now + 600_000 };
+  const closed = { opens: now - 120_000, closes: now - 60_000 };
+  const unavailable = { opens: now + 60_000, closes: now + 60_000 };
+
+  assert.equal(closedSaleNotice([], now), null);
+  assert.equal(closedSaleNotice([closed, open, soon], now), null);
+  assert.deepEqual(closedSaleNotice([later, closed, soon], now), { status: 'upcoming', opens: soon.opens });
+  assert.deepEqual(closedSaleNotice([unavailable, closed], now), { status: 'closed' });
+  assert.deepEqual(closedSaleNotice([unavailable], now), { status: 'unavailable' });
 });
