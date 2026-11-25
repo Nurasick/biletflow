@@ -3672,6 +3672,39 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HalykStartRequest": {
+        "properties": {
+          "return_url": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Return Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "return_url"
+        ],
+        "title": "HalykStartRequest",
+        "type": "object"
+      },
+      "HalykStartResponse": {
+        "properties": {
+          "checkout_url": {
+            "title": "Checkout Url",
+            "type": "string"
+          },
+          "invoice_id": {
+            "title": "Invoice Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkout_url",
+          "invoice_id"
+        ],
+        "title": "HalykStartResponse",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -5084,6 +5117,24 @@
           "created_at"
         ],
         "title": "PaymentOrder",
+        "type": "object"
+      },
+      "PaymentProviderRead": {
+        "properties": {
+          "is_sandbox": {
+            "title": "Is Sandbox",
+            "type": "boolean"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "is_sandbox"
+        ],
+        "title": "PaymentProviderRead",
         "type": "object"
       },
       "PayoutAccountRead": {
@@ -11920,6 +11971,148 @@
         ]
       }
     },
+    "/api/v1/orders/{order_number}/halyk": {
+      "post": {
+        "description": "Open (or reopen) a Halyk invoice for a pending order and get the\nlink to Halyk's payment page. Nothing is charged until the buyer pays there.",
+        "operationId": "start_halyk_payment_api_v1_orders__order_number__halyk_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_number",
+            "required": true,
+            "schema": {
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HalykStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HalykStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start Halyk Payment",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/orders/{order_number}/halyk/sync": {
+      "post": {
+        "description": "Ask Halyk now about this order's latest invoice, and return the order.\n\nThe apps call this when the buyer comes back from Halyk's page.",
+        "operationId": "sync_halyk_payment_api_v1_orders__order_number__halyk_sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_number",
+            "required": true,
+            "schema": {
+              "title": "Order Number",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The signed link token for guests",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The signed link token for guests",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sync Halyk Payment",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/api/v1/orders/{order_number}/pay": {
       "post": {
         "description": "Pay a pending order through the simulated provider (\u00a74.6).\n\nSend the same `Idempotency-Key` header when retrying: a repeated request\nreturns the first result and charges nothing (state-machines.md \u00a74).\nA declined payment answers 402 and cancels the order, releasing its tickets.",
@@ -14774,6 +14967,28 @@
         "summary": "Verify Profile",
         "tags": [
           "organizer"
+        ]
+      }
+    },
+    "/api/v1/payments/provider": {
+      "get": {
+        "description": "Which checkout the clients should show: simulator buttons or Halyk.",
+        "operationId": "payment_provider_api_v1_payments_provider_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentProviderRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Payment Provider",
+        "tags": [
+          "payments"
         ]
       }
     },
