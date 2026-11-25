@@ -1,6 +1,6 @@
 # BiletFlow Mobile App (Expo / React Native)
 
-The cross-platform mobile client for **BiletFlow** targeting **iOS**, **Android**, and **Web**, built with **Expo Router**, **React Native**, **TypeScript**, and **NativeWind**.
+The cross-platform mobile client for **BiletFlow** targeting **iOS**, **Android**, and **Web**, built with **Expo SDK 58**, **Expo Router**, **React Native**, **TypeScript**, and **NativeWind**.
 
 ## Key Capabilities
 
@@ -17,7 +17,7 @@ npm ci
 npm start           # Expo Dev Server (choose iOS simulator, Android emulator, or Web)
 ```
 
-Configure the backend API URL via `.env` or `EXPO_PUBLIC_API_URL` (defaults to `http://localhost:8000/api/v1` for local development; ensure `http://localhost:8081` is included in the backend's `CORS_ORIGINS` when running Expo Web).
+Configure the backend API URL via `.env` or `EXPO_PUBLIC_API_URL` (defaults to `http://localhost:8000` for local development, or `http://10.0.2.2:8000` on Android emulator — do **not** append `/api/v1`, since `src/constants/api.ts` adds `/api/v1` automatically; ensure `http://localhost:8081` is included in the backend's `CORS_ORIGINS` when running Expo Web).
 
 ## Verification Scripts
 
