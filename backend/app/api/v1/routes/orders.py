@@ -14,6 +14,7 @@ from app.api.deps import (
 )
 from app.core import qr
 from app.core.clock import as_utc, utcnow
+from app.core.config import settings
 from app.core.security import create_order_token
 from app.models.campaign import Campaign
 from app.models.event import Event
@@ -216,6 +217,12 @@ def pay_order(
     A declined payment answers 402 and cancels the order, releasing its tickets.
     """
     order = _viewable(db, order_number, user, token)
+    if settings.PAYMENT_PROVIDER != "simulator":
+        # Otherwise anyone could skip the real checkout and "pay" for free here.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "This server takes payments through Halyk ePay: POST /orders/{number}/halyk",
+        )
     key = idempotency_key or f"order-{order.id}-{uuid.uuid4().hex}"
     try:
         payment = payment_service.pay_order(db, order, data.outcome, key, user)

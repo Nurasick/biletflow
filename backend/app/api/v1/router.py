@@ -11,6 +11,7 @@ from app.api.v1.routes import (
     event_images,
     event_reports,
     events,
+    halyk,
     health,
     notifications,
     orders,
@@ -28,6 +29,7 @@ api_router.include_router(events.router)
 api_router.include_router(event_images.router)
 api_router.include_router(ticket_types.router)
 api_router.include_router(orders.router)
+api_router.include_router(halyk.router)
 api_router.include_router(organizer.router)
 api_router.include_router(activation.router)
 api_router.include_router(event_reports.router)

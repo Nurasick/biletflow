@@ -19,7 +19,15 @@ export default function Workspace() {
   const [hasStaffEvents, setHasStaffEvents] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
+  // Keyed on `user`, not just `authenticatedFetch`: that callback is stable across
+  // sign-out, so without `user` here the account fetched before sign-out stayed in
+  // state and the profile row kept showing the old name until a reload.
   useFocusEffect(useCallback(() => {
+    if (!user) {
+      setAccount(null);
+      setHasStaffEvents(false);
+      return undefined;
+    }
     const controller = new AbortController();
     void accountApi.get(authenticatedFetch, controller.signal)
       .then((value) => { if (!controller.signal.aborted) setAccount(value); })
@@ -29,7 +37,7 @@ export default function Workspace() {
       .then((events) => { if (!controller.signal.aborted) setHasStaffEvents(events.length > 0); })
       .catch(() => { if (!controller.signal.aborted) setHasStaffEvents(false); });
     return () => controller.abort();
-  }, [authenticatedFetch]));
+  }, [authenticatedFetch, user]));
 
   const go = (href: Href) => () => router.push(user ? href : '/login');
   const name = account ? `${account.first_name} ${account.last_name}`.trim() : '';

@@ -1,7 +1,10 @@
 """Payment provider abstraction: built-in simulator and Halyk Bank ePay 2.0.
 
-§3.2 and §4.6 allow either a clearly labelled internal simulation or a real
-payment gateway sandbox. Both share the same `payments` / `refunds` tables:
+§3.2 and §4.6 allow "a provider sandbox or a clearly labelled internal
+simulation" for the academic MVP; no real money moves. This module is the
+simulation. The Halyk ePay sandbox (PAYMENT_PROVIDER=halyk) cannot fit the
+one-call `charge` shape, because the buyer pays on Halyk's own page; it lives
+in halyk_payment.py, and only `refund` here dispatches to it.
 
 - `simulator`: immediate synthetic charges/refunds (`biletflow_simulator`).
 - `halyk_sandbox`: Halyk Bank ePay 2.0 test gateway (`test-epay.epayment.kz`),
@@ -22,6 +25,7 @@ from typing import Any, Literal
 from app.core.clock import utcnow
 from app.core.config import settings
 from app.models.payment import Payment
+from app.services import halyk_epay
 
 NAME = "biletflow_simulator"
 IS_SIMULATED = True
@@ -59,7 +63,7 @@ class PaymentGatewayError(Exception):
 @dataclass(frozen=True)
 class Result:
     succeeded: bool
-    provider_ref: str
+    provider_ref: str | None
     failure_reason: str | None = None
 
 
@@ -357,65 +361,18 @@ def charge(amount_minor: int, outcome: Outcome) -> Result:
 
 
 def refund(payment: Payment, amount_minor: int) -> Result:
-    if payment.provider not in (HALYK_SANDBOX_NAME, HALYK_PROD_NAME):
-        return Result(True, f"sim_re_{secrets.token_hex(8)}")
+    """Refund through whichever provider took the payment.
 
-    mode: Literal["halyk_sandbox", "halyk"] = (
-        "halyk_sandbox" if payment.provider == HALYK_SANDBOX_NAME else "halyk"
-    )
-    cfg = get_halyk_config(mode_override=mode)
-    invoice_id, txn_id = unpack_halyk_ref(payment.provider_ref)
-    if not txn_id and invoice_id:
+    Dispatches on the row, not on settings.PAYMENT_PROVIDER: a deploy that
+    switched providers must still refund old payments where they were made.
+    """
+    if payment.provider == halyk_epay.NAME:
+        # Imported here: halyk_payment imports payment.py, which imports us.
+        from app.services import halyk_payment
+
         try:
-            checked = check_halyk_transaction_status(invoice_id, cfg=cfg)
-            txn_id = checked.transaction_id
-        except PaymentGatewayError as exc:
-            return Result(False, invoice_id, str(exc))
-    if not txn_id:
-        return Result(False, payment.provider_ref or "", "Missing Halyk transaction ID for refund")
-
-    ext_id = secrets.token_hex(8)
-    try:
-        token = request_halyk_api_token(cfg)
-    except PaymentGatewayError as exc:
-        return Result(False, ext_id, str(exc))
-
-    query = urllib.parse.urlencode(
-        {"amount": format_major_amount_str(amount_minor), "externalID": ext_id}
-    )
-    refund_url = f"{cfg.api_url}/operation/{urllib.parse.quote(txn_id, safe='')}/refund?{query}"
-    try:
-        status_code, body = _http_json(
-            refund_url,
-            method="POST",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=cfg.timeout_seconds,
-        )
-    except PaymentGatewayError as exc:
-        return Result(False, ext_id, str(exc))
-
-    if 200 <= status_code < 300:
-        return Result(True, f"halyk_re_{ext_id}")
-
-    # Single-stage AUTH holds not yet settled in Halyk use `/cancel` instead of `/refund`.
-    cancel_url = f"{cfg.api_url}/operation/{urllib.parse.quote(txn_id, safe='')}/cancel"
-    try:
-        cancel_code, cancel_body = _http_json(
-            cancel_url,
-            method="POST",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=cfg.timeout_seconds,
-        )
-    except PaymentGatewayError:
-        cancel_code, cancel_body = 500, {}
-
-    if 200 <= cancel_code < 300:
-        return Result(True, f"halyk_cancel_{ext_id}")
-
-    reason = (
-        body.get("message")
-        or body.get("resultMessage")
-        or cancel_body.get("message")
-        or f"Halyk refund failed (HTTP {status_code})"
-    )
-    return Result(False, ext_id, str(reason))
+            return Result(True, halyk_payment.refund(payment, amount_minor))
+        except halyk_epay.HalykError as exc:
+            return Result(False, None, f"Halyk ePay refused the refund: {exc}")
+    # A simulated charge can always be simulated back.
+    return Result(True, f"sim_re_{secrets.token_hex(8)}")

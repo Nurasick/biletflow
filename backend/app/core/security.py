@@ -93,6 +93,22 @@ def create_support_case_token(case_id: int) -> str:
     return _create_token(case_id, "support_case", timedelta(days=settings.SUPPORT_LINK_EXPIRE_DAYS))
 
 
+HALYK_CHECKOUT_TOKEN_TYPE = "halyk_checkout"
+
+
+def create_halyk_checkout_token(payment_id: int, return_url: str) -> str:
+    """The signed link to our Halyk checkout page and back (halyk_payment.py).
+
+    It names one payment and where to send the buyer afterwards, so neither
+    can be swapped in the URL. Typed, like the order token, so it opens that
+    page and nothing else. An hour covers the 10-minute hold plus a slow
+    3-D Secure step; after that the return link just lands on the web app.
+    """
+    return _create_token(
+        payment_id, HALYK_CHECKOUT_TOKEN_TYPE, timedelta(hours=1), {"ret": return_url}
+    )
+
+
 def decode_token(token: str) -> dict:
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
 

@@ -62,10 +62,10 @@ def pay_order(
             raise IdempotencyKeyReused
         return replay
 
-    _ensure_payable(order, now)
+    ensure_payable(order, now)
     # Before the charge, not after: with a real provider, refusing after
     # charging would mean a refund. The simulator would roll back anyway.
-    _ensure_still_on_sale(db, order)
+    ensure_still_on_sale(db, order)
     result = provider.charge(order.total_minor, outcome)
     payment = Payment(
         purpose=PaymentPurpose.TICKET_ORDER,
@@ -84,32 +84,41 @@ def pay_order(
     _audit_payment(db, order, payment, actor)
 
     if not result.succeeded:
-        # state-machines.md §5: a failed payment releases the holds. The order
-        # is cancelled so the buyer starts a fresh checkout rather than
-        # retrying against inventory that is no longer theirs.
-        order_lifecycle.cancel_pending(db, order, actor, now)
-        # §4.10 "Payment failure". The link goes back to the event, because
-        # this order is over and a retry is a fresh checkout.
-        event = db.get(Event, order.event_id)
-        notify.notify(
-            db,
-            "payment.failed",
-            {
-                "order_number": order.order_number,
-                "event_title": event.title,
-                "reason": result.failure_reason,
-                "link": notify.web_link(f"/events/{event.slug}"),
-            },
-            email=order.contact_email,
-            user_id=order.user_id,
-        )
+        release_failed_order(db, order, result.failure_reason, actor, now)
         return payment
 
     order_service.confirm_order(db, order, now, actor=actor)
     return payment
 
 
-def _ensure_payable(order: Order, now: datetime) -> None:
+def release_failed_order(
+    db: Session, order: Order, reason: str | None, actor: User | None, now: datetime
+) -> None:
+    """What any declined payment does to its order, whichever provider declined it.
+
+    state-machines.md §5: a failed payment releases the holds. The order is
+    cancelled so the buyer starts a fresh checkout rather than retrying
+    against inventory that is no longer theirs.
+    """
+    order_lifecycle.cancel_pending(db, order, actor, now)
+    # §4.10 "Payment failure". The link goes back to the event, because
+    # this order is over and a retry is a fresh checkout.
+    event = db.get(Event, order.event_id)
+    notify.notify(
+        db,
+        "payment.failed",
+        {
+            "order_number": order.order_number,
+            "event_title": event.title,
+            "reason": reason,
+            "link": notify.web_link(f"/events/{event.slug}"),
+        },
+        email=order.contact_email,
+        user_id=order.user_id,
+    )
+
+
+def ensure_payable(order: Order, now: datetime) -> None:
     if order.status != OrderStatus.PENDING:
         raise IllegalOrderTransition(
             f"only a pending order can be paid; this one is {order.status}"
@@ -120,7 +129,7 @@ def _ensure_payable(order: Order, now: datetime) -> None:
         raise ReservationExpired
 
 
-def _ensure_still_on_sale(db: Session, order: Order) -> None:
+def ensure_still_on_sale(db: Session, order: Order) -> None:
     """Re-check, at payment time, what checkout checked at reservation time (T13).
 
     Checkout refuses paid lines unless the event is published and its paid
@@ -147,7 +156,7 @@ def _ensure_still_on_sale(db: Session, order: Order) -> None:
     cannot deadlock. SQLite ignores the lock clause; the race test runs on
     Postgres (tests/test_payment_suspension_race.py).
 
-    Only paid orders reach this function (_ensure_payable refuses free ones),
+    Only paid orders reach this function (ensure_payable refuses free ones),
     so an inactive activation always means "refuse". Free registration on an
     event with only its paid sales suspended never comes through here.
     """
