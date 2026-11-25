@@ -80,6 +80,21 @@ class Settings(BaseSettings):
     DEFAULT_CURRENCY: str = "KZT"
     SUPPORTED_CURRENCIES: Annotated[list[str], NoDecode] = ["KZT"]
 
+    # Payment gateway (§4.6).
+    # - simulator: built-in demo simulator (default for automated tests).
+    # - halyk_sandbox: Halyk Bank ePay 2.0 sandbox (test-epay.epayment.kz).
+    #   Uses merchant-provided sandbox credentials when set, or falls back to
+    #   Halyk Bank's public developer sandbox credentials.
+    # - halyk: Halyk Bank ePay 2.0 production (requires explicit credentials).
+    PAYMENT_PROVIDER: Literal["simulator", "halyk_sandbox", "halyk"] = "simulator"
+    HALYK_EPAY_CLIENT_ID: str = ""
+    HALYK_EPAY_CLIENT_SECRET: str = ""
+    HALYK_EPAY_TERMINAL: str = ""
+    HALYK_EPAY_OAUTH_URL: str = ""
+    HALYK_EPAY_API_URL: str = ""
+    HALYK_EPAY_PAYFORM_SCRIPT_URL: str = ""
+    HALYK_EPAY_TIMEOUT_SECONDS: int = 15
+
     CORS_ORIGINS: Annotated[list[AnyHttpUrl], NoDecode] = []
 
     @field_validator("SUPPORTED_CURRENCIES", mode="before")

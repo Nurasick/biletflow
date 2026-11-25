@@ -73,15 +73,21 @@ Password for every seeded account: `Demo12345!`
 
 | Account | Role | Seeded data |
 |---|---|---|
-| admin@example.com | Platform Admin | sees everything, including a reported scam event |
-| organizer@example.com | Organizer (Almaty Jazz Club) | owns 6 events covering every phase |
-| staff@example.com | Event Admin | assigned to Jazz Night, Open Mic, and **Startup Meetup (live today)** |
-| attendee@example.com | Attendee | has orders and tickets |
+| admin@example.com | Platform Admin | sees everything, including a reported listing (*Night Market Sessions*) |
+| organizer@example.com | Organizer (Steppe Stage Collective) | owns 7 events covering every phase, including the assigned-seating gala |
+| staff@example.com | Event Admin | assigned to Jazz Night, Open Mic, the gala, and **Startup Meetup: Live Check-In** (in progress) |
+| attendee@example.com | Attendee | has orders and tickets, a declined payment, a seated gala ticket, and support cases |
+| other@example.com | Organizer (Courtyard Events, unverified) | owns the reported *Night Market Sessions* |
+| catalog-demo@example.com | Organizer (BiletFlow Demo Events, unverified) | owns the 15-event public catalog |
 
-Seeded events: *Almaty Jazz Night* (paid, activated, 2 campaigns), *Open Mic* (free),
-*Startup Meetup: Live Today* (scan here), *Winter Hackathon* (completed, with a refund),
-*Kazakh Cinema Evening* (cancelled), *Nauryz Spring Concert* (draft paid event for UC2),
-*FREE iPhone…* (reported, for admin suspension).
+Seeded events: *Almaty Jazz Night* (paid, activated, 2 campaigns, one declined payment),
+*Open Mic at Abai Library* (free), *Startup Meetup: Live Check-In* (in progress, scan here,
+`MEETUP10` campaign), *Nauryz Spring Concert* (completed, with attendance and a refund),
+*Winter Hackathon* (cancelled, every order refunded), *Kazakh Cinema Evening* (draft paid event
+for UC2), *Palace Symphony Gala* (assigned seating), *Night Market Sessions* (reported, for admin
+suspension), plus 15 free catalog listings across Almaty, Astana, Shymkent, Karaganda and
+Qyzylorda. Event photos come from `backend/scripts/seed_assets/events/<slug>/`; the catalog itself
+is defined in `backend/scripts/seed_catalog.py`.
 
 ### 1.5 Windows pitfalls (seen on the team machine)
 
@@ -266,7 +272,7 @@ attendee are signed in at the same time.
 | D4 | Add to calendar | event page / order | event page / order → *Add to calendar (.ics)* | correct time zone, venue, URL |
 | D5 | Cancel the event, re-download the .ics | — | — | same UID, `STATUS:CANCELLED` |
 
-### 3.7 Check-in (SRS 4.8, UC4): sign in as `staff@example.com`, event *Startup Meetup: Live Today*
+### 3.7 Check-in (SRS 4.8, UC4): sign in as `staff@example.com`, event *Startup Meetup: Live Check-In*
 
 Real camera checks need a phone (section 1.6). The browser build of the mobile app
 has no usable camera on most laptops; use manual search there.
@@ -324,7 +330,7 @@ has no usable camera on most laptops; use manual search there.
 | M1 | Overview numbers | `/admin` | Menu tab → *Platform administration* | users, events, orders, failed payments, open reports/cases |
 | M2 | Search users / events / orders / payments | `/admin/users`, `/admin/events`, `/admin/transactions` | *Users*, *Events*, *Transactions* tabs | results |
 | M3 | Suspend + reinstate a user | `/admin/users` | *Users* | suspended user cannot sign in |
-| M4 | Review the reported *FREE iPhone…* event → suspend | `/admin/reports` (resolve) + `/admin/events/:id` (suspend) | *Reports* → *Suspend event and mark actioned* | removed from discovery; checkout blocked |
+| M4 | Review the reported *Night Market Sessions* event → suspend | `/admin/reports` (resolve) + `/admin/events/:id` (suspend) | *Reports* → *Suspend event and mark actioned* | removed from discovery; checkout blocked |
 | M5 | Suspend / reinstate **paid sales** only | `/admin/events/:id` | *Activations* | free registration continues, paid stops |
 | M6 | Activation fee and processing fee | `/admin/settings` | *Settings* | new orders use them |
 | M7 | CSV exports | `/admin/transactions` | *Transactions* → *Export orders/payments CSV* | files download/share |

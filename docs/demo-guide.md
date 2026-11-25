@@ -46,7 +46,7 @@ $env:EXPO_PUBLIC_API_URL = "http://<LAN-IP>:8000"               # ipconfig → W
 npx expo start                                                   # scan the QR with Expo Go on both phones
 ```
 
-- [ ] Phone 1: sign in as attendee. Phone 2: sign in as staff → *Startup Meetup: Live Today* opens and the camera works.
+- [ ] Phone 1: sign in as attendee. Phone 2: sign in as staff → *Startup Meetup: Live Check-In* opens and the camera works.
 - [ ] Laptop tabs: http://localhost:5173 (organizer signed in), http://localhost:8025 (Mailpit), a private window for admin.
 - [ ] Phone brightness up, Do Not Disturb on, auto-lock off.
 - [ ] Language set to English on all screens; you switch it live in act 8.
@@ -132,8 +132,8 @@ Phone 2 (staff): *Event tools* → *Open assigned events* → **Almaty Jazz Nigh
 
 ### Act 9: Moderation stops sales (4.12, 4.5, SC12): 1 min
 
-1. Laptop (admin, private window): `/admin/reports` → read the "FREE iPhone…" report → open that event
-   (`/admin/events` → search "iPhone") → suspend it → back on `/admin/reports`, mark the report *actioned*.
+1. Laptop (admin, private window): `/admin/reports` → read the *Night Market Sessions* report → open that event
+   (`/admin/events` → search "Night Market") → suspend it → back on `/admin/reports`, mark the report *actioned*.
    (On mobile this is one button: *Reports* → *Suspend event and mark actioned*.)
 2. Phone 1 (attendee) opens that event → no *Choose tickets*. **"Suspension stops sales immediately, including payments already in flight."** (`test_payment_suspension_race.py`)
 

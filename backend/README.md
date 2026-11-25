@@ -17,7 +17,10 @@ backend/
 ├── scripts/
 │   ├── backup_db.sh      # Compressed pg_dump + SHA-256 verification + retention pruning
 │   ├── export_openapi.py # Generates ../docs/openapi.json from the FastAPI app
-│   └── seed_demo.py      # Idempotent demo data + predefined Kazakhstan venue layout loader
+│   ├── seed_demo.py      # The one demo seeder: scenarios, public catalog, seating gala, support
+│   ├── seed_catalog.py   # The 15 public catalog listings used by seed_demo.py
+│   ├── seed_media.py     # Event photos from seed_assets/ (generated poster as fallback)
+│   └── seed_assets/      # Event photos, one folder per event slug
 └── tests/                # Unit, integration, API, and multi-threaded PostgreSQL concurrency tests
 ```
 
