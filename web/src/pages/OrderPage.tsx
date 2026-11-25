@@ -9,7 +9,7 @@ import { OrderCard } from "../features/Orders/ui/OrderCard";
 import { useAuth } from "../hooks/useAuth";
 import { useLocale } from "../i18n/useLocale";
 import { ApiError } from "../shared/api/auth";
-import { ordersApi, type Order } from "../shared/api/events";
+import { ordersApi, type Order, type PaymentProvider } from "../shared/api/events";
 import { formatMinor } from "../shared/lib/formatPrice";
 import { parseApiInstant } from "../shared/lib/parseApiInstant";
 import { randomId } from "../shared/lib/randomId";
@@ -34,7 +34,9 @@ export const OrderPage = () => {
   </main>;
 };
 
-type OrderAction = "succeed" | "fail" | "cancel";
+/** What the simulator mutation handles; "halyk" leaves the page instead. */
+type LocalAction = "succeed" | "fail" | "cancel";
+type OrderAction = LocalAction | "halyk";
 
 const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
   orderNumber: string; token: string | null; ownerId: number | null; waitingForSession: boolean;
@@ -46,14 +48,17 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
   const submitting = useRef(false);
   const confirmation = useRef<HTMLDivElement>(null);
   const [cancelRegistration, setCancelRegistration] = useState(false);
+  const [params, setParams] = useSearchParams();
   const queryKey = ["orders", "detail", orderNumber, token, ownerId];
+  // Simulator buttons or Halyk ePay: the server decides (PAYMENT_PROVIDER).
+  const provider = useQuery({ queryKey: ["payments", "provider"], queryFn: ordersApi.paymentProvider, staleTime: Infinity });
   const order = useQuery({
     queryKey, queryFn: () => ordersApi.get(orderNumber, token), enabled: !waitingForSession, retry: false,
     refetchInterval: ({ state: { data } }) => data?.status === "pending" && data.expires_at
       && parseApiInstant(data.expires_at) <= Date.now() ? 5_000 : false,
   });
   const act = useMutation({
-    mutationFn: (action: OrderAction) => action === "cancel"
+    mutationFn: (action: LocalAction) => action === "cancel"
       ? ordersApi.cancel(orderNumber, token)
       : ordersApi.pay(orderNumber, token, paymentKeys.current[action] ??= randomId(), action),
     onMutate: () => queryClient.cancelQueries({ queryKey }),
@@ -67,12 +72,42 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
       submitting.current = false;
     },
   });
+  // Halyk: open an invoice, then leave for Halyk's page. The buyer comes back
+  // to this URL with ?halyk=1, and the effect below asks the server to check.
+  const halykStart = useMutation({
+    mutationFn: () => {
+      const back = new URL(window.location.href);
+      back.searchParams.set("halyk", "1");
+      return ordersApi.startHalyk(orderNumber, token, back.toString());
+    },
+    onSuccess: ({ checkout_url }) => window.location.assign(checkout_url),
+    onSettled: () => { submitting.current = false; },
+  });
+  const halykSync = useMutation({
+    mutationFn: () => ordersApi.syncHalyk(orderNumber, token),
+    onSuccess: (updated) => queryClient.setQueryData(queryKey, updated),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["orders", "mine"] }),
+  });
+  const returnedFromHalyk = params.get("halyk") === "1";
+  const synced = useRef(false);
+  useEffect(() => {
+    if (!returnedFromHalyk || waitingForSession || synced.current) return;
+    synced.current = true;
+    halykSync.mutate();
+    // Drop the flag so a reload does not look like a fresh return.
+    setParams((current) => { current.delete("halyk"); return current; }, { replace: true });
+  }, [returnedFromHalyk, waitingForSession, halykSync, setParams]);
+
   const run = (action: OrderAction) => {
     if (submitting.current) return;
     submitting.current = true;
-    act.mutate(action);
+    if (action === "halyk") halykStart.mutate();
+    else act.mutate(action);
   };
-  const paymentConfirmed = act.isSuccess && act.variables === "succeed" && order.data?.status === "confirmed";
+  // Stays "pending" after success too: the page is navigating away to Halyk.
+  const halykBusy = halykStart.isPending || halykStart.isSuccess;
+  const paymentConfirmed = ((act.isSuccess && act.variables === "succeed") || halykSync.isSuccess)
+    && order.data?.status === "confirmed";
   const paymentDeclined = act.variables === "fail" && act.error instanceof ApiError && act.error.status === 402;
   useEffect(() => { if (paymentConfirmed) confirmation.current?.focus(); }, [paymentConfirmed]);
 
@@ -90,8 +125,17 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
             {order.data.status === "confirmed" && <Alert type="success" showIcon role="presentation" title={t("orders.confirmed")}
               description={token ? t("orders.keepLink") : undefined} />}
           </div>
+          {halykSync.isPending && <Alert type="info" showIcon title={t("checkout.halykChecking")} />}
+          {halykSync.isSuccess && order.data.status === "pending" && <Alert type="info" showIcon
+            title={t("checkout.halykNotYet")}
+            action={<Button size="small" onClick={() => halykSync.mutate()}>{t("checkout.halykCheckAgain")}</Button>} />}
+          {halykSync.isSuccess && order.data.status === "cancelled" && <Alert role="alert" type="error" showIcon
+            title={t("checkout.halykDeclined")} />}
+          {(halykStart.isError || halykSync.isError) && <Alert role="alert" type="error" showIcon
+            title={errorMessage(halykStart.error ?? halykSync.error, t("eventWorkflow.networkError"))} />}
           {order.data.status === "pending" && <PaymentControls key={order.data.expires_at} order={order.data}
-            pendingAction={act.isPending ? act.variables : undefined} onAction={run} refresh={order.refetch} />}
+            provider={provider.data} providerLoading={provider.isPending || halykSync.isPending}
+            pendingAction={act.isPending ? act.variables : halykBusy ? "halyk" : undefined} onAction={run} refresh={order.refetch} />}
           {freeRegistration && <Button danger disabled={act.isPending} onClick={() => {
             act.reset();
             setCancelRegistration(true);
@@ -113,8 +157,10 @@ const OrderDetails = ({ orderNumber, token, ownerId, waitingForSession }: {
   );
 };
 
-const PaymentControls = ({ order, pendingAction, onAction, refresh }: {
+const PaymentControls = ({ order, provider, providerLoading, pendingAction, onAction, refresh }: {
   order: Order;
+  provider?: PaymentProvider;
+  providerLoading: boolean;
   pendingAction?: OrderAction;
   onAction: (action: OrderAction) => void;
   refresh: () => Promise<unknown>;
@@ -146,8 +192,10 @@ const PaymentControls = ({ order, pendingAction, onAction, refresh }: {
   }, [expired, pendingAction, refresh]);
 
   const remaining = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`.padStart(5, "0");
-  const disablePayment = Boolean(pendingAction) || expired;
-  const pay = (action: "succeed" | "fail") => {
+  const disablePayment = Boolean(pendingAction) || expired || providerLoading;
+  const halyk = provider?.provider === "halyk";
+  const amount = formatMinor(order.total_minor, locale);
+  const pay = (action: "succeed" | "fail" | "halyk") => {
     if (readSeconds() === 0) setSeconds(0);
     else onAction(action);
   };
@@ -159,13 +207,19 @@ const PaymentControls = ({ order, pendingAction, onAction, refresh }: {
         <span role="timer" className="rounded-md border border-amber-300 bg-white px-2 py-0.5 font-mono font-bold tabular-nums">{remaining}</span>
       </span>} />
     <div className="flex flex-wrap gap-2">
-      <Button type="primary" disabled={disablePayment} loading={pendingAction === "succeed"}
-        onClick={() => pay("succeed")}>{t("checkout.paySimulated", { amount: formatMinor(order.total_minor, locale) })}</Button>
-      <Button danger disabled={disablePayment} loading={pendingAction === "fail"}
-        onClick={() => pay("fail")}>{t("checkout.simulateFailure")}</Button>
+      {halyk ? <Button type="primary" disabled={disablePayment} loading={pendingAction === "halyk"}
+        onClick={() => pay("halyk")}>{t("checkout.payHalyk", { amount })}</Button>
+        : <>
+          <Button type="primary" disabled={disablePayment} loading={pendingAction === "succeed"}
+            onClick={() => pay("succeed")}>{t("checkout.paySimulated", { amount })}</Button>
+          <Button danger disabled={disablePayment} loading={pendingAction === "fail"}
+            onClick={() => pay("fail")}>{t("checkout.simulateFailure")}</Button>
+        </>}
       {!expired && <Button disabled={Boolean(pendingAction)} loading={pendingAction === "cancel"}
         onClick={() => onAction("cancel")}>{t("orders.cancel")}</Button>}
     </div>
-    {!expired && <p className="text-xs text-muted">{t("checkout.simulatedNote")}</p>}
+    {!expired && <p className="text-xs text-muted">
+      {t(halyk ? (provider?.is_sandbox ? "checkout.halykSandboxNote" : "checkout.halykNote") : "checkout.simulatedNote")}
+    </p>}
   </div>;
 };

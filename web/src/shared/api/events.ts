@@ -40,6 +40,8 @@ export type OrderTicket = {
   qr_payload: string;
 };
 
+export type PaymentProvider = { provider: "simulator" | "halyk"; is_sandbox: boolean };
+
 export type Order = {
   order_number: string;
   event_id: number;
@@ -146,6 +148,16 @@ export const ordersApi = {
     }),
   cancel: (orderNumber: string, token: string | null) => optionalAuthRequest<Order>(
     orderPath(orderNumber, token, "cancel"), { method: "POST" }),
+  /** Which checkout this server runs: the simulator buttons, or Halyk ePay. */
+  paymentProvider: () => rawRequest<PaymentProvider>("/payments/provider"),
+  /** Opens a Halyk invoice; the browser then goes to `checkout_url` (an API page
+   * that hands over to Halyk) and comes back to `returnUrl`. Nothing is charged here. */
+  startHalyk: (orderNumber: string, token: string | null, returnUrl: string) =>
+    optionalAuthRequest<{ checkout_url: string; invoice_id: string }>(
+      orderPath(orderNumber, token, "halyk"), api.json("POST", { return_url: returnUrl })),
+  /** Asks the server to check with Halyk now; returns the settled (or still pending) order. */
+  syncHalyk: (orderNumber: string, token: string | null) => optionalAuthRequest<Order>(
+    orderPath(orderNumber, token, "halyk/sync"), { method: "POST" }),
   mine: () => api.get<Order[]>("/users/me/orders"),
   calendar: (orderNumber: string, token: string | null) =>
     optionalAuthFile(orderPath(orderNumber, token, "calendar.ics"), "text/calendar"),

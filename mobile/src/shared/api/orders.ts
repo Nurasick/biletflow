@@ -73,7 +73,26 @@ export const ordersApi = {
 
   cancel: (fetcher: AuthenticatedFetch, orderNumber: string) =>
     requestJson<Order>(fetcher, `/orders/${encodeURIComponent(orderNumber)}/cancel`, { method: 'POST' }),
+
+  /** Which checkout the server runs: the demo buttons, or Halyk ePay. */
+  paymentProvider: (fetcher: AuthenticatedFetch, signal?: AbortSignal) =>
+    requestJson<PaymentProvider>(fetcher, '/payments/provider', { signal }),
+
+  /** Opens a Halyk invoice. Open `checkout_url` in a browser; Halyk sends the
+   * buyer back to `returnUrl` (the app's deep link). Nothing is charged here. */
+  startHalyk: (fetcher: AuthenticatedFetch, orderNumber: string, returnUrl: string) =>
+    requestJson<{ checkout_url: string; invoice_id: string }>(fetcher, `/orders/${encodeURIComponent(orderNumber)}/halyk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ return_url: returnUrl }),
+    }),
+
+  /** Asks the server to check with Halyk now; returns the settled (or still pending) order. */
+  syncHalyk: (fetcher: AuthenticatedFetch, orderNumber: string) =>
+    requestJson<Order>(fetcher, `/orders/${encodeURIComponent(orderNumber)}/halyk/sync`, { method: 'POST' }),
 };
+
+export type PaymentProvider = { provider: 'simulator' | 'halyk'; is_sandbox: boolean };
 
 export function formatOrderMoney(minor: number, currency = 'KZT', locale?: string) {
   const amount = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(minor / 100);
