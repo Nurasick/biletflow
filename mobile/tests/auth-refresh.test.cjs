@@ -135,3 +135,24 @@ async function login(app,remember=false){assert.equal(await app.value().login('o
    await until(()=>app.value().isRestoring===false);
    assert.equal(app.value().isLoggedIn,false);assert.equal(app.values.has(sessionKey),false);app.dispose();
  });
+
+ test('logout sends Authorization header, JSON Content-Type, and refresh_token body for single-device revocation',async()=>{
+   let logoutRequest=null;
+   global.fetch=async(url,init)=>{
+     if(url.endsWith('/auth/login'))return Response.json(tokens('device-one'));
+     if(url.endsWith('/auth/logout')){
+       logoutRequest={url,method:init.method,headers:new Headers(init.headers),body:init.body};
+       return new Response(null,{status:204});
+     }
+     throw new Error('Unexpected URL '+url);
+   };
+   const app=harness();await login(app,true);
+   await app.value().logout();
+   assert.ok(logoutRequest);
+   assert.equal(logoutRequest.url,'https://api.example.test/api/v1/auth/logout');
+   assert.equal(logoutRequest.method,'POST');
+   assert.equal(logoutRequest.headers.get('Authorization'),'Bearer device-one-access');
+   assert.equal(logoutRequest.headers.get('Content-Type'),'application/json');
+   assert.equal(logoutRequest.body,JSON.stringify({refresh_token:'device-one-refresh'}));
+   assert.equal(app.value().isLoggedIn,false);
+ });

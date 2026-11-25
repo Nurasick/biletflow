@@ -279,7 +279,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${activeSession.accessToken}`,
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({ refresh_token: activeSession.refreshToken }),
         });
       } catch {
         // Local token removal is enough for the bearer-mode client.
