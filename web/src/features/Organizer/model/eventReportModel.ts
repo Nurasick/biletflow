@@ -51,7 +51,7 @@ export const EVENT_AUDIT_ACTIONS = [
   "refund.initiated", "payment.succeeded", "payment.failed", "staff.assigned", "staff.removed",
   "ticket.checked_in", "ticket.check_in_reversed",
   "campaign.created", "campaign.updated", "campaign.enabled", "campaign.disabled",
-  "support_case.status_changed",
+  "support.status_changed",
 ] as const;
 
 // datetime-local has no offset. The filters are read as wall-clock time in the

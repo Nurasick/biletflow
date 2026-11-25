@@ -731,7 +731,7 @@
   "reports.action.event.suspended": "Событие приостановлено",
   "reports.action.event.unsuspended": "Приостановка события снята",
   "reports.action.event.duplicated": "Создана копия события",
-  "reports.action.support_case.status_changed": "Статус обращения изменился",
+  "reports.action.support.status_changed": "Статус обращения изменился",
   "reports.action.ticket_type.price_changed": "Цена билета изменена",
   "reports.action.ticket_type.capacity_changed": "Количество билетов изменено",
   "reports.action.activation.terms_accepted": "Условия платных продаж приняты",
