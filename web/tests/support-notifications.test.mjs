@@ -35,11 +35,22 @@ test('notification links resolve to local routes and calendar exports without ca
     kind: 'calendar', slug: 'jazz-night',
   });
   assert.equal(notificationDestination('/organizer/events/17/preview').href, '/organizer/events/17/preview');
+  assert.deepEqual(notificationDestination('/organizer/profile'), {
+    kind: 'page', href: '/organizer/profile', label: 'notifications.viewProfile',
+  });
+  assert.deepEqual(notificationDestination('https://tickets.example/organizer/profile?tab=payouts'), {
+    kind: 'page', href: '/organizer/profile', label: 'notifications.viewProfile',
+  });
   assert.equal(notificationDestination(`/staff/support/${caseNumber}`).href, `/staff/support/${caseNumber}`);
   assert.equal(notificationDestination('javascript:alert(1)'), null);
   assert.equal(notificationDestination('https://example.com/unrecognized/path'), null);
   assert.equal(notificationDestination('/orders/%2Fredirect'), null);
   assert.equal(notificationTitleKey('payment.failed'), 'notifications.paymentFailed');
+  assert.equal(notificationTitleKey('support.opened'), 'notifications.supportOpened');
+  assert.equal(notificationTitleKey('support.received'), 'notifications.supportReceived');
+  assert.equal(notificationTitleKey('support.escalated'), 'notifications.supportEscalated');
+  assert.equal(notificationTitleKey('activation.fee_failed'), 'notifications.activationFeeFailed');
+  assert.equal(notificationTitleKey('ticket.assigned'), 'notifications.ticketAssigned');
   assert.equal(notificationTitleKey('__proto__'), 'notifications.generic');
 });
 
