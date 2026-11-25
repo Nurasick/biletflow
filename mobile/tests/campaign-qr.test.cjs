@@ -22,3 +22,26 @@ test('campaign QR accepts only BiletFlow event links with a bounded campaign tok
   assert.equal(campaignFromUrl(`https://api.biletflow.kz/events/jazz-night?c=${'x'.repeat(65)}`, 'https://api.biletflow.kz'), null);
   assert.equal(campaignFromUrl('BF1.adm.ticket.42.nonce.signature', 'https://api.biletflow.kz'), null);
 });
+
+test('campaign QR allows LAN and emulator HTTP links during local development without weakening production checks', () => {
+  assert.deepEqual(
+    campaignFromUrl('http://192.168.1.50:5173/events/almaty-jazz-night?c=tok123', 'http://192.168.1.50:8000'),
+    { slug: 'almaty-jazz-night', token: 'tok123' },
+  );
+  assert.deepEqual(
+    campaignFromUrl('http://localhost:5173/events/almaty-jazz-night?c=tok123', 'http://192.168.1.50:8000'),
+    { slug: 'almaty-jazz-night', token: 'tok123' },
+  );
+  assert.deepEqual(
+    campaignFromUrl('http://10.0.2.2:5173/events/almaty-jazz-night?c=tok123', 'http://10.0.2.2:8000'),
+    { slug: 'almaty-jazz-night', token: 'tok123' },
+  );
+  assert.equal(
+    campaignFromUrl('http://attacker.example/events/almaty-jazz-night?c=tok123', 'http://192.168.1.50:8000'),
+    null,
+  );
+  assert.equal(
+    campaignFromUrl('http://192.168.1.99:5173/events/almaty-jazz-night?c=tok123', 'https://api.biletflow.kz'),
+    null,
+  );
+});
