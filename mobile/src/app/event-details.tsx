@@ -8,6 +8,7 @@ import { AppText, Icon, type IconName } from '@/components/design';
 import { ScreenFrame } from '@/components/screen-frame';
 import { Action, Info, Panel, ScreenHeading, FormField } from '@/components/workspace';
 import { MaxContentWidth } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useI18n } from '@/i18n';
 import { openEventCalendar } from '@/shared/api/documents';
@@ -17,6 +18,7 @@ const categories: Record<EventCategory, string> = { concert: 'Concerts', theater
 
 export default function EventDetailsScreen() {
   const router = useRouter();
+  const { isLoggedIn } = useAuth();
   const { t, formatDate, formatNumber } = useI18n();
   const { slug: rawSlug, campaignToken: rawCampaignToken } = useLocalSearchParams<{ slug?: string | string[]; campaignToken?: string | string[] }>();
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
@@ -137,8 +139,8 @@ export default function EventDetailsScreen() {
               )}
             </Panel>
             {!!event.refund_policy && <Panel><SectionTitle>{t('Refund policy')}</SectionTitle><Info tone="muted">{event.refund_policy}</Info></Panel>}
-            <Action secondary icon="help" label={t('Contact support')} onPress={() => router.push({ pathname: '/support-new', params: { eventId: String(event.id) } })} />
-            <Action secondary label={t('Report this event')} onPress={() => router.push({ pathname: '/report-event', params: { slug: event.slug } })} />
+            <Action secondary icon="help" label={t('Contact support')} onPress={() => router.push(isLoggedIn ? { pathname: '/support-new', params: { eventId: String(event.id) } } : '/login')} />
+            <Action secondary label={t('Report this event')} onPress={() => router.push(isLoggedIn ? { pathname: '/report-event', params: { slug: event.slug } } : '/login')} />
           </ScrollView>
           <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
             <View style={styles.footerContent}>

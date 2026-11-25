@@ -58,10 +58,12 @@ export default function Workspace() {
         <View style={styles.language}><LanguageSelector /></View>
       </Group>
 
-      <Group>
-        <Row icon="signOut" danger label={t(signingOut ? 'Signing out…' : 'Sign out')} disabled={signingOut} chevron={false}
-          onPress={() => { setSigningOut(true); void logout().finally(() => setSigningOut(false)); }} />
-      </Group>
+      {Boolean(user) && (
+        <Group>
+          <Row icon="signOut" danger label={t(signingOut ? 'Signing out…' : 'Sign out')} disabled={signingOut} chevron={false}
+            onPress={() => { setSigningOut(true); void logout().finally(() => setSigningOut(false)); }} />
+        </Group>
+      )}
     </WorkspaceScreen>
   );
 }

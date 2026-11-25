@@ -484,6 +484,8 @@ const entries: readonly [string, string, string][] = [
   ['Check tickets in at the door', 'Проверяйте билеты на входе', 'Кіреберісте билеттерді тексеріңіз'],
   ['Events, sales and campaigns', 'События, продажи и акции', 'Іс-шаралар, сатылым және науқандар'],
   ['Edit your account', 'Изменить данные аккаунта', 'Аккаунт деректерін өзгерту'],
+  ['Sign in to view your tickets and orders.', 'Войдите, чтобы просмотреть свои билеты и заказы.', 'Билеттеріңіз бен тапсырыстарыңызды көру үшін кіріңіз.'],
+  ['The payment failed.', 'Платёж не прошёл.', 'Төлем сәтсіз аяқталды.'],
 ];
 
 const allEntries = [...entries, ...managementEntries];
