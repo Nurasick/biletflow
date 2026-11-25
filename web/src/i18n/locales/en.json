@@ -751,7 +751,7 @@
   "reports.action.event.suspended": "Event suspended",
   "reports.action.event.unsuspended": "Event suspension lifted",
   "reports.action.event.duplicated": "Event duplicated",
-  "reports.action.support_case.status_changed": "Support case status changed",
+  "reports.action.support.status_changed": "Support case status changed",
   "reports.action.ticket_type.price_changed": "Ticket price changed",
   "reports.action.ticket_type.capacity_changed": "Ticket quantity changed",
   "reports.action.activation.terms_accepted": "Paid-sales terms accepted",

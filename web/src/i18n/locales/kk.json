@@ -751,7 +751,7 @@
   "reports.action.event.suspended": "Іс-шара тоқтатылды",
   "reports.action.event.unsuspended": "Іс-шара қайта жалғастырылды",
   "reports.action.event.duplicated": "Іс-шара көшірілді",
-  "reports.action.support_case.status_changed": "Қолдау өтінімінің күйі өзгерді",
+  "reports.action.support.status_changed": "Қолдау өтінімінің күйі өзгерді",
   "reports.action.ticket_type.price_changed": "Билет бағасы өзгертілді",
   "reports.action.ticket_type.capacity_changed": "Билеттер саны өзгертілді",
   "reports.action.activation.terms_accepted": "Ақылы сату шарттары қабылданды",
