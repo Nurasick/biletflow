@@ -2,15 +2,20 @@ export const NOTIFICATION_POLL_INTERVAL = 30_000;
 
 const titleKeys = {
   "order.confirmed": "notifications.orderConfirmed",
+  "ticket.assigned": "notifications.ticketAssigned",
   "payment.failed": "notifications.paymentFailed",
+  "activation.fee_failed": "notifications.activationFeeFailed",
   "order.cancelled": "notifications.orderCancelled",
   "refund.completed": "notifications.refundCompleted",
   "event.updated": "notifications.eventUpdated",
   "event.cancelled": "notifications.eventCancelled",
   "payout.status": "notifications.payoutStatus",
+  "support.opened": "notifications.supportOpened",
+  "support.received": "notifications.supportReceived",
   "support.message": "notifications.supportMessage",
   "support.assigned": "notifications.supportAssigned",
   "support.status": "notifications.supportStatus",
+  "support.escalated": "notifications.supportEscalated",
 } as const;
 
 export const notificationTitleKey = (key: string) =>
@@ -18,7 +23,11 @@ export const notificationTitleKey = (key: string) =>
 
 type Destination =
   | { kind: "calendar"; slug: string }
-  | { kind: "page"; href: string; label: "notifications.viewOrder" | "notifications.viewEvent" | "notifications.viewCase" };
+  | {
+      kind: "page";
+      href: string;
+      label: "notifications.viewOrder" | "notifications.viewEvent" | "notifications.viewCase" | "notifications.viewProfile";
+    };
 
 // The API sends absolute links for email. Resolve known destinations inside
 // this app, where signed-in users already have access to their orders and cases.
@@ -42,6 +51,9 @@ export const notificationDestination = (link: unknown): Destination | null => {
   }
   if (/^\/events\/[a-z0-9-]{3,200}$/.test(path) || /^\/organizer\/events\/[1-9]\d*\/preview$/.test(path)) {
     return { kind: "page", href: path, label: "notifications.viewEvent" };
+  }
+  if (path === "/organizer/profile") {
+    return { kind: "page", href: "/organizer/profile", label: "notifications.viewProfile" };
   }
   return null;
 };
