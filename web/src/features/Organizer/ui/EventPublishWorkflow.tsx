@@ -1,18 +1,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Modal } from "antd";
-import { CheckCircle2, CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { Check, CheckCircle2, CircleAlert, Copy, Link2, LoaderCircle, Lock, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useLocale } from "../../../i18n/useLocale";
+import { ApiError } from "../../../shared/api/auth";
 import { EventWorkflowError, eventLifecycleApi } from "../../../shared/api/eventLifecycle";
 import type { EventAction } from "../../../shared/api/eventLifecycle";
+import { organizerEventApi } from "../../../shared/api/organizerEvents";
 import { SupportRequestButton } from "../../Support/ui/SupportRequestButton";
 import { organizerEventKeys, useEventLifecycle } from "../model/useEventLifecycle";
 import { ActivationPanel } from "./ActivationPanel";
 import { AttendeesPanel } from "./AttendeesPanel";
 import { CampaignsPanel } from "./CampaignsPanel";
+import { eventInputClass } from "./EventFormField";
 import { EventPreviewContent } from "./EventPreviewContent";
 import { EventSalesPanel } from "./EventSalesPanel";
 import { SeatingPanel } from "./SeatingPanel";
@@ -20,6 +23,109 @@ import { StaffPanel } from "./StaffPanel";
 import { TicketTypesPanel } from "./TicketTypesPanel";
 import { EventStatusBadge } from "./EventStatusBadge";
 import { EventTimelinePanel } from "./EventTimelinePanel";
+
+const PrivateAccessPanel = ({ eventId, userId, hasAccessCode, editable, disabled }: {
+  eventId: number;
+  userId: number;
+  hasAccessCode: boolean;
+  editable: boolean;
+  disabled: boolean;
+}) => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const copyResetTimer = useRef<number | null>(null);
+  const inviteLink = useMutation({
+    mutationFn: () => organizerEventApi.createInviteLink(eventId),
+    onMutate: () => {
+      if (copyResetTimer.current !== null) {
+        window.clearTimeout(copyResetTimer.current);
+        copyResetTimer.current = null;
+      }
+      setCopied(false);
+      setCopyError(false);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["organizer", "timeline", userId, eventId] });
+    },
+  });
+
+  useEffect(() => () => {
+    if (copyResetTimer.current !== null) window.clearTimeout(copyResetTimer.current);
+  }, []);
+
+  const copyInviteUrl = async (url: string) => {
+    setCopyError(false);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard_unavailable");
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      if (copyResetTimer.current !== null) window.clearTimeout(copyResetTimer.current);
+      copyResetTimer.current = window.setTimeout(() => {
+        setCopied(false);
+        copyResetTimer.current = null;
+      }, 3000);
+    } catch {
+      setCopied(false);
+      setCopyError(true);
+    }
+  };
+
+  return (
+    <section id="event-private-access" aria-labelledby="event-private-access-heading"
+      className="rounded-xl border border-line bg-white p-5">
+      <h2 id="event-private-access-heading" className="flex items-center gap-2 font-semibold">
+        <Lock size={18} aria-hidden="true" />{t("eventWorkflow.privateAccessTitle")}
+      </h2>
+      <p className="mt-1 text-xs leading-5 text-muted">{t("eventWorkflow.privateAccessDescription")}</p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-paper px-3.5 py-2.5 text-sm">
+        <div className="flex items-center gap-2">
+          {hasAccessCode
+            ? <CheckCircle2 size={16} className="shrink-0 text-green-700" aria-hidden="true" />
+            : <CircleAlert size={16} className="shrink-0 text-muted" aria-hidden="true" />}
+          <span className="font-semibold">
+            {t(hasAccessCode ? "eventWorkflow.accessCodeSet" : "eventWorkflow.accessCodeNotSet")}
+          </span>
+        </div>
+        {editable && <Link to={`/organizer/events/${eventId}/edit`} className="text-xs font-semibold text-primary-hover">
+          {t("eventWorkflow.editDetails")}
+        </Link>}
+      </div>
+      {editable && <p className="mt-2 text-xs text-muted">{t("eventWorkflow.accessCodeManageHint")}</p>}
+      <div className="mt-4">
+        <Button icon={<Link2 size={15} aria-hidden="true" />} disabled={disabled || inviteLink.isPending}
+          loading={inviteLink.isPending} onClick={() => { if (!inviteLink.isPending) inviteLink.mutate(); }}>
+          {t("eventWorkflow.generateInviteLink")}
+        </Button>
+      </div>
+      {inviteLink.data && (
+        <div className="mt-4">
+          <label htmlFor="event-invite-link" className="mb-1.5 block text-xs font-semibold">
+            {t("eventWorkflow.inviteLinkLabel")}
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input id="event-invite-link" type="text" readOnly value={inviteLink.data.invite_url}
+              onFocus={(event) => event.currentTarget.select()}
+              className={`${eventInputClass} flex-1 font-mono text-xs`} />
+            <Button icon={copied ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
+              onClick={() => void copyInviteUrl(inviteLink.data.invite_url)}>
+              {t(copied ? "eventWorkflow.copied" : "eventWorkflow.copyLink")}
+            </Button>
+          </div>
+          <div role="status" aria-live="polite" className="mt-2 min-h-5 text-xs text-green-700">
+            {copied ? t("eventWorkflow.linkCopied") : ""}
+          </div>
+          {copyError && <Alert role="alert" type="error" showIcon className="mt-2"
+            title={t("eventWorkflow.copyLinkError")} />}
+        </div>
+      )}
+      {inviteLink.isError && <Alert role="alert" type="error" showIcon className="mt-4"
+        title={t("eventWorkflow.inviteLinkError")}
+        description={inviteLink.error instanceof ApiError ? inviteLink.error.message : undefined} />}
+    </section>
+  );
+};
 
 export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; userId: number }) => {
   const { t } = useTranslation();
@@ -94,6 +200,11 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
     </Link>}
     <p className="mt-3 text-sm leading-6 text-muted">{t("eventWorkflow.previewDescription")}</p>
     {!preview.isError && <nav aria-label={t("a11y.eventSections")} className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary-hover">
+      {event.visibility === "private" && (
+        <a href="#event-private-access" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">
+          {t("eventWorkflow.privateAccessTitle")}
+        </a>
+      )}
       <a href="#event-ticket-types" className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">{t("ticketTypes.title")}</a>
       <Link to={`/organizer/events/${eventId}/analytics`} className="rounded focus-visible:outline-2 focus-visible:outline-offset-4">
         {t("analytics.title")}
@@ -120,6 +231,10 @@ export const EventPublishWorkflow = ({ eventId, userId }: { eventId: number; use
     <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]" aria-busy={transition.isPending}>
       <div className="min-w-0 space-y-6">
         <EventPreviewContent snapshot={snapshot} />
+        {event.visibility === "private" && (
+          <PrivateAccessPanel key={eventId} eventId={eventId} userId={userId}
+            hasAccessCode={Boolean(event.has_access_code)} editable={editable} disabled={preview.isError} />
+        )}
         <TicketTypesPanel event={event} userId={userId} editable={editable} />
         {event.seating_mode === "assigned" && <SeatingPanel event={event} userId={userId} editable={editable} />}
         <ActivationPanel eventId={eventId} />

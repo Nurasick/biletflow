@@ -47,6 +47,10 @@ export const eventSchema = z.object({
     /^[1-9]\d*$/.test(value) && Number(value) <= 2_147_483_647
   ), "validation.eventCapacity"),
   visibility: z.enum(EVENT_VISIBILITIES, { error: "validation.eventVisibility" }),
+  accessCode: z.string().trim().refine((value) => value === "" || (
+    value.length >= 4 && value.length <= 64
+  ), "validation.eventAccessCode"),
+  clearAccessCode: z.boolean(),
 }).superRefine((values, context) => {
   if (!isEventTimeZone(values.timeZone)) return;
   const instants: Partial<Record<"startsAt" | "endsAt" | "registrationOpensAt" | "registrationClosesAt", number>> = {};
@@ -80,4 +84,5 @@ export const emptyOrganizerEvent = (): OrganizerEventValues => ({
   title: "", description: "", refundPolicy: "", category: "other", images: [],
   venueName: "", venueAddress: "", venueCity: "", seatingMode: "general_admission", timeZone: "Asia/Almaty", startsAt: "", endsAt: "",
   registrationOpensAt: "", registrationClosesAt: "", capacity: "", visibility: "public",
+  accessCode: "", clearAccessCode: false,
 });

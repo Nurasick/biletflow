@@ -52,7 +52,8 @@ const OrganizerEventEditor = ({ userId, eventId }: { userId: number; eventId: nu
           <Link to={previewHref!} className="mt-4 inline-block font-semibold text-primary-hover">{t("eventWorkflow.preview")}</Link>
         </div>
       ) : (
-        <OrganizerEventForm key={eventId ?? "new"} draft={draft.data.values} saveDraft={save} previewHref={previewHref} editing={eventId !== null} />
+        <OrganizerEventForm key={eventId ?? "new"} draft={draft.data.values} saveDraft={save} previewHref={previewHref}
+          editing={eventId !== null} hasAccessCode={event?.has_access_code ?? false} />
       )}
       <p className="mt-6 text-xs text-muted">{t("organizer.required")}</p>
     </OrganizerWorkspace>
