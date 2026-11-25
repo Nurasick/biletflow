@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, Linking, Pressable, View } from 'react-native';
+import * as ExpoLinking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 
 import { Icon } from '@/components/design';
 import { ThemedText } from '@/components/themed-text';
@@ -12,7 +14,7 @@ import { useTheme } from '@/hooks/use-theme';
 import type { AppColors } from '@/constants/theme';
 import { downloadOrderCalendar, downloadOrderTicketsPdf } from '@/shared/api/documents';
 import { formatEventDate } from '@/shared/api/events';
-import { formatOrderMoney, ordersApi, type Order, type OrderStatus } from '@/shared/api/orders';
+import { formatOrderMoney, ordersApi, type Order, type OrderStatus, type PaymentProvider } from '@/shared/api/orders';
 import { confirmAction } from '@/lib/confirm';
 
 export default function TicketsScreen() {
@@ -28,6 +30,7 @@ export default function TicketsScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [documentBusy, setDocumentBusy] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
+  const [provider, setProvider] = useState<PaymentProvider | null>(null);
   const [now,setNow]=useState(Date.now());
   useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[]);
 
@@ -60,8 +63,12 @@ export default function TicketsScreen() {
     }
     const controller = new AbortController();
     void loadOrders(controller.signal);
+    // Demo buttons or Halyk ePay: the server decides (PAYMENT_PROVIDER).
+    void ordersApi.paymentProvider(authenticatedFetch, controller.signal)
+      .then((value) => { if (!controller.signal.aborted) setProvider(value); })
+      .catch(() => { /* Falls back to the demo buttons; /pay then explains itself. */ });
     return () => controller.abort();
-  }, [isLoggedIn, loadOrders]));
+  }, [authenticatedFetch, isLoggedIn, loadOrders]));
 
   const runOrderAction = async (order: Order, action: 'pay' | 'cancel') => {
     setBusyOrder(order.order_number);
@@ -86,6 +93,28 @@ export default function TicketsScreen() {
       setOrders((current) => current.map((item) => item.order_number === updated.order_number ? updated : item));
     } catch (actionFailure) {
       setActionError(actionFailure instanceof Error ? actionFailure.message : 'The payment failed.');
+      await loadOrders();
+    } finally {
+      setBusyOrder(null);
+    }
+  };
+
+  // Halyk's card page runs in an in-app browser. The server sends the buyer
+  // back to our deep link, which closes it; then we ask the server to check
+  // with Halyk, because closing the browser by hand looks the same to us.
+  const payWithHalyk = async (order: Order) => {
+    setBusyOrder(order.order_number);
+    setActionError(null);
+    try {
+      const returnUrl = ExpoLinking.createURL('payment-return');
+      const { checkout_url } = await ordersApi.startHalyk(authenticatedFetch, order.order_number, returnUrl);
+      await WebBrowser.openAuthSessionAsync(checkout_url, returnUrl);
+      const updated = await ordersApi.syncHalyk(authenticatedFetch, order.order_number);
+      setOrders((current) => current.map((item) => item.order_number === updated.order_number ? updated : item));
+      if (updated.status === 'pending') setActionError('Halyk ePay has not confirmed this payment yet. Pull to refresh in a moment.');
+      else if (updated.status === 'cancelled') setActionError('The payment was declined. Your tickets were released.');
+    } catch (failure) {
+      setActionError(failure instanceof Error ? failure.message : 'The payment could not be started.');
       await loadOrders();
     } finally {
       setBusyOrder(null);
@@ -195,14 +224,20 @@ export default function TicketsScreen() {
 
                   {order.status === 'pending' && (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 13 }}>
-                      <ActionButton label={isBusy ? t("Working…") : t("Pay (demo)")} disabled={isBusy} colors={colors} onPress={() => void runOrderAction(order, 'pay')} />
-                      <ActionButton label={t("Simulate failed payment")} disabled={isBusy} secondary colors={colors} onPress={() => void simulateFailedPayment(order)} />
+                      {provider?.provider === 'halyk' ? (
+                        <ActionButton label={isBusy ? t("Working…") : t("Pay with Halyk ePay")} disabled={isBusy} colors={colors} onPress={() => void payWithHalyk(order)} />
+                      ) : (
+                        <>
+                          <ActionButton label={isBusy ? t("Working…") : t("Pay (demo)")} disabled={isBusy} colors={colors} onPress={() => void runOrderAction(order, 'pay')} />
+                          <ActionButton label={t("Simulate failed payment")} disabled={isBusy} secondary colors={colors} onPress={() => void simulateFailedPayment(order)} />
+                        </>
+                      )}
                       <ActionButton label={isBusy ? t("Working…") : t("Cancel")} disabled={isBusy} secondary colors={colors} onPress={() => confirmCancel(order)} />
                     </View>
                   )}
 
                   {actionError && busyOrder === null && <ThemedText style={{ marginTop: 10, color: colors.danger, fontSize: 12 }}>{t(actionError)}</ThemedText>}
-                  {order.status === 'pending' && <ThemedText style={{ marginTop: 9, color: colors.muted, fontSize: 10 }}>{t("Demo payment only. No real payment is made.")}{order.expires_at?` · ${t('Hold expires in {time}', {time:remainingTime(order.expires_at,now)})}`:''}</ThemedText>}
+                  {order.status === 'pending' && <ThemedText style={{ marginTop: 9, color: colors.muted, fontSize: 10 }}>{t(provider?.provider !== 'halyk' ? "Demo payment only. No real payment is made." : provider.is_sandbox ? "Halyk ePay test environment: no real money moves. Test card 4405 6397 0401 5096, 01/27, CVC 321." : "You will be taken to Halyk Bank's secure payment page.")}{order.expires_at?` · ${t('Hold expires in {time}', {time:remainingTime(order.expires_at,now)})}`:''}</ThemedText>}
 
                   <View style={{ marginTop: 15 }}>
                     <ThemedText style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>{t("Tickets (")}{order.tickets.length})</ThemedText>

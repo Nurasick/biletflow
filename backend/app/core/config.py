@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import AnyHttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 env_root = Path(__file__).resolve().parents[3] / ".env"
@@ -81,6 +81,50 @@ class Settings(BaseSettings):
     SUPPORTED_CURRENCIES: Annotated[list[str], NoDecode] = ["KZT"]
 
     CORS_ORIGINS: Annotated[list[AnyHttpUrl], NoDecode] = []
+
+    # Which payment provider takes ticket payments (§4.6). "simulator" is the
+    # in-process demo with pass/fail buttons; "halyk" sends the buyer to the
+    # Halyk Bank ePay payment page. Activation fees stay simulated either way.
+    PAYMENT_PROVIDER: Literal["simulator", "halyk"] = "simulator"
+    # Halyk ePay credentials. Deliberately no defaults, not even the public
+    # sandbox ones: they live in .env.example, so a production deploy cannot
+    # silently run on test credentials. Required when PAYMENT_PROVIDER=halyk.
+    HALYK_CLIENT_ID: str = ""
+    HALYK_CLIENT_SECRET: str = ""
+    HALYK_TERMINAL_ID: str = ""
+    # Sandbox endpoints by default (epayment.kz/docs). Production is
+    # epay-oauth.homebank.kz / epay-api.homebank.kz / epay.homebank.kz.
+    HALYK_OAUTH_URL: str = "https://test-epay-oauth.epayment.kz/oauth2/token"
+    HALYK_API_URL: str = "https://test-epay-api.epayment.kz"
+    HALYK_PAYFORM_JS_URL: str = "https://test-epay.epayment.kz/payform/payment-api.js"
+    # True while on the sandbox: those payments move no real money, so they are
+    # stored with is_simulated=True and labelled as such (§4.6).
+    HALYK_IS_SANDBOX: bool = True
+    HALYK_TIMEOUT_SECONDS: float = 15.0
+    # Where a finished Halyk payment may send the buyer back to, besides
+    # PUBLIC_WEB_URL: the mobile app's URL schemes ("mobile" is app.json's
+    # scheme, "exp" is Expo Go in development). Anything else is refused, so
+    # the return link cannot be turned into an open redirect.
+    APP_RETURN_SCHEMES: Annotated[list[str], NoDecode] = ["mobile", "exp"]
+
+    @field_validator("APP_RETURN_SCHEMES", mode="before")
+    @classmethod
+    def assemble_app_return_schemes(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return [s.strip().lower() for s in v.split(",") if s.strip()]
+        return v
+
+    @model_validator(mode="after")
+    def require_halyk_credentials(self) -> "Settings":
+        if self.PAYMENT_PROVIDER == "halyk":
+            missing = [
+                name
+                for name in ("HALYK_CLIENT_ID", "HALYK_CLIENT_SECRET", "HALYK_TERMINAL_ID")
+                if not getattr(self, name)
+            ]
+            if missing:
+                raise ValueError(f"PAYMENT_PROVIDER=halyk needs {', '.join(missing)}")
+        return self
 
     @field_validator("SUPPORTED_CURRENCIES", mode="before")
     @classmethod

@@ -13,7 +13,7 @@ These tests force exactly that interleaving instead of hoping threads hit it:
    so it holds the row lock.
 2. A second thread calls pay_order.
 3. We wait until Postgres reports that thread as blocked on a lock. Without
-   the FOR SHARE lock in payment._ensure_still_on_sale it never blocks: it
+   the FOR SHARE lock in payment.ensure_still_on_sale it never blocks: it
    reads the old row, pays and confirms, and the test fails.
 4. The admin commits. The payment wakes up, re-reads the row (Postgres does
    that for a locking read), sees "suspended" and refuses.
@@ -194,7 +194,7 @@ def test_a_payment_and_an_event_cancellation_do_not_deadlock(
     real_charge = payment_service.provider.charge
 
     def charge_after_the_cancel_has_started(amount_minor, outcome):
-        # pay_order has passed _ensure_still_on_sale: the event is share-locked.
+        # pay_order has passed ensure_still_on_sale: the event is share-locked.
         locked.set()
         assert go_on.wait(LOCK_WAIT_TIMEOUT_SECONDS)
         return real_charge(amount_minor, outcome)
