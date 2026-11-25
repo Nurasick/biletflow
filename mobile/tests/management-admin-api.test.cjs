@@ -22,3 +22,12 @@ test('admin API applies payment and order status filters',async()=>{
  assert.match(calls[0],/\/admin\/orders\?.*q=concert.*status=confirmed/);
  assert.match(calls[1],/\/admin\/payments\?.*status=failed/);
 });
+
+test('managementApi.createInviteLink posts to event invite-link endpoint',async()=>{
+ const calls=[];const fetcher=async(path,init={})=>{calls.push({path,init});return Response.json({invite_token:'inv_123',invite_url:'https://app.example.test/events/secret?invite=inv_123'});};
+ const result=await managementApi.createInviteLink(fetcher,12);
+ assert.equal(calls[0].path,'/organizer/events/12/invite-link');
+ assert.equal(calls[0].init.method,'POST');
+ assert.equal(result.invite_token,'inv_123');
+ assert.equal(result.invite_url,'https://app.example.test/events/secret?invite=inv_123');
+});

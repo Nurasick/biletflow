@@ -10,7 +10,7 @@ import { TicketQr } from '@/components/ticket-qr';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import type { AppColors } from '@/constants/theme';
-import { downloadOrderTicketsPdf, openEventCalendar } from '@/shared/api/documents';
+import { downloadOrderCalendar, downloadOrderTicketsPdf } from '@/shared/api/documents';
 import { formatEventDate } from '@/shared/api/events';
 import { formatOrderMoney, ordersApi, type Order, type OrderStatus } from '@/shared/api/orders';
 import { confirmAction } from '@/lib/confirm';
@@ -94,7 +94,7 @@ export default function TicketsScreen() {
   const addToCalendar = async (order: Order) => {
     setDocumentError(null);
     try {
-      await openEventCalendar(order.event.slug);
+      await downloadOrderCalendar(authenticatedFetch, order.order_number, order.event.slug);
     } catch (failure) {
       setDocumentError(failure instanceof Error ? failure.message : 'Could not open the calendar file.');
     }
