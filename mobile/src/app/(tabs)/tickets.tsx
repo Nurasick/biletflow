@@ -18,7 +18,7 @@ import { confirmAction } from '@/lib/confirm';
 export default function TicketsScreen() {
   const router = useRouter();
   const { t, formatDate, locale } = useI18n();
-  const { authenticatedFetch } = useAuth();
+  const { authenticatedFetch, isLoggedIn } = useAuth();
   const colors = useTheme();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,6 +32,12 @@ export default function TicketsScreen() {
   useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[]);
 
   const loadOrders = useCallback(async (signal?: AbortSignal) => {
+    if (!isLoggedIn) {
+      setOrders([]);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
@@ -43,13 +49,19 @@ export default function TicketsScreen() {
     } finally {
       if (!signal?.aborted) setIsLoading(false);
     }
-  }, [authenticatedFetch]);
+  }, [authenticatedFetch, isLoggedIn]);
 
   useFocusEffect(useCallback(() => {
+    if (!isLoggedIn) {
+      setOrders([]);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
     const controller = new AbortController();
     void loadOrders(controller.signal);
     return () => controller.abort();
-  }, [loadOrders]));
+  }, [isLoggedIn, loadOrders]));
 
   const runOrderAction = async (order: Order, action: 'pay' | 'cancel') => {
     setBusyOrder(order.order_number);
@@ -61,6 +73,20 @@ export default function TicketsScreen() {
       setOrders((current) => current.map((item) => item.order_number === updated.order_number ? updated : item));
     } catch (actionFailure) {
       setActionError(actionFailure instanceof Error ? actionFailure.message : 'The order could not be updated.');
+    } finally {
+      setBusyOrder(null);
+    }
+  };
+
+  const simulateFailedPayment = async (order: Order) => {
+    setBusyOrder(order.order_number);
+    setActionError(null);
+    try {
+      const updated = await ordersApi.pay(authenticatedFetch, order.order_number, 'fail');
+      setOrders((current) => current.map((item) => item.order_number === updated.order_number ? updated : item));
+    } catch (actionFailure) {
+      setActionError(actionFailure instanceof Error ? actionFailure.message : 'The payment failed.');
+      await loadOrders();
     } finally {
       setBusyOrder(null);
     }
@@ -101,9 +127,17 @@ export default function TicketsScreen() {
   };
 
   return (
-    <WorkspaceScreen tab="tickets" title={t('My tickets')} onRefresh={refresh} refreshing={isLoading && orders.length > 0}>
+    <WorkspaceScreen tab="tickets" title={t('My tickets')} onRefresh={isLoggedIn ? refresh : undefined} refreshing={isLoggedIn && isLoading && orders.length > 0}>
         <ThemedText style={{ color: colors.muted, fontSize: 14 }}>{t("Tickets and order status for your account.")}</ThemedText>
 
+        {!isLoggedIn ? (
+          <View style={{ alignItems: 'center', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
+            <View style={{ width: 54, height: 54, alignItems: 'center', justifyContent: 'center', borderRadius: 15, backgroundColor: colors.accentWash }}><Icon name="ticket" color={colors.accent} size={26} /></View>
+            <ThemedText style={{ marginTop: 13, color: colors.text, textAlign: 'center', fontSize: 16, fontWeight: '800' }}>{t('Sign in to view your tickets and orders.')}</ThemedText>
+            <View style={{ marginTop: 16 }}><Action label={t('Sign in')} onPress={() => router.push('/login')} /></View>
+          </View>
+        ) : (
+        <>
         {isLoading && orders.length === 0 && <View style={{ alignItems: 'center', paddingVertical: 48 }}><ActivityIndicator color={colors.accent} /><ThemedText style={{ marginTop: 12, color: colors.muted }}>{t("Loading your orders…")}</ThemedText></View>}
 
         {error && <FeedbackCard message={t(error)} colors={colors} buttonLabel={t("Try again")} onPress={refresh} />}
@@ -149,7 +183,7 @@ export default function TicketsScreen() {
                     {order.fee_minor > 0 && <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 7 }}><ThemedText style={{ color: colors.muted, fontSize: 11 }}>{t("Processing fee")}</ThemedText><ThemedText style={{ color: colors.text, fontSize: 11 }}>{formatOrderMoney(order.fee_minor, order.currency,locale)}</ThemedText></View>}
                   </View>
 
-                  <View style={{ flexDirection: 'row', gap: 9, marginTop: 13 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 13 }}>
                     {order.tickets.some((ticket) => ticket.status === 'valid' || ticket.status === 'checked_in') && (
                       <ActionButton label={documentBusy === order.order_number ? t("Preparing PDF…") : t("Download tickets PDF")} disabled={documentBusy !== null} colors={colors} onPress={() => void savePdf(order)} />
                     )}
@@ -162,7 +196,7 @@ export default function TicketsScreen() {
                   {order.status === 'pending' && (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 13 }}>
                       <ActionButton label={isBusy ? t("Working…") : t("Pay (demo)")} disabled={isBusy} colors={colors} onPress={() => void runOrderAction(order, 'pay')} />
-                      <ActionButton label={t("Simulate failed payment")} disabled={isBusy} secondary colors={colors} onPress={() => void ordersApi.pay(authenticatedFetch, order.order_number, 'fail').then(updated => setOrders(current => current.map(item => item.order_number === updated.order_number ? updated : item))).catch(failure => setActionError(failure instanceof Error ? failure.message : 'The payment failed.'))} />
+                      <ActionButton label={t("Simulate failed payment")} disabled={isBusy} secondary colors={colors} onPress={() => void simulateFailedPayment(order)} />
                       <ActionButton label={isBusy ? t("Working…") : t("Cancel")} disabled={isBusy} secondary colors={colors} onPress={() => confirmCancel(order)} />
                     </View>
                   )}
@@ -181,6 +215,8 @@ export default function TicketsScreen() {
             </View>
           );
         })}
+        </>
+        )}
     </WorkspaceScreen>
   );
 }
@@ -227,5 +263,5 @@ function FeedbackCard({ message, colors, buttonLabel, onPress }: { message: stri
 function remainingTime(expiresAt:string,now:number){const seconds=Math.max(0,Math.floor((new Date(expiresAt).getTime()-now)/1000));return `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;}
 
 function ActionButton({ label, disabled, secondary = false, onPress }: { label: string; disabled: boolean; secondary?: boolean; colors: AppColors; onPress: () => void }) {
-  return <View style={{ flex: 1 }}><Action label={label} disabled={disabled} secondary={secondary} onPress={onPress} /></View>;
+  return <View style={{ flexGrow: 1, minWidth: 145 }}><Action label={label} disabled={disabled} secondary={secondary} onPress={onPress} /></View>;
 }

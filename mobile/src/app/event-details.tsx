@@ -157,8 +157,8 @@ export default function EventDetailsScreen() {
               )}
             </Panel>
             {!!event.refund_policy && <Panel><SectionTitle>{t('Refund policy')}</SectionTitle><Info tone="muted">{event.refund_policy}</Info></Panel>}
-            <Action secondary icon="help" label={t('Contact support')} onPress={() => router.push({ pathname: '/support-new', params: { eventId: String(event.id) } })} />
-            <Action secondary label={t('Report this event')} onPress={() => router.push({ pathname: '/report-event', params: { slug: event.slug } })} />
+            <Action secondary icon="help" label={t('Contact support')} onPress={() => router.push(isLoggedIn ? { pathname: '/support-new', params: { eventId: String(event.id) } } : '/login')} />
+            <Action secondary label={t('Report this event')} onPress={() => router.push(isLoggedIn ? { pathname: '/report-event', params: { slug: event.slug } } : '/login')} />
           </ScrollView>
           <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
             <View style={styles.footerContent}>
